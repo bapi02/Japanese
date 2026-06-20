@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スピーキング練習</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161820;
+  --card: #1e2130;
+  --border: #2a2d3e;
+  --text: #eceef5;
+  --text-dim: #8b8fa8;
+  --text-muted: #4a4d60;
+  --accent: #7c6ef5;
+  --accent2: #4ecdc4;
+  --red: #ff6b6b;
+  --yellow: #ffe66d;
+  --green: #51cf66;
+  --font-jp: 'Noto Serif JP', serif;
+  --font-ui: 'Inter', sans-serif;
+  --r: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  width: 100%;
+  padding: 20px 24px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.header-left { display: flex; align-items: center; gap: 10px; }
+.back-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--text-dim); cursor: pointer; display: none; font-family: inherit; }
+.back-btn:hover { border-color: var(--accent); color: var(--text); }
+.back-btn.show { display: block; }
+.header-titles .ep { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.header-titles .title { font-size: 15px; font-weight: 700; margin-top: 2px; }
+.mode-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); }
+
+main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ── 홈(에피소드 선택) ── */
+.home-intro { text-align: center; margin: 8px 0 4px; }
+.home-intro h1 { font-size: 18px; font-weight: 700; }
+.home-intro p { font-size: 13px; color: var(--text-dim); margin-top: 6px; }
+.episode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+.episode-card { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--r); padding: 26px 16px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); }
+.episode-card:hover { border-color: var(--accent); transform: translateY(-2px); background: #1e1b3a; }
+.episode-card .ep-no { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+.episode-card .ep-meta { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+
+.mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mode-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px 14px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); }
+.mode-btn:hover { border-color: var(--accent); }
+.mode-btn.active { border-color: var(--accent); background: #1e1b3a; }
+.mode-btn .mode-icon { font-size: 24px; margin-bottom: 6px; }
+.mode-btn .mode-name { font-size: 13px; font-weight: 700; }
+.mode-btn .mode-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+.prompt-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 22px 20px; }
+.prompt-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.prompt-jp { font-family: var(--font-jp); font-size: 20px; line-height: 1.8; margin-bottom: 8px; }
+.prompt-ko { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.prompt-hint { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+.prompt-hint strong { color: var(--text-dim); }
+
+.shadow-target { background: #1a1030; border: 1px solid #3a2d70; border-radius: var(--r); padding: 22px 20px; text-align: center; }
+.shadow-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+.shadow-sentence { font-family: var(--font-jp); font-size: 22px; line-height: 2; margin-bottom: 6px; }
+.shadow-reading { font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+.shadow-ko { font-size: 12px; color: var(--text-muted); }
+.shadow-nav { display: flex; gap: 8px; margin-top: 14px; justify-content: center; }
+.shadow-nav button { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--text-dim); cursor: pointer; transition: border-color 0.15s; }
+.shadow-nav button:hover { border-color: var(--accent); color: var(--text); }
+.shadow-counter { font-size: 11px; color: var(--text-muted); align-self: center; }
+
+.record-area { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 8px 0; }
+.record-btn { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: all 0.2s ease; background: var(--card); position: relative; }
+.record-btn:hover { border-color: var(--red); }
+.record-btn.recording { background: #2a0e0e; border-color: var(--red); animation: pulse 1s infinite; }
+.record-btn.processing { background: #1a1030; border-color: var(--accent); }
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(255,107,107,0); }
+}
+.record-hint { font-size: 12px; color: var(--text-muted); text-align: center; }
+.record-hint.active { color: var(--red); }
+
+.transcript-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; min-height: 52px; font-family: var(--font-jp); font-size: 17px; line-height: 1.7; color: var(--text-dim); transition: border-color 0.2s; }
+.transcript-box.has-text { color: var(--text); border-color: var(--accent2); }
+.transcript-label { font-size: 10px; letter-spacing: 2px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 6px; }
+
+.feedback-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; display: none; animation: fadeUp 0.3s ease; }
+.feedback-card.show { display: block; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.fb-head { padding: 12px 18px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-dim); }
+.fb-score-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); }
+.fb-score-dot.great { background: var(--green); }
+.fb-score-dot.ok { background: var(--yellow); }
+.fb-score-dot.retry { background: var(--red); }
+.fb-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.fb-section-label { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+.fb-text { font-size: 14px; line-height: 1.7; color: var(--text-dim); }
+.fb-reply-jp { font-family: var(--font-jp); font-size: 18px; line-height: 1.8; color: var(--text); }
+.fb-reply-ko { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+.compare-row { display: flex; flex-direction: column; gap: 6px; }
+.compare-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; }
+.compare-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+.compare-tag.you { background: #1a2535; color: var(--accent2); border: 1px solid var(--accent2); }
+.compare-tag.ideal { background: #1a2510; color: var(--green); border: 1px solid var(--green); }
+.compare-val { font-family: var(--font-jp); font-size: 15px; line-height: 1.7; }
+
+.next-q-btn { width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: white; font-size: 15px; font-weight: 700; border: none; cursor: pointer; display: none; transition: opacity 0.15s, transform 0.15s; letter-spacing: 0.5px; }
+.next-q-btn.show { display: block; }
+.next-q-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.progress-dots { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+.dot.done-great { background: var(--green); }
+.dot.done-ok { background: var(--yellow); }
+.dot.done-retry { background: var(--red); }
+.dot.current { background: var(--accent); }
+
+.no-speech-notice { background: #2a1a10; border: 1px solid #6b3a20; border-radius: 12px; padding: 14px 16px; font-size: 13px; color: #e8a87c; display: none; }
+
+@media (max-width: 400px) {
+  .shadow-sentence { font-size: 18px; }
+  .prompt-jp { font-size: 17px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <button class="back-btn" id="back-btn" onclick="backToHome()">← 목록</button>
+    <div class="header-titles">
+      <div class="ep" id="header-ep">스피킹 연습</div>
+      <div class="title" id="header-title">에피소드 선택</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="mode-badge" id="key-btn" onclick="openKeySettings()" style="cursor:pointer;font-family:inherit;">🔑 API 키</button>
+    <div class="mode-badge" id="header-mode" style="display:none;"></div>
+  </div>
+</header>
+
+<main>
+  <!-- 홈: 에피소드 선택 -->
+  <div id="home-screen">
+    <div class="home-intro">
+      <h1>스피킹 연습</h1>
+      <p>연습할 에피소드를 선택하세요</p>
+    </div>
+    <div class="episode-grid" id="episode-grid"></div>
+  </div>
+
+  <!-- 학습 화면 -->
+  <div id="study-screen" style="display:none;">
+    <div class="mode-selector">
+      <div class="mode-btn active" id="mode-conv" onclick="setMode('conversation')">
+        <div class="mode-icon">💬</div>
+        <div class="mode-name">회화 연습</div>
+        <div class="mode-desc">AI가 질문 → 내가 대답</div>
+      </div>
+      <div class="mode-btn" id="mode-shadow" onclick="setMode('shadowing')">
+        <div class="mode-icon">🎙</div>
+        <div class="mode-name">쉐도잉</div>
+        <div class="mode-desc">문장 보고 따라 말하기</div>
+      </div>
+    </div>
+
+    <div class="progress-dots" id="progress-dots"></div>
+
+    <div id="conv-area">
+      <div class="prompt-card">
+        <div class="prompt-label">🤖 Shun의 질문</div>
+        <div class="prompt-jp" id="question-jp"></div>
+        <div class="prompt-ko" id="question-ko"></div>
+        <div class="prompt-hint" id="question-hint"></div>
+      </div>
+      <div>
+        <div class="transcript-label">내가 말한 것</div>
+        <div class="transcript-box" id="transcript">마이크 버튼을 눌러 말해보세요...</div>
+      </div>
+      <div class="record-area">
+        <button class="record-btn" id="record-btn" onclick="toggleRecording()">🎤</button>
+        <div class="record-hint" id="record-hint">버튼을 누르고 일본어로 말해보세요</div>
+      </div>
+      <div class="feedback-card" id="feedback-card">
+        <div class="fb-head">
+          <div class="fb-score-dot" id="score-dot"></div>
+          <span id="score-label"></span>
+        </div>
+        <div class="fb-body" id="feedback-body"></div>
+      </div>
+      <button class="next-q-btn" id="next-btn" onclick="nextQuestion()">다음 질문으로 →</button>
+    </div>
+
+    <div id="shadow-area" style="display:none;">
+      <div class="shadow-target">
+        <div class="shadow-label">따라 말해보세요</div>
+        <div class="shadow-sentence" id="shadow-sentence"></div>
+        <div class="shadow-reading" id="shadow-reading"></div>
+        <div class="shadow-ko" id="shadow-ko"></div>
+        <div class="shadow-nav">
+          <button onclick="prevShadow()">← 이전</button>
+          <span class="shadow-counter" id="shadow-counter"></span>
+          <button onclick="nextShadow()">다음 →</button>
+        </div>
+      </div>
+      <div>
+        <div class="transcript-label">내가 말한 것</div>
+        <div class="transcript-box" id="shadow-transcript">마이크 버튼을 눌러 말해보세요...</div>
+      </div>
+      <div class="record-area">
+        <button class="record-btn" id="shadow-record-btn" onclick="toggleShadowRecording()">🎤</button>
+        <div class="record-hint" id="shadow-record-hint">버튼을 누르고 따라 말해보세요</div>
+      </div>
+      <div class="feedback-card" id="shadow-feedback-card">
+        <div class="fb-head">
+          <div class="fb-score-dot" id="shadow-score-dot"></div>
+          <span id="shadow-score-label"></span>
+        </div>
+        <div class="fb-body" id="shadow-feedback-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="no-speech-notice" id="no-speech-notice">
+    ⚠️ 이 브라우저는 음성인식을 지원하지 않습니다. Chrome에서 열어주세요.
+  </div>
+</main>
+
+<script>
+// ════════════ 에피소드 데이터 ════════════
+const EPISODES = {
+  28: {
+    topic: '일본 편의점',
+    questions: [
+      { jp: 'みなさんのくにに、コンビニはありますか。どんなコンビニがありますか。', ko: '여러분의 나라에 편의점이 있나요? 어떤 편의점이 있나요?', hint: 'はい、〜があります。たとえば〜です。', idealAnswer: 'はい、かんこくにもコンビニがあります。たとえばCUやGS25やセブンイレブンなどがあります。' },
+      { jp: 'コンビニによくいきますか。なにをかいますか。', ko: '편의점에 자주 가나요? 무엇을 사나요?', hint: 'はい、よくいきます。〜をかいます。', idealAnswer: 'はい、よくいきます。たいていコーヒーやおにぎりをかいます。' },
+      { jp: 'にほんのコンビニにいったことがありますか。どうおもいましたか。', ko: '일본 편의점에 가 본 적 있나요? 어떻게 생각했나요?', hint: 'はい、〜たことがあります。〜とおもいました。', idealAnswer: 'はい、いったことがあります。にほんのコンビニはとてもべんりでおいしいとおもいました。' },
+      { jp: 'にほんのコンビニのたべものでなにがいちばんすきですか。', ko: '일본 편의점 음식 중 어떤 것을 가장 좋아하나요?', hint: 'いちばんすきなのは〜です。', idealAnswer: 'いちばんすきなのはおにぎりです。やわらかくておいしいです。' },
+      { jp: 'あなたのくにのコンビニとにほんのコンビニはどこがちがいますか。', ko: '여러분 나라 편의점과 일본 편의점은 어디가 다른가요?', hint: '〜がちがいます。にほんのコンビニは〜ですが、〜のコンビニは〜です。', idealAnswer: 'にほんのコンビニはたべものがとてもおいしいです。でもかんこくのコンビニもべんりです。' },
+      { jp: 'コンビニにはどんなたべものがありますか。エピソードでならったものをおしえてください。', ko: '편의점에는 어떤 음식이 있나요? 이 에피소드에서 배운 것을 알려주세요.', hint: 'たとえば〜や〜があります。', idealAnswer: 'たとえばおにぎりやフライドチキンやフライドポテトなどがあります。' },
+      { jp: 'コンビニのコーヒーはどうですか。しゅんさんはどんなコーヒーがすきですか。', ko: '편의점 커피는 어떤가요? 슌은 어떤 커피를 좋아한다고 했나요?', hint: 'コンビニのコーヒーは〜です。しゅんさんは〜がすきです。', idealAnswer: 'コンビニのコーヒーはやすくておいしいです。しゅんさんはドリップコーヒーがすきです。' },
+      { jp: 'しゅんさんはどこにすんでいますか。にほんのコンビニについてどうおもっていますか。', ko: '슌은 어디 살고 있나요? 일본 편의점에 대해 어떻게 생각하나요?', hint: 'しゅんさんはニュージーランドにすんでいます。', idealAnswer: 'しゅんさんはニュージーランドにすんでいます。がいこくにいるとき、にほんのコンビニがこいしいです。' },
+    ],
+    shadows: [
+      { jp: 'にほんのコンビニにはなんでもあります。', reading: 'Nihon no konbini ni wa nandemo arimasu.', ko: '일본 편의점에는 뭐든지 있습니다.' },
+      { jp: 'コンビニのおにぎりのおこめはやわらかくて、いろいろなぐがあります。', reading: 'Konbini no onigiri no okome wa yawarakakute, iroirona gu ga arimasu.', ko: '편의점 주먹밥의 쌀은 부드럽고, 여러 속재료가 있습니다.' },
+      { jp: 'うめとしゃけはわたしのおきにいりです。', reading: 'Ume to shake wa watashi no okiniiri desu.', ko: '매실과 연어가 제 최애입니다.' },
+      { jp: 'ドリップコーヒーは１００えんでのむことができます。', reading: 'Dorippu koohii wa hyaku en de nomu koto ga dekimasu.', ko: '드립 커피는 100엔으로 마실 수 있습니다.' },
+      { jp: 'コンビニのすごいのはやすくてとてもおいしいことです。', reading: 'Konbini no sugoi no wa yasukute totemo oishii koto desu.', ko: '편의점의 대단한 점은 싸고 아주 맛있다는 것입니다.' },
+      { jp: 'あまりからだによくないけど、おいしいです。', reading: 'Amari karada ni yokunai kedo, oishii desu.', ko: '별로 몸에 좋지는 않지만 맛있습니다.' },
+      { jp: 'コンビニはにほんじゅうにありますから、すぐにみつけることができます。', reading: 'Konbini wa nihonjuu ni arimasu kara, sugu ni mitsukeru koto ga dekimasu.', ko: '편의점은 일본 전역에 있어서 바로 찾을 수 있습니다.' },
+      { jp: 'じつはいまにほんに、コンビニは５５６００てんもあります。', reading: 'Jitsu wa ima nihon ni, konbini wa goman-gosen-roppyaku ten mo arimasu.', ko: '사실 지금 일본에 편의점이 55,600개나 있습니다.' },
+      { jp: 'ほとんどりょうりをしなくてもいいですね。', reading: 'Hotondo ryouri o shinakute mo ii desu ne.', ko: '거의 요리를 하지 않아도 됩니다.' },
+      { jp: 'にほんにすんだら、ほとんどりょうりをしないとおもいます。', reading: 'Nihon ni sundara, hotondo ryouri o shinai to omoimasu.', ko: '일본에 살게 되면 거의 요리를 하지 않을 것 같습니다.' },
+      { jp: 'にほんでロードトリップにいくとき、なにもいりません。', reading: 'Nihon de roodotorippu ni iku toki, nani mo irimasen.', ko: '일본에서 로드트립 갈 때 아무것도 필요 없습니다.' },
+      { jp: 'ぜんぶコンビニでかうことができます。', reading: 'Zenbu konbini de kau koto ga dekimasu.', ko: '전부 편의점에서 살 수 있습니다.' },
+      { jp: 'いつもにほんにかえるとき、にほんのコンビニにかんどうします。', reading: 'Itsumo nihon ni kaeru toki, nihon no konbini ni kandou shimasu.', ko: '항상 일본에 돌아갈 때 일본 편의점에 감동합니다.' },
+      { jp: 'にほんにかえったら、まずコンビニのおにぎりをかってたべますね。', reading: 'Nihon ni kaettara, mazu konbini no onigiri o katte tabemasu ne.', ko: '일본에 돌아가면 먼저 편의점 주먹밥을 사서 먹습니다.' },
+      { jp: 'みなさんのくににはべんりなコンビニがありますか。', reading: 'Minasan no kuni ni wa benrina konbini ga arimasu ka.', ko: '여러분 나라에 편리한 편의점이 있나요?' },
+      { jp: 'わたしはがいこくにいるとき、いちばんこいしくなるのはにほんのコンビニです。', reading: 'Watashi wa gaikoku ni iru toki, ichiban koishiku naru no wa nihon no konbini desu.', ko: '외국에 있을 때 가장 그리워지는 것은 일본 편의점입니다.' },
+      { jp: 'とくにFamilymartのファミチキはおすすめです。', reading: 'Tokuni Familymart no famichiki wa osusume desu.', ko: '특히 패밀리마트의 파미치키를 추천합니다.' },
+      { jp: 'べんりでおいしいですから、よくコンビニのコーヒーをかいます。', reading: 'Benri de oishii desu kara, yoku konbini no koohii o kaimasu.', ko: '편리하고 맛있어서 자주 편의점 커피를 삽니다.' },
+    ],
+  },
+
+  29: {
+    topic: '일본의 물가 (일본은 비싼 나라인가?)',
+    questions: [
+      { jp: 'にほんはたかいくにだとおもいますか。どうしてですか。', ko: '일본은 비싼 나라라고 생각하나요? 왜 그렇게 생각하나요?', hint: 'わたしは〜とおもいます。どうしてかというと〜。', idealAnswer: 'なにをするかによってちがうとおもいます。レストランはやすいですが、くだものはたかいです。' },
+      { jp: 'かんこうきゃくにとって、にほんはやすいくにだとおもいますか。', ko: '관광객에게 일본은 싼 나라라고 생각하나요?', hint: 'はい/いいえ、〜とおもいます。とくに〜。', idealAnswer: 'はい、やすいとおもいます。とくにレストランがヨーロッパやアメリカとくらべてやすいです。' },
+      { jp: 'にほんのやすいレストランをしっていますか。どんなおみせがありますか。', ko: '일본의 싼 레스토랑을 아나요? 어떤 가게가 있나요?', hint: 'たとえば〜や〜があります。', idealAnswer: 'はい、よしのややはなまるうどんがあります。よしのやのぎゅうどんは３５０えんでたべることができます。' },
+      { jp: 'にほんでなにがいちばんたかいとおもいますか。', ko: '일본에서 무엇이 가장 비싸다고 생각하나요?', hint: 'いちばんたかいのは〜だとおもいます。', idealAnswer: 'いちばんたかいのはくだものだとおもいます。とくにメロンやいちごはとてもたかいです。' },
+      { jp: 'あなたのくにのぶっかと、にほんのぶっかをくらべてください。', ko: '당신 나라의 물가와 일본의 물가를 비교해 주세요.', hint: 'わたしのくにとくらべて、にほんは〜です。', idealAnswer: 'わたしのくにとくらべて、にほんのレストランはやすいです。でもくだものはたかいです。' },
+      { jp: 'にほんのくだものについてどうおもいますか。', ko: '일본 과일에 대해 어떻게 생각하나요?', hint: 'にほんのくだものは〜とおもいます。', idealAnswer: 'にほんのくだものはせかいでいちばんたかいとおもいます。きょねんのメロンは３００まんえんでした。' },
+      { jp: 'やちんについて、あなたのまちはどうですか。たかいですか、やすいですか。', ko: '집세에 대해, 당신 도시는 어떤가요? 비싼가요, 싼가요?', hint: 'わたしのまちのやちんは〜です。', idealAnswer: 'わたしのまちのやちんはたかいです。でもへやはちいさいです。いなかはやすいとおもいます。' },
+    ],
+    shadows: [
+      { jp: 'にほんはたかいくにだとおもいますか。', reading: 'Nihon wa takai kuni da to omoimasu ka.', ko: '일본은 비싼 나라라고 생각하나요?' },
+      { jp: 'それはなにをするかによってちがいます。', reading: 'Sore wa nani o suru ka ni yotte chigaimasu.', ko: '그것은 무엇을 하느냐에 따라 다릅니다.' },
+      { jp: 'かんこうきゃくにとって、にほんはとてもやすいくにだとおもいます。', reading: 'Kankoukyaku ni totte, nihon wa totemo yasui kuni da to omoimasu.', ko: '관광객에게 일본은 매우 싼 나라라고 생각합니다.' },
+      { jp: 'にほんのレストランはヨーロッパやアメリカとくらべて、ほんとうにやすいです。', reading: 'Nihon no resutoran wa yooroppa ya amerika to kurabete, hontou ni yasui desu.', ko: '일본 레스토랑은 유럽이나 미국과 비교해 정말 쌉니다.' },
+      { jp: 'たかいレストランもありますが、やすいせんたくしもあります。', reading: 'Takai resutoran mo arimasu ga, yasui sentakushi mo arimasu.', ko: '비싼 레스토랑도 있지만, 싼 선택지도 있습니다.' },
+      { jp: 'よしのやのぎゅうどんは３５０えんでたべることができます。', reading: 'Yoshinoya no gyuudon wa sanbyaku-gojuu en de taberu koto ga dekimasu.', ko: '요시노야 규동은 350엔에 먹을 수 있습니다.' },
+      { jp: 'にほんのやさいはとてもやすいです。', reading: 'Nihon no yasai wa totemo yasui desu.', ko: '일본 채소는 매우 쌉니다.' },
+      { jp: 'コンビニもやすくてべんりなせんたくしですよね。', reading: 'Konbini mo yasukute benrina sentakushi desu yo ne.', ko: '편의점도 싸고 편리한 선택지죠.' },
+      { jp: 'やちんはすむばしょによります。', reading: 'Yachin wa sumu basho ni yorimasu.', ko: '집세는 사는 곳에 따라 다릅니다.' },
+      { jp: 'おなじねだんですが、とうきょうのアパートのほうがもっとちいさいです。', reading: 'Onaji nedan desu ga, toukyou no apaato no hou ga motto chiisai desu.', ko: '같은 가격이지만 도쿄 아파트가 더 작습니다.' },
+      { jp: 'にほんのくだものはせかいのなかでいちばんたかいとおもいます。', reading: 'Nihon no kudamono wa sekai no naka de ichiban takai to omoimasu.', ko: '일본 과일은 세계에서 가장 비싸다고 생각합니다.' },
+      { jp: 'きょねんのいちばんたかいメロンは３００まんえんですよ。', reading: 'Kyonen no ichiban takai meron wa sanbyaku-man en desu yo.', ko: '작년 가장 비싼 멜론은 300만 엔이에요.' },
+      { jp: 'こうそくりょうきんはほんとうにたかいです。', reading: 'Kousoku ryoukin wa hontou ni takai desu.', ko: '고속도로 요금은 정말 비쌉니다.' },
+      { jp: 'にほんにはとてもたかいものと、とてもやすいものりょうほうがあります。', reading: 'Nihon ni wa totemo takai mono to, totemo yasui mono ryouhou ga arimasu.', ko: '일본에는 아주 비싼 것과 아주 싼 것 둘 다 있습니다.' },
+      { jp: 'にほんにいくときはきをつけてください。', reading: 'Nihon ni iku toki wa ki o tsukete kudasai.', ko: '일본에 갈 때는 조심하세요.' },
+    ],
+  },
+
+  31: {
+    topic: '지금부터 10년 후 (기술과 생활의 변화)',
+    questions: [
+      { jp: '１０ねんまえとくらべて、なにがいちばんかわったとおもいますか。', ko: '10년 전과 비교해 무엇이 가장 바뀌었다고 생각하나요?', hint: 'いちばんかわったのは〜だとおもいます。', idealAnswer: 'いちばんかわったのはスマートフォンだとおもいます。いまはスマホのないせいかつはかんがえられません。' },
+      { jp: 'むかしはどうやってりょこうのよやくをしましたか。', ko: '옛날에는 어떻게 여행 예약을 했나요?', hint: 'むかしは〜なければいけませんでした。', idealAnswer: 'むかしはあるいてホテルをさがして、ねだんをこうしょうしなければいけませんでした。' },
+      { jp: 'いまはともだちとどうやってコミュニケーションをとりますか。', ko: '지금은 친구와 어떻게 소통하나요?', hint: 'いまは〜でコミュニケーションをとります。', idealAnswer: 'いまはSNSのメッセージやコメントでコミュニケーションをとります。' },
+      { jp: 'みなさんは2030ねんにはどうなるとおもいますか。', ko: '여러분은 2030년에는 어떻게 될 거라 생각하나요?', hint: '2030ねんには〜とおもいます。', idealAnswer: '2030ねんにはロボットがくるまをうんてんするようになるかもしれません。' },
+      { jp: 'しょうらい、くるまはどうなるとおもいますか。', ko: '미래에 자동차는 어떻게 될 거라 생각하나요?', hint: 'しょうらい、くるまは〜とおもいます。', idealAnswer: 'しょうらいはロボットがうんてんするとおもいます。いまはでんきじどうしゃがにんきです。' },
+      { jp: 'テクノロジーがなかったじだいと、いまと、どちらがすきですか。', ko: '기술이 없던 시대와 지금, 어느 쪽이 좋나요?', hint: 'わたしは〜のほうがすきです。どうしてかというと〜。', idealAnswer: 'わたしはいまのほうがすきです。でもテクノロジーがなかったときのアドベンチャーもこいしいです。' },
+      { jp: 'あなたは１０ねんごになにをしていたいですか。', ko: '당신은 10년 후에 무엇을 하고 있고 싶나요?', hint: '１０ねんごは〜していたいです。', idealAnswer: '１０ねんごはあたらしいテクノロジーをつかって、もっとべんりにせいかつをしていたいです。' },
+    ],
+    shadows: [
+      { jp: 'この１０ねんでほんとうにたくさんのことがかわりました。', reading: 'Kono juu-nen de hontou ni takusan no koto ga kawarimashita.', ko: '이 10년 동안 정말 많은 것이 바뀌었습니다.' },
+      { jp: 'いまはスマートフォンのないせいかつはかんがえられません。', reading: 'Ima wa sumaatofon no nai seikatsu wa kangaeraremasen.', ko: '지금은 스마트폰 없는 생활은 생각할 수 없습니다.' },
+      { jp: 'ホテルはBooking.comでよやくしますよね。', reading: 'Hoteru wa Booking.com de yoyaku shimasu yo ne.', ko: '호텔은 Booking.com으로 예약하죠.' },
+      { jp: 'ひょうかをみて、いいホテルをえらぶことができます。', reading: 'Hyouka o mite, ii hoteru o erabu koto ga dekimasu.', ko: '평가를 보고 좋은 호텔을 고를 수 있습니다.' },
+      { jp: 'もっとかんたんにりょこうにいくことができるようになりました。', reading: 'Motto kantan ni ryokou ni iku koto ga dekiru you ni narimashita.', ko: '더 쉽게 여행 갈 수 있게 되었습니다.' },
+      { jp: 'みなさんは2030ねんにはどうなるとおもいますか。', reading: 'Minasan wa nisen-sanjuu-nen ni wa dou naru to omoimasu ka.', ko: '여러분은 2030년에는 어떻게 될 거라 생각하나요?' },
+      { jp: 'つぎの１０ねんはもっとかわるかもしれませんよね。', reading: 'Tsugi no juu-nen wa motto kawaru kamoshiremasen yo ne.', ko: '다음 10년은 더 바뀔지도 모르죠.' },
+      { jp: 'いまはSNSのコメントでコミュニケーションをとります。', reading: 'Ima wa SNS no komento de komyunikeeshon o torimasu.', ko: '지금은 SNS 댓글로 소통합니다.' },
+      { jp: 'むかしはともだちにあってはなしました。', reading: 'Mukashi wa tomodachi ni atte hanashimashita.', ko: '옛날에는 친구를 만나서 이야기했습니다.' },
+      { jp: 'いまはでんきじどうしゃがにんきになっています。', reading: 'Ima wa denki jidousha ga ninki ni natte imasu.', ko: '지금은 전기차가 인기입니다.' },
+      { jp: 'しょうらいはロボットがうんてんするかもしれません。', reading: 'Shourai wa robotto ga unten suru kamoshiremasen.', ko: '미래에는 로봇이 운전할지도 모릅니다.' },
+      { jp: 'あたらしいテクノロジーをつかわないと、あたらしいじだいについていけません。', reading: 'Atarashii tekunorojii o tsukawanai to, atarashii jidai ni tsuite ikemasen.', ko: '새 기술을 쓰지 않으면 새 시대를 따라갈 수 없습니다.' },
+      { jp: 'でもテクノロジーがなかったときがすこしこいしいですよね。', reading: 'Demo tekunorojii ga nakatta toki ga sukoshi koishii desu yo ne.', ko: '하지만 기술이 없던 때가 조금 그립죠.' },
+      { jp: '１０ねんごはいまより、もっとせいかつがべんりになるとおもいます。', reading: 'Juu-nen go wa ima yori, motto seikatsu ga benri ni naru to omoimasu.', ko: '10년 후는 지금보다 생활이 더 편리해질 거라 생각합니다.' },
+      { jp: 'まいにちがアドベンチャーでした。', reading: 'Mainichi ga adobenchaa deshita.', ko: '매일이 모험이었습니다.' },
+    ],
+  },
+};
+const EPISODE_ORDER = [28, 29, 31];
+
+// ════════════ 상태 ════════════
+let QUESTIONS = [];
+let SHADOW_SENTENCES = [];
+let currentEpisode = null;
+let currentTopic = '';
+let currentMode = 'conversation';
+let currentQIdx = 0;
+let shadowIdx = 0;
+let isRecording = false;
+let shadowRecording = false;
+let qResults = [];
+let convRec = null;
+let shadowRec = null;
+
+// ── API 키 관리 ──
+const API_KEY_STORE = 'anthropic_api_key';
+function getApiKey() { return localStorage.getItem(API_KEY_STORE) || ''; }
+function updateKeyBtn() {
+  const btn = document.getElementById('key-btn');
+  if (btn) btn.textContent = getApiKey() ? '🔑 키 설정됨' : '🔑 API 키 필요';
+}
+function openKeySettings() {
+  const cur = getApiKey();
+  const masked = cur ? cur.slice(0, 10) + '…' + cur.slice(-4) : '(없음)';
+  const input = window.prompt(
+    'Anthropic API 키를 입력하세요 (sk-ant-... 로 시작).\n' +
+    '이 키는 이 브라우저에만 저장되고, 분석할 때 Anthropic 서버로만 전송됩니다.\n' +
+    '비우고 확인하면 삭제됩니다.\n\n현재: ' + masked,
+    cur
+  );
+  if (input === null) return;
+  const v = input.trim();
+  if (v === '') localStorage.removeItem(API_KEY_STORE);
+  else localStorage.setItem(API_KEY_STORE, v);
+  updateKeyBtn();
+}
+async function callClaude(prompt, maxTokens) {
+  const key = getApiKey();
+  if (!key) throw new Error('no-key');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error('api-' + res.status + ': ' + t.slice(0, 200));
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
+// ── 홈 / 에피소드 선택 ──
+function init() {
+  updateKeyBtn();
+  if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+    document.getElementById('no-speech-notice').style.display = 'block';
+  }
+  renderHome();
+}
+
+function renderHome() {
+  const grid = document.getElementById('episode-grid');
+  grid.innerHTML = '';
+  EPISODE_ORDER.forEach((num) => {
+    const ep = EPISODES[num];
+    const card = document.createElement('div');
+    card.className = 'episode-card';
+    card.onclick = () => selectEpisode(num);
+    card.innerHTML = `<div class="ep-no">No.${num}</div><div class="ep-meta">회화 ${ep.questions.length} · 쉐도잉 ${ep.shadows.length}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function selectEpisode(num) {
+  currentEpisode = num;
+  const ep = EPISODES[num];
+  QUESTIONS = ep.questions;
+  SHADOW_SENTENCES = ep.shadows;
+  currentTopic = ep.topic;
+  currentQIdx = 0;
+  shadowIdx = 0;
+  qResults = new Array(QUESTIONS.length).fill(null);
+
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('study-screen').style.display = 'flex';
+  document.getElementById('study-screen').style.flexDirection = 'column';
+  document.getElementById('study-screen').style.gap = '16px';
+  document.getElementById('back-btn').classList.add('show');
+  document.getElementById('header-mode').style.display = 'block';
+  document.getElementById('header-ep').textContent = `No.${num}`;
+  document.getElementById('header-title').textContent = '스피킹 연습';
+
+  renderShadow();
+  setMode('conversation');
+}
+
+function backToHome() {
+  if (isRecording && convRec) { try { convRec.stop(); } catch (e) {} }
+  if (shadowRecording && shadowRec) { try { shadowRec.stop(); } catch (e) {} }
+  document.getElementById('study-screen').style.display = 'none';
+  document.getElementById('home-screen').style.display = 'block';
+  document.getElementById('back-btn').classList.remove('show');
+  document.getElementById('header-mode').style.display = 'none';
+  document.getElementById('header-ep').textContent = '스피킹 연습';
+  document.getElementById('header-title').textContent = '에피소드 선택';
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  const convArea = document.getElementById('conv-area');
+  const shadowArea = document.getElementById('shadow-area');
+  convArea.style.display = mode === 'conversation' ? 'flex' : 'none';
+  convArea.style.flexDirection = 'column';
+  convArea.style.gap = '14px';
+  shadowArea.style.display = mode === 'shadowing' ? 'flex' : 'none';
+  shadowArea.style.flexDirection = 'column';
+  shadowArea.style.gap = '14px';
+  document.getElementById('mode-conv').classList.toggle('active', mode === 'conversation');
+  document.getElementById('mode-shadow').classList.toggle('active', mode === 'shadowing');
+  document.getElementById('header-mode').textContent = mode === 'conversation' ? '💬 회화 연습' : '🎙 쉐도잉';
+  if (mode === 'conversation') loadQuestion();
+  renderProgressDots();
+}
+
+function loadQuestion() {
+  const q = QUESTIONS[currentQIdx];
+  document.getElementById('question-jp').textContent = q.jp;
+  document.getElementById('question-ko').textContent = q.ko;
+  document.getElementById('question-hint').innerHTML = `<strong>힌트:</strong> ${q.hint}`;
+}
+
+function renderProgressDots() {
+  const wrap = document.getElementById('progress-dots');
+  if (currentMode === 'shadowing') { wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '';
+  QUESTIONS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === currentQIdx ? ' current' : qResults[i] ? ` done-${qResults[i]}` : '');
+    wrap.appendChild(d);
+  });
+}
+
+function renderShadow() {
+  const s = SHADOW_SENTENCES[shadowIdx];
+  document.getElementById('shadow-sentence').textContent = s.jp;
+  document.getElementById('shadow-reading').textContent = s.reading;
+  document.getElementById('shadow-ko').textContent = s.ko;
+  document.getElementById('shadow-counter').textContent = `${shadowIdx + 1} / ${SHADOW_SENTENCES.length}`;
+  document.getElementById('shadow-transcript').textContent = '마이크 버튼을 눌러 말해보세요...';
+  document.getElementById('shadow-transcript').className = 'transcript-box';
+  document.getElementById('shadow-feedback-card').className = 'feedback-card';
+  resetBtn('shadow-record-btn', 'shadow-record-hint', '버튼을 누르고 따라 말해보세요');
+}
+
+function prevShadow() { shadowIdx = (shadowIdx - 1 + SHADOW_SENTENCES.length) % SHADOW_SENTENCES.length; renderShadow(); }
+function nextShadow() { shadowIdx = (shadowIdx + 1) % SHADOW_SENTENCES.length; renderShadow(); }
+
+function resetBtn(btnId, hintId, hintText) {
+  const btn = document.getElementById(btnId);
+  btn.className = 'record-btn';
+  btn.textContent = '🎤';
+  const hint = document.getElementById(hintId);
+  hint.className = 'record-hint';
+  hint.textContent = hintText;
+}
+
+function startSpeech(lang, onResult, onEnd, onError) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const rec = new SR();
+  rec.lang = lang;
+  rec.interimResults = true;
+  rec.continuous = true;
+  rec.onresult = onResult;
+  rec.onend = onEnd;
+  rec.onerror = onError;
+  rec.start();
+  return rec;
+}
+
+// ── 회화 ──
+function toggleRecording() {
+  if (isRecording) { if (convRec) { try { convRec.stop(); } catch (e) {} } return; }
+  isRecording = true;
+  const transcriptEl = document.getElementById('transcript');
+  const btn = document.getElementById('record-btn');
+  const hint = document.getElementById('record-hint');
+  transcriptEl.textContent = '듣는 중...';
+  transcriptEl.className = 'transcript-box';
+  btn.className = 'record-btn recording';
+  btn.textContent = '⏹';
+  hint.className = 'record-hint active';
+  hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
+
+  let finalText = '';
+
+  convRec = startSpeech('ja-JP',
+    (e) => {
+      finalText = '';
+      let interim = '';
+      for (let r of e.results) {
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      transcriptEl.textContent = finalText || interim || '...';
+      transcriptEl.className = 'transcript-box has-text';
+    },
+    () => {
+      isRecording = false;
+      const text = finalText || transcriptEl.textContent;
+      if (text && !['듣는 중...', '...'].includes(text)) {
+        btn.className = 'record-btn processing';
+        btn.textContent = '⏳';
+        hint.className = 'record-hint';
+        hint.textContent = 'AI가 분석 중입니다...';
+        analyzeAnswer(text);
+      } else {
+        resetBtn('record-btn', 'record-hint', '버튼을 누르고 일본어로 말해보세요');
+        transcriptEl.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
+      }
+    },
+    (e) => {
+      isRecording = false;
+      resetBtn('record-btn', 'record-hint', '버튼을 누르고 일본어로 말해보세요');
+      if (e.error !== 'aborted') transcriptEl.textContent = e.error === 'no-speech' ? '소리가 감지되지 않았어요.' : `오류: ${e.error}`;
+    }
+  );
+}
+
+async function analyzeAnswer(userText) {
+  const q = QUESTIONS[currentQIdx];
+  const prompt = `당신은 일본어 회화 선생님입니다. 학생의 대답을 분석해주세요.
+에피소드 주제: ${currentTopic}
+질문(일본어): ${q.jp}
+질문(한국어): ${q.ko}
+모범 답안: ${q.idealAnswer}
+학생 대답: ${userText}
+JSON으로만 응답(마크다운 없이):
+{"score":"great|ok|retry","scoreLabel":"짧은 한국어 평가","feedback":"한국어 2-3문장 피드백","correctedJp":"자연스러운 일본어(없으면 빈 문자열)","correctedKo":"위 해석","nextQuestion":"이어지는 일본어 질문","nextQuestionKo":"한국어 해석"}`;
+
+  try {
+    const raw = await callClaude(prompt, 1000);
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    renderConvFeedback(result, userText);
+  } catch (err) {
+    const noKey = String(err.message).includes('no-key');
+    renderConvFeedback({
+      score: 'ok',
+      scoreLabel: noKey ? 'API 키 필요' : '분석 오류',
+      feedback: noKey
+        ? '오른쪽 위 🔑 버튼을 눌러 Anthropic API 키를 입력하면 AI 피드백을 받을 수 있어요. 우선 아래 모범답안과 비교해보세요.'
+        : '분석에 실패했어요 (' + err.message + '). 아래 모범답안과 비교해보세요.',
+      correctedJp: q.idealAnswer, correctedKo: '(모범답안)'
+    }, userText);
+  }
+}
+
+function renderConvFeedback(result, userText) {
+  qResults[currentQIdx] = result.score;
+  renderProgressDots();
+  document.getElementById('score-dot').className = `fb-score-dot ${result.score}`;
+  document.getElementById('score-label').textContent = result.scoreLabel;
+  document.getElementById('feedback-body').innerHTML = `
+    <div><div class="fb-section-label">📝 피드백</div><div class="fb-text">${result.feedback}</div></div>
+    <div class="compare-row">
+      <div class="compare-item"><div class="compare-tag you">내 대답</div><div class="compare-val">${userText}</div></div>
+      ${result.correctedJp ? `<div class="compare-item"><div class="compare-tag ideal">이렇게도</div><div class="compare-val">${result.correctedJp}<div style="font-size:12px;color:var(--text-muted);margin-top:2px">${result.correctedKo}</div></div></div>` : ''}
+    </div>
+    ${result.nextQuestion ? `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px"><div class="fb-section-label">💬 AI의 다음 질문</div><div class="fb-reply-jp">${result.nextQuestion}</div><div class="fb-reply-ko">${result.nextQuestionKo}</div></div>` : ''}
+  `;
+  document.getElementById('feedback-card').className = 'feedback-card show';
+  document.getElementById('next-btn').className = 'next-q-btn show';
+  resetBtn('record-btn', 'record-hint', '버튼을 누르고 일본어로 말해보세요');
+}
+
+function nextQuestion() {
+  currentQIdx = (currentQIdx + 1) % QUESTIONS.length;
+  loadQuestion();
+  document.getElementById('transcript').textContent = '마이크 버튼을 눌러 말해보세요...';
+  document.getElementById('transcript').className = 'transcript-box';
+  document.getElementById('feedback-card').className = 'feedback-card';
+  document.getElementById('next-btn').className = 'next-q-btn';
+  resetBtn('record-btn', 'record-hint', '버튼을 누르고 일본어로 말해보세요');
+  renderProgressDots();
+}
+
+// ── 쉐도잉 ──
+function toggleShadowRecording() {
+  if (shadowRecording) { if (shadowRec) { try { shadowRec.stop(); } catch (e) {} } return; }
+  shadowRecording = true;
+  const el = document.getElementById('shadow-transcript');
+  const btn = document.getElementById('shadow-record-btn');
+  const hint = document.getElementById('shadow-record-hint');
+  el.textContent = '듣는 중...';
+  el.className = 'transcript-box';
+  btn.className = 'record-btn recording';
+  btn.textContent = '⏹';
+  hint.className = 'record-hint active';
+  hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
+
+  let finalText = '';
+
+  shadowRec = startSpeech('ja-JP',
+    (e) => {
+      finalText = '';
+      let interim = '';
+      for (let r of e.results) {
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      el.textContent = finalText || interim || '...';
+      el.className = 'transcript-box has-text';
+    },
+    () => {
+      shadowRecording = false;
+      const text = finalText || el.textContent;
+      if (text && !['듣는 중...', '...'].includes(text)) {
+        btn.className = 'record-btn processing';
+        btn.textContent = '⏳';
+        hint.className = 'record-hint';
+        hint.textContent = 'AI가 분석 중입니다...';
+        analyzeShadowing(text);
+      } else {
+        resetBtn('shadow-record-btn', 'shadow-record-hint', '버튼을 누르고 따라 말해보세요');
+        el.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
+      }
+    },
+    (e) => {
+      shadowRecording = false;
+      resetBtn('shadow-record-btn', 'shadow-record-hint', '버튼을 누르고 따라 말해보세요');
+      if (e.error !== 'aborted') el.textContent = e.error === 'no-speech' ? '소리가 감지되지 않았어요.' : `오류: ${e.error}`;
+    }
+  );
+}
+
+async function analyzeShadowing(userText) {
+  const target = SHADOW_SENTENCES[shadowIdx];
+  const prompt = `일본어 쉐도잉 발음을 평가해주세요.
+목표: ${target.jp}
+학생: ${userText}
+JSON으로만 응답:
+{"score":"great|ok|retry","scoreLabel":"한국어 짧은 평가","similarity":"유사도 설명","wrongParts":"다른 부분(없으면 빈 문자열)","tip":"발음 팁"}`;
+
+  try {
+    const raw = await callClaude(prompt, 600);
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    document.getElementById('shadow-score-dot').className = `fb-score-dot ${result.score}`;
+    document.getElementById('shadow-score-label').textContent = result.scoreLabel;
+    document.getElementById('shadow-feedback-body').innerHTML = `
+      <div class="compare-row">
+        <div class="compare-item"><div class="compare-tag ideal">목표</div><div class="compare-val">${target.jp}</div></div>
+        <div class="compare-item"><div class="compare-tag you">내 발음</div><div class="compare-val">${userText}</div></div>
+      </div>
+      <div><div class="fb-section-label">📊 유사도</div><div class="fb-text">${result.similarity}</div></div>
+      ${result.wrongParts ? `<div><div class="fb-section-label">⚠️ 다른 부분</div><div class="fb-text">${result.wrongParts}</div></div>` : ''}
+      <div><div class="fb-section-label">💡 팁</div><div class="fb-text">${result.tip}</div></div>
+    `;
+  } catch (err) {
+    const noKey = String(err.message).includes('no-key');
+    document.getElementById('shadow-score-dot').className = 'fb-score-dot';
+    document.getElementById('shadow-score-label').textContent = noKey ? 'API 키 필요' : '분석 오류';
+    document.getElementById('shadow-feedback-body').innerHTML = `
+      <div class="compare-row">
+        <div class="compare-item"><div class="compare-tag ideal">목표</div><div class="compare-val">${target.jp}</div></div>
+        <div class="compare-item"><div class="compare-tag you">내 발음</div><div class="compare-val">${userText}</div></div>
+      </div>
+      <div class="fb-text">${noKey ? '오른쪽 위 🔑 버튼에서 Anthropic API 키를 입력하면 AI 발음 평가를 받을 수 있어요.' : '분석에 실패했어요 (' + err.message + '). 목표 문장과 비교해보세요.'}</div>`;
+  }
+  document.getElementById('shadow-feedback-card').className = 'feedback-card show';
+  resetBtn('shadow-record-btn', 'shadow-record-hint', '버튼을 누르고 따라 말해보세요');
+}
+
+init();
+</script>
+</body>
+</html>
