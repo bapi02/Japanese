@@ -261,6 +261,8 @@ let shadowIdx = 0;
 let isRecording = false;
 let shadowRecording = false;
 let qResults = [];
+let convRec = null;
+let shadowRec = null;
 
 function init() {
   if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
@@ -337,7 +339,7 @@ function startSpeech(lang, onResult, onEnd, onError) {
   const rec = new SR();
   rec.lang = lang;
   rec.interimResults = true;
-  rec.continuous = false;
+  rec.continuous = true;
   rec.onresult = onResult;
   rec.onend = onEnd;
   rec.onerror = onError;
@@ -347,7 +349,7 @@ function startSpeech(lang, onResult, onEnd, onError) {
 
 // ── 회화 ──
 function toggleRecording() {
-  if (isRecording) return;
+  if (isRecording) { if (convRec) { try { convRec.stop(); } catch (e) {} } return; }
   isRecording = true;
   const transcriptEl = document.getElementById('transcript');
   const btn = document.getElementById('record-btn');
@@ -355,13 +357,13 @@ function toggleRecording() {
   transcriptEl.textContent = '듣는 중...';
   transcriptEl.className = 'transcript-box';
   btn.className = 'record-btn recording';
-  btn.textContent = '🔴';
+  btn.textContent = '⏹';
   hint.className = 'record-hint active';
-  hint.textContent = '말해주세요 — 말이 끝나면 자동으로 분석합니다';
+  hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
 
   let finalText = '';
 
-  startSpeech('ja-JP',
+  convRec = startSpeech('ja-JP',
     (e) => {
       finalText = '';
       let interim = '';
@@ -450,7 +452,7 @@ function nextQuestion() {
 
 // ── 쉐도잉 ──
 function toggleShadowRecording() {
-  if (shadowRecording) return;
+  if (shadowRecording) { if (shadowRec) { try { shadowRec.stop(); } catch (e) {} } return; }
   shadowRecording = true;
   const el = document.getElementById('shadow-transcript');
   const btn = document.getElementById('shadow-record-btn');
@@ -458,13 +460,13 @@ function toggleShadowRecording() {
   el.textContent = '듣는 중...';
   el.className = 'transcript-box';
   btn.className = 'record-btn recording';
-  btn.textContent = '🔴';
+  btn.textContent = '⏹';
   hint.className = 'record-hint active';
-  hint.textContent = '말해주세요 — 말이 끝나면 자동으로 분석합니다';
+  hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
 
   let finalText = '';
 
-  startSpeech('ja-JP',
+  shadowRec = startSpeech('ja-JP',
     (e) => {
       finalText = '';
       let interim = '';
