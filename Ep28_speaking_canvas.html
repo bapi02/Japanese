@@ -142,7 +142,10 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
     <div class="ep">EP 28 · コンビニ</div>
     <div class="title">스피킹 연습</div>
   </div>
-  <div class="mode-badge" id="header-mode">모드 선택 중</div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="mode-badge" id="key-btn" onclick="openKeySettings()" style="cursor:pointer;font-family:inherit;">🔑 API 키</button>
+    <div class="mode-badge" id="header-mode">모드 선택 중</div>
+  </div>
 </header>
 
 <main>
@@ -264,7 +267,51 @@ let qResults = [];
 let convRec = null;
 let shadowRec = null;
 
+// ── API 키 관리 ──
+const API_KEY_STORE = 'anthropic_api_key';
+function getApiKey() { return localStorage.getItem(API_KEY_STORE) || ''; }
+function updateKeyBtn() {
+  const btn = document.getElementById('key-btn');
+  if (btn) btn.textContent = getApiKey() ? '🔑 키 설정됨' : '🔑 API 키 필요';
+}
+function openKeySettings() {
+  const cur = getApiKey();
+  const masked = cur ? cur.slice(0, 10) + '…' + cur.slice(-4) : '(없음)';
+  const input = window.prompt(
+    'Anthropic API 키를 입력하세요 (sk-ant-... 로 시작).\n' +
+    '이 키는 이 브라우저에만 저장되고, 분석할 때 Anthropic 서버로만 전송됩니다.\n' +
+    '비우고 확인하면 삭제됩니다.\n\n현재: ' + masked,
+    cur
+  );
+  if (input === null) return;
+  const v = input.trim();
+  if (v === '') localStorage.removeItem(API_KEY_STORE);
+  else localStorage.setItem(API_KEY_STORE, v);
+  updateKeyBtn();
+}
+async function callClaude(prompt, maxTokens) {
+  const key = getApiKey();
+  if (!key) throw new Error('no-key');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error('api-' + res.status + ': ' + t.slice(0, 200));
+  }
+  const data = await res.json();
+  return data.content[0].text;
+}
+
 function init() {
+  updateKeyBtn();
   if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
     document.getElementById('no-speech-notice').style.display = 'block';
   }
@@ -408,16 +455,19 @@ JSON으로만 응답(마크다운 없이):
 {"score":"great|ok|retry","scoreLabel":"짧은 한국어 평가","feedback":"한국어 2-3문장 피드백","correctedJp":"자연스러운 일본어(없으면 빈 문자열)","correctedKo":"위 해석","nextQuestion":"이어지는 일본어 질문","nextQuestionKo":"한국어 해석"}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1000, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    const result = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+    const raw = await callClaude(prompt, 1000);
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
     renderConvFeedback(result, userText);
-  } catch {
-    renderConvFeedback({ score: 'ok', scoreLabel: '분석 완료', feedback: '네트워크 오류. 직접 비교해보세요.', correctedJp: q.idealAnswer, correctedKo: '' }, userText);
+  } catch (err) {
+    const noKey = String(err.message).includes('no-key');
+    renderConvFeedback({
+      score: 'ok',
+      scoreLabel: noKey ? 'API 키 필요' : '분석 오류',
+      feedback: noKey
+        ? '오른쪽 위 🔑 버튼을 눌러 Anthropic API 키를 입력하면 AI 피드백을 받을 수 있어요. 우선 아래 모범답안과 비교해보세요.'
+        : '분석에 실패했어요 (' + err.message + '). 아래 모범답안과 비교해보세요.',
+      correctedJp: q.idealAnswer, correctedKo: '(모범답안)'
+    }, userText);
   }
 }
 
@@ -508,13 +558,8 @@ JSON으로만 응답:
 {"score":"great|ok|retry","scoreLabel":"한국어 짧은 평가","similarity":"유사도 설명","wrongParts":"다른 부분(없으면 빈 문자열)","tip":"발음 팁"}`;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{ role: 'user', content: prompt }] })
-    });
-    const data = await res.json();
-    const result = JSON.parse(data.content[0].text.replace(/```json|```/g, '').trim());
+    const raw = await callClaude(prompt, 600);
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
     document.getElementById('shadow-score-dot').className = `fb-score-dot ${result.score}`;
     document.getElementById('shadow-score-label').textContent = result.scoreLabel;
     document.getElementById('shadow-feedback-body').innerHTML = `
@@ -526,12 +571,16 @@ JSON으로만 응답:
       ${result.wrongParts ? `<div><div class="fb-section-label">⚠️ 다른 부분</div><div class="fb-text">${result.wrongParts}</div></div>` : ''}
       <div><div class="fb-section-label">💡 팁</div><div class="fb-text">${result.tip}</div></div>
     `;
-  } catch {
+  } catch (err) {
+    const noKey = String(err.message).includes('no-key');
+    document.getElementById('shadow-score-dot').className = 'fb-score-dot';
+    document.getElementById('shadow-score-label').textContent = noKey ? 'API 키 필요' : '분석 오류';
     document.getElementById('shadow-feedback-body').innerHTML = `
       <div class="compare-row">
         <div class="compare-item"><div class="compare-tag ideal">목표</div><div class="compare-val">${target.jp}</div></div>
         <div class="compare-item"><div class="compare-tag you">내 발음</div><div class="compare-val">${userText}</div></div>
-      </div>`;
+      </div>
+      <div class="fb-text">${noKey ? '오른쪽 위 🔑 버튼에서 Anthropic API 키를 입력하면 AI 발음 평가를 받을 수 있어요.' : '분석에 실패했어요 (' + err.message + '). 목표 문장과 비교해보세요.'}</div>`;
   }
   document.getElementById('shadow-feedback-card').className = 'feedback-card show';
   resetBtn('shadow-record-btn', 'shadow-record-hint', '버튼을 누르고 따라 말해보세요');
