@@ -69,6 +69,23 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .episode-card:hover { border-color: var(--accent); transform: translateY(-2px); background: #1e1b3a; }
 .episode-card .ep-no { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
 .episode-card .ep-meta { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); margin: 20px 2px 2px; }
+
+/* ── 단어장 ── */
+.deck-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.deck-toolbar .count { font-size: 12px; color: var(--text-muted); }
+.toggle-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 12px; color: var(--text-dim); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.toggle-btn.on { border-color: var(--accent); color: var(--text); background: #1e1b3a; }
+.vocab-list { display: flex; flex-direction: column; gap: 10px; }
+.vocab-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+.vocab-jp { font-family: var(--font-jp); font-size: 30px; font-weight: 700; min-width: 54px; text-align: center; }
+.vocab-card.word .vocab-jp { font-size: 20px; min-width: auto; text-align: left; }
+.vocab-info { flex: 1; min-width: 0; }
+.vocab-reading { font-size: 13px; color: var(--accent2); }
+.vocab-ko { font-size: 15px; margin-top: 2px; }
+.vocab-ex { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-family: var(--font-jp); }
+.vocab-card.hide { cursor: pointer; }
+.vocab-card.hide .vocab-reading, .vocab-card.hide .vocab-ko, .vocab-card.hide .vocab-ex { visibility: hidden; }
 
 .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px 14px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); }
@@ -168,13 +185,25 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 </header>
 
 <main>
-  <!-- 홈: 에피소드 선택 -->
+  <!-- 홈: 에피소드 / 단어장 선택 -->
   <div id="home-screen">
     <div class="home-intro">
-      <h1>스피킹 연습</h1>
-      <p>연습할 에피소드를 선택하세요</p>
+      <h1>일본어 연습</h1>
+      <p>에피소드 또는 기초 단어·칸지를 선택하세요</p>
     </div>
+    <div class="section-label">📻 에피소드 (스피킹)</div>
     <div class="episode-grid" id="episode-grid"></div>
+    <div class="section-label">📚 기초 단어 · 칸지 (N5 · N4)</div>
+    <div class="episode-grid" id="deck-grid"></div>
+  </div>
+
+  <!-- 단어장 화면 -->
+  <div id="deck-screen" style="display:none;">
+    <div class="deck-toolbar">
+      <div class="count" id="deck-count"></div>
+      <button class="toggle-btn" id="hide-toggle" onclick="toggleHideMeaning()">🙈 뜻 가리기</button>
+    </div>
+    <div class="vocab-list" id="vocab-list"></div>
   </div>
 
   <!-- 학습 화면 -->
@@ -353,6 +382,203 @@ const EPISODES = {
 };
 const EPISODE_ORDER = [28, 29, 31];
 
+// ════════════ 기초 단어 · 칸지 (N5 · N4) ════════════
+const DECKS = {
+  n5k: { title: 'N5 칸지', type: 'kanji', items: [
+    { jp: '日', reading: 'にち / ひ', ko: '날, 해', ex: '日曜日（にちようび）일요일' },
+    { jp: '月', reading: 'げつ / つき', ko: '달, 월', ex: '月曜日（げつようび）월요일' },
+    { jp: '火', reading: 'か / ひ', ko: '불', ex: '火曜日（かようび）화요일' },
+    { jp: '水', reading: 'すい / みず', ko: '물', ex: '水曜日（すいようび）수요일' },
+    { jp: '木', reading: 'もく / き', ko: '나무', ex: '木曜日（もくようび）목요일' },
+    { jp: '金', reading: 'きん / かね', ko: '금, 돈', ex: 'お金（おかね）돈' },
+    { jp: '土', reading: 'ど / つち', ko: '흙', ex: '土曜日（どようび）토요일' },
+    { jp: '一', reading: 'いち / ひと', ko: '하나, 1', ex: '一つ（ひとつ）하나' },
+    { jp: '二', reading: 'に / ふた', ko: '둘, 2', ex: '二つ（ふたつ）둘' },
+    { jp: '三', reading: 'さん / みっ', ko: '셋, 3', ex: '三つ（みっつ）셋' },
+    { jp: '四', reading: 'し / よん', ko: '넷, 4', ex: '四月（しがつ）4월' },
+    { jp: '五', reading: 'ご / いつ', ko: '다섯, 5', ex: '五分（ごふん）5분' },
+    { jp: '六', reading: 'ろく / むっ', ko: '여섯, 6', ex: '六時（ろくじ）6시' },
+    { jp: '七', reading: 'しち / なな', ko: '일곱, 7', ex: '七月（しちがつ）7월' },
+    { jp: '八', reading: 'はち / やっ', ko: '여덟, 8', ex: '八時（はちじ）8시' },
+    { jp: '九', reading: 'きゅう / く', ko: '아홉, 9', ex: '九時（くじ）9시' },
+    { jp: '十', reading: 'じゅう / とお', ko: '열, 10', ex: '十分（じゅっぷん）10분' },
+    { jp: '百', reading: 'ひゃく', ko: '백, 100', ex: '三百（さんびゃく）300' },
+    { jp: '千', reading: 'せん', ko: '천, 1000', ex: '千円（せんえん）천 엔' },
+    { jp: '万', reading: 'まん', ko: '만, 10000', ex: '一万（いちまん）만' },
+    { jp: '円', reading: 'えん', ko: '엔(화폐), 원', ex: '百円（ひゃくえん）100엔' },
+    { jp: '時', reading: 'じ / とき', ko: '시, 때', ex: '何時（なんじ）몇 시' },
+    { jp: '分', reading: 'ふん / ぷん', ko: '분', ex: '五分（ごふん）5분' },
+    { jp: '今', reading: 'こん / いま', ko: '지금, 이번', ex: '今日（きょう）오늘' },
+    { jp: '人', reading: 'じん / ひと', ko: '사람', ex: '日本人（にほんじん）일본인' },
+    { jp: '大', reading: 'だい / おお', ko: '크다', ex: '大きい（おおきい）크다' },
+    { jp: '小', reading: 'しょう / ちい', ko: '작다', ex: '小さい（ちいさい）작다' },
+    { jp: '上', reading: 'じょう / うえ', ko: '위', ex: '上（うえ）위' },
+    { jp: '下', reading: 'か / した', ko: '아래', ex: '下（した）아래' },
+    { jp: '中', reading: 'ちゅう / なか', ko: '가운데, 안', ex: '中（なか）안' },
+    { jp: '山', reading: 'さん / やま', ko: '산', ex: '山（やま）산' },
+    { jp: '川', reading: 'せん / かわ', ko: '강', ex: '川（かわ）강' },
+    { jp: '口', reading: 'こう / くち', ko: '입', ex: '入口（いりぐち）입구' },
+    { jp: '目', reading: 'もく / め', ko: '눈', ex: '目（め）눈' },
+    { jp: '手', reading: 'しゅ / て', ko: '손', ex: '手（て）손' },
+    { jp: '足', reading: 'そく / あし', ko: '발, 다리', ex: '足（あし）발' },
+    { jp: '食', reading: 'しょく / た', ko: '먹다', ex: '食べる（たべる）먹다' },
+    { jp: '飲', reading: 'いん / の', ko: '마시다', ex: '飲む（のむ）마시다' },
+    { jp: '行', reading: 'こう / い', ko: '가다', ex: '行く（いく）가다' },
+    { jp: '来', reading: 'らい / く', ko: '오다', ex: '来る（くる）오다' },
+    { jp: '見', reading: 'けん / み', ko: '보다', ex: '見る（みる）보다' },
+    { jp: '聞', reading: 'ぶん / き', ko: '듣다, 묻다', ex: '聞く（きく）듣다' },
+    { jp: '話', reading: 'わ / はな', ko: '말하다, 이야기', ex: '話す（はなす）말하다' },
+    { jp: '読', reading: 'どく / よ', ko: '읽다', ex: '読む（よむ）읽다' },
+    { jp: '書', reading: 'しょ / か', ko: '쓰다', ex: '書く（かく）쓰다' },
+    { jp: '買', reading: 'ばい / か', ko: '사다', ex: '買う（かう）사다' },
+    { jp: '学', reading: 'がく / まな', ko: '배우다, 학문', ex: '学生（がくせい）학생' },
+    { jp: '校', reading: 'こう', ko: '학교', ex: '学校（がっこう）학교' },
+    { jp: '先', reading: 'せん / さき', ko: '먼저, 앞', ex: '先生（せんせい）선생님' },
+    { jp: '生', reading: 'せい / い', ko: '살다, 태어나다', ex: '学生（がくせい）학생' },
+  ] },
+  n5w: { title: 'N5 단어', type: 'word', items: [
+    { jp: 'おはよう', reading: 'ohayou', ko: '좋은 아침 (인사)', ex: '' },
+    { jp: 'こんにちは', reading: 'konnichiwa', ko: '안녕하세요 (낮 인사)', ex: '' },
+    { jp: 'こんばんは', reading: 'konbanwa', ko: '안녕하세요 (밤 인사)', ex: '' },
+    { jp: 'ありがとう', reading: 'arigatou', ko: '고맙습니다', ex: '' },
+    { jp: 'すみません', reading: 'sumimasen', ko: '죄송합니다 / 실례합니다', ex: '' },
+    { jp: 'さようなら', reading: 'sayounara', ko: '안녕히 가세요', ex: '' },
+    { jp: 'おやすみなさい', reading: 'oyasuminasai', ko: '안녕히 주무세요', ex: '' },
+    { jp: 'はい / いいえ', reading: 'hai / iie', ko: '네 / 아니요', ex: '' },
+    { jp: '水', reading: 'mizu', ko: '물', ex: '' },
+    { jp: 'お茶', reading: 'ocha', ko: '차', ex: '' },
+    { jp: 'ご飯', reading: 'gohan', ko: '밥, 식사', ex: '' },
+    { jp: '朝 / 昼 / 夜', reading: 'asa / hiru / yoru', ko: '아침 / 낮 / 밤', ex: '' },
+    { jp: '今日', reading: 'kyou', ko: '오늘', ex: '' },
+    { jp: '明日', reading: 'ashita', ko: '내일', ex: '' },
+    { jp: '昨日', reading: 'kinou', ko: '어제', ex: '' },
+    { jp: '家', reading: 'ie / uchi', ko: '집', ex: '' },
+    { jp: '学校', reading: 'gakkou', ko: '학교', ex: '' },
+    { jp: '会社', reading: 'kaisha', ko: '회사', ex: '' },
+    { jp: '駅', reading: 'eki', ko: '역', ex: '' },
+    { jp: '店', reading: 'mise', ko: '가게', ex: '' },
+    { jp: '友達', reading: 'tomodachi', ko: '친구', ex: '' },
+    { jp: 'お金', reading: 'okane', ko: '돈', ex: '' },
+    { jp: '時間', reading: 'jikan', ko: '시간', ex: '' },
+    { jp: '食べる', reading: 'taberu', ko: '먹다', ex: '' },
+    { jp: '飲む', reading: 'nomu', ko: '마시다', ex: '' },
+    { jp: '行く', reading: 'iku', ko: '가다', ex: '' },
+    { jp: '来る', reading: 'kuru', ko: '오다', ex: '' },
+    { jp: '見る', reading: 'miru', ko: '보다', ex: '' },
+    { jp: '聞く', reading: 'kiku', ko: '듣다, 묻다', ex: '' },
+    { jp: '話す', reading: 'hanasu', ko: '말하다', ex: '' },
+    { jp: '読む', reading: 'yomu', ko: '읽다', ex: '' },
+    { jp: '書く', reading: 'kaku', ko: '쓰다', ex: '' },
+    { jp: '買う', reading: 'kau', ko: '사다', ex: '' },
+    { jp: 'する', reading: 'suru', ko: '하다', ex: '' },
+    { jp: '寝る', reading: 'neru', ko: '자다', ex: '' },
+    { jp: '起きる', reading: 'okiru', ko: '일어나다', ex: '' },
+    { jp: '帰る', reading: 'kaeru', ko: '돌아가다, 귀가하다', ex: '' },
+    { jp: '待つ', reading: 'matsu', ko: '기다리다', ex: '' },
+    { jp: '大きい', reading: 'ookii', ko: '크다', ex: '' },
+    { jp: '小さい', reading: 'chiisai', ko: '작다', ex: '' },
+    { jp: '高い', reading: 'takai', ko: '비싸다, 높다', ex: '' },
+    { jp: '安い', reading: 'yasui', ko: '싸다', ex: '' },
+    { jp: 'おいしい', reading: 'oishii', ko: '맛있다', ex: '' },
+    { jp: '暑い / 寒い', reading: 'atsui / samui', ko: '덥다 / 춥다', ex: '' },
+    { jp: '新しい / 古い', reading: 'atarashii / furui', ko: '새롭다 / 낡다', ex: '' },
+    { jp: 'いい / 悪い', reading: 'ii / warui', ko: '좋다 / 나쁘다', ex: '' },
+    { jp: '楽しい', reading: 'tanoshii', ko: '즐겁다', ex: '' },
+    { jp: '忙しい', reading: 'isogashii', ko: '바쁘다', ex: '' },
+  ] },
+  n4k: { title: 'N4 칸지', type: 'kanji', items: [
+    { jp: '持', reading: 'じ / も', ko: '가지다, 들다', ex: '持つ（もつ）들다' },
+    { jp: '待', reading: 'たい / ま', ko: '기다리다', ex: '待つ（まつ）기다리다' },
+    { jp: '動', reading: 'どう / うご', ko: '움직이다', ex: '動く（うごく）움직이다' },
+    { jp: '働', reading: 'どう / はたら', ko: '일하다', ex: '働く（はたらく）일하다' },
+    { jp: '始', reading: 'し / はじ', ko: '시작하다', ex: '始まる（はじまる）시작되다' },
+    { jp: '終', reading: 'しゅう / お', ko: '끝나다', ex: '終わる（おわる）끝나다' },
+    { jp: '開', reading: 'かい / あ', ko: '열다', ex: '開ける（あける）열다' },
+    { jp: '閉', reading: 'へい / し', ko: '닫다', ex: '閉める（しめる）닫다' },
+    { jp: '使', reading: 'し / つか', ko: '사용하다', ex: '使う（つかう）쓰다' },
+    { jp: '送', reading: 'そう / おく', ko: '보내다', ex: '送る（おくる）보내다' },
+    { jp: '借', reading: 'しゃく / か', ko: '빌리다', ex: '借りる（かりる）빌리다' },
+    { jp: '貸', reading: 'たい / か', ko: '빌려주다', ex: '貸す（かす）빌려주다' },
+    { jp: '急', reading: 'きゅう / いそ', ko: '급하다', ex: '急ぐ（いそぐ）서두르다' },
+    { jp: '洗', reading: 'せん / あら', ko: '씻다', ex: '洗う（あらう）씻다' },
+    { jp: '運', reading: 'うん / はこ', ko: '운반, 운', ex: '運転（うんてん）운전' },
+    { jp: '転', reading: 'てん / ころ', ko: '구르다', ex: '運転（うんてん）운전' },
+    { jp: '計', reading: 'けい / はか', ko: '재다, 계산', ex: '時計（とけい）시계' },
+    { jp: '質', reading: 'しつ', ko: '질, 바탕', ex: '質問（しつもん）질문' },
+    { jp: '問', reading: 'もん / と', ko: '묻다', ex: '問題（もんだい）문제' },
+    { jp: '題', reading: 'だい', ko: '제목, 주제', ex: '問題（もんだい）문제' },
+    { jp: '答', reading: 'とう / こた', ko: '답하다', ex: '答える（こたえる）대답하다' },
+    { jp: '意', reading: 'い', ko: '뜻, 마음', ex: '意味（いみ）의미' },
+    { jp: '味', reading: 'み / あじ', ko: '맛', ex: '意味（いみ）의미' },
+    { jp: '体', reading: 'たい / からだ', ko: '몸', ex: '体（からだ）몸' },
+    { jp: '病', reading: 'びょう / や', ko: '병', ex: '病院（びょういん）병원' },
+    { jp: '院', reading: 'いん', ko: '시설, 기관', ex: '病院（びょういん）병원' },
+    { jp: '医', reading: 'い', ko: '의사, 의술', ex: '医者（いしゃ）의사' },
+    { jp: '者', reading: 'しゃ / もの', ko: '사람', ex: '医者（いしゃ）의사' },
+    { jp: '薬', reading: 'やく / くすり', ko: '약', ex: '薬（くすり）약' },
+    { jp: '部', reading: 'ぶ', ko: '부분', ex: '部屋（へや）방' },
+    { jp: '屋', reading: 'おく / や', ko: '가게, 방', ex: '部屋（へや）방' },
+    { jp: '図', reading: 'ず / と', ko: '그림, 도면', ex: '図書館（としょかん）도서관' },
+    { jp: '館', reading: 'かん', ko: '건물, 관', ex: '図書館（としょかん）도서관' },
+    { jp: '旅', reading: 'りょ / たび', ko: '여행', ex: '旅行（りょこう）여행' },
+    { jp: '写', reading: 'しゃ / うつ', ko: '베끼다, 찍다', ex: '写真（しゃしん）사진' },
+    { jp: '真', reading: 'しん / ま', ko: '참, 진짜', ex: '写真（しゃしん）사진' },
+    { jp: '売', reading: 'ばい / う', ko: '팔다', ex: '売る（うる）팔다' },
+    { jp: '知', reading: 'ち / し', ko: '알다', ex: '知る（しる）알다' },
+    { jp: '思', reading: 'し / おも', ko: '생각하다', ex: '思う（おもう）생각하다' },
+    { jp: '教', reading: 'きょう / おし', ko: '가르치다', ex: '教える（おしえる）가르치다' },
+    { jp: '習', reading: 'しゅう / なら', ko: '익히다, 배우다', ex: '習う（ならう）배우다' },
+    { jp: '使', reading: 'し / つか', ko: '쓰다 (재확인)', ex: '使い方（つかいかた）사용법' },
+  ] },
+  n4w: { title: 'N4 단어', type: 'word', items: [
+    { jp: '約束', reading: 'yakusoku', ko: '약속', ex: '' },
+    { jp: '用事', reading: 'youji', ko: '볼일, 용무', ex: '' },
+    { jp: '都合', reading: 'tsugou', ko: '형편, 사정', ex: '' },
+    { jp: '予定', reading: 'yotei', ko: '예정', ex: '' },
+    { jp: '準備', reading: 'junbi', ko: '준비', ex: '' },
+    { jp: '説明', reading: 'setsumei', ko: '설명', ex: '' },
+    { jp: '紹介', reading: 'shoukai', ko: '소개', ex: '' },
+    { jp: '連絡', reading: 'renraku', ko: '연락', ex: '' },
+    { jp: '経験', reading: 'keiken', ko: '경험', ex: '' },
+    { jp: '趣味', reading: 'shumi', ko: '취미', ex: '' },
+    { jp: '生活', reading: 'seikatsu', ko: '생활', ex: '' },
+    { jp: '文化', reading: 'bunka', ko: '문화', ex: '' },
+    { jp: '社会', reading: 'shakai', ko: '사회', ex: '' },
+    { jp: '世界', reading: 'sekai', ko: '세계', ex: '' },
+    { jp: '理由', reading: 'riyuu', ko: '이유', ex: '' },
+    { jp: '場合', reading: 'baai', ko: '경우', ex: '' },
+    { jp: '場所', reading: 'basho', ko: '장소', ex: '' },
+    { jp: '関係', reading: 'kankei', ko: '관계', ex: '' },
+    { jp: '興味', reading: 'kyoumi', ko: '흥미', ex: '' },
+    { jp: '心配', reading: 'shinpai', ko: '걱정', ex: '' },
+    { jp: '必要', reading: 'hitsuyou', ko: '필요', ex: '' },
+    { jp: '自由', reading: 'jiyuu', ko: '자유', ex: '' },
+    { jp: '安全 / 危険', reading: 'anzen / kiken', ko: '안전 / 위험', ex: '' },
+    { jp: '簡単', reading: 'kantan', ko: '간단함', ex: '' },
+    { jp: '大変', reading: 'taihen', ko: '힘듦, 큰일', ex: '' },
+    { jp: '親切', reading: 'shinsetsu', ko: '친절함', ex: '' },
+    { jp: '丁寧', reading: 'teinei', ko: '정중함', ex: '' },
+    { jp: '真面目', reading: 'majime', ko: '성실함', ex: '' },
+    { jp: '残念', reading: 'zannen', ko: '아쉬움, 유감', ex: '' },
+    { jp: '受ける', reading: 'ukeru', ko: '받다 (시험 등)', ex: '' },
+    { jp: '続ける', reading: 'tsuzukeru', ko: '계속하다', ex: '' },
+    { jp: '比べる', reading: 'kuraberu', ko: '비교하다', ex: '' },
+    { jp: '選ぶ', reading: 'erabu', ko: '고르다', ex: '' },
+    { jp: '決める', reading: 'kimeru', ko: '정하다', ex: '' },
+    { jp: '集める', reading: 'atsumeru', ko: '모으다', ex: '' },
+    { jp: '調べる', reading: 'shiraberu', ko: '조사하다, 찾아보다', ex: '' },
+    { jp: '違う', reading: 'chigau', ko: '다르다, 틀리다', ex: '' },
+    { jp: '増える / 減る', reading: 'fueru / heru', ko: '늘다 / 줄다', ex: '' },
+    { jp: '困る', reading: 'komaru', ko: '곤란하다', ex: '' },
+    { jp: '慣れる', reading: 'nareru', ko: '익숙해지다', ex: '' },
+    { jp: '間に合う', reading: 'maniau', ko: '시간에 맞추다', ex: '' },
+    { jp: '楽 / 楽しみ', reading: 'raku / tanoshimi', ko: '편함 / 기대(됨)', ex: '' },
+  ] },
+};
+const DECK_ORDER = ['n5k', 'n5w', 'n4k', 'n4w'];
+let hideMeaning = false;
+let currentDeckCount = 0;
+
 // ════════════ 상태 ════════════
 let QUESTIONS = [];
 let SHADOW_SENTENCES = [];
@@ -430,6 +656,59 @@ function renderHome() {
     card.innerHTML = `<div class="ep-no">No.${num}</div><div class="ep-meta">회화 ${ep.questions.length} · 쉐도잉 ${ep.shadows.length}</div>`;
     grid.appendChild(card);
   });
+  renderDeckGrid();
+}
+
+function renderDeckGrid() {
+  const grid = document.getElementById('deck-grid');
+  grid.innerHTML = '';
+  DECK_ORDER.forEach((id) => {
+    const d = DECKS[id];
+    const card = document.createElement('div');
+    card.className = 'episode-card';
+    card.onclick = () => openDeck(id);
+    card.innerHTML = `<div class="ep-no" style="font-size:18px">${d.title}</div><div class="ep-meta">${d.items.length}개 단어</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function openDeck(id) {
+  const d = DECKS[id];
+  hideMeaning = false;
+  currentDeckCount = d.items.length;
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('study-screen').style.display = 'none';
+  const ds = document.getElementById('deck-screen');
+  ds.style.display = 'flex';
+  ds.style.flexDirection = 'column';
+  ds.style.gap = '12px';
+  document.getElementById('back-btn').classList.add('show');
+  document.getElementById('header-mode').style.display = 'none';
+  document.getElementById('header-ep').textContent = '기초 학습';
+  document.getElementById('header-title').textContent = d.title;
+  const toggle = document.getElementById('hide-toggle');
+  toggle.classList.remove('on');
+  toggle.textContent = '🙈 뜻 가리기';
+  document.getElementById('deck-count').textContent = `${d.items.length}개`;
+
+  const list = document.getElementById('vocab-list');
+  list.innerHTML = '';
+  d.items.forEach((it) => {
+    const c = document.createElement('div');
+    c.className = 'vocab-card' + (d.type === 'word' ? ' word' : '');
+    c.innerHTML = `<div class="vocab-jp">${it.jp}</div><div class="vocab-info"><div class="vocab-reading">${it.reading}</div><div class="vocab-ko">${it.ko}</div>${it.ex ? `<div class="vocab-ex">${it.ex}</div>` : ''}</div>`;
+    c.onclick = () => { if (hideMeaning) c.classList.toggle('hide'); };
+    list.appendChild(c);
+  });
+}
+
+function toggleHideMeaning() {
+  hideMeaning = !hideMeaning;
+  const toggle = document.getElementById('hide-toggle');
+  toggle.classList.toggle('on', hideMeaning);
+  toggle.textContent = hideMeaning ? '👁 뜻 보기' : '🙈 뜻 가리기';
+  document.getElementById('deck-count').textContent = hideMeaning ? '카드를 누르면 뜻이 하나씩 보여요' : `${currentDeckCount}개`;
+  document.querySelectorAll('#vocab-list .vocab-card').forEach((c) => c.classList.toggle('hide', hideMeaning));
 }
 
 function selectEpisode(num) {
@@ -459,6 +738,7 @@ function backToHome() {
   if (isRecording && convRec) { try { convRec.stop(); } catch (e) {} }
   if (shadowRecording && shadowRec) { try { shadowRec.stop(); } catch (e) {} }
   document.getElementById('study-screen').style.display = 'none';
+  document.getElementById('deck-screen').style.display = 'none';
   document.getElementById('home-screen').style.display = 'block';
   document.getElementById('back-btn').classList.remove('show');
   document.getElementById('header-mode').style.display = 'none';
