@@ -105,6 +105,11 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .quiz-result { text-align: center; padding: 30px 20px; }
 .quiz-result .score { font-size: 44px; font-weight: 700; color: var(--accent); margin: 10px 0; }
 .quiz-result .msg { font-size: 14px; color: var(--text-dim); margin-bottom: 18px; }
+.quiz-reveal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-top: 14px; text-align: center; animation: fadeUp 0.25s ease; }
+.quiz-reveal-jp { font-family: var(--font-jp); font-size: 24px; font-weight: 700; }
+.quiz-reveal-reading { font-size: 14px; color: var(--accent2); font-weight: 400; margin-left: 6px; }
+.quiz-reveal-ko { font-size: 15px; margin-top: 6px; }
+.quiz-reveal-ex { font-size: 13px; color: var(--text-muted); margin-top: 8px; font-family: var(--font-jp); }
 
 .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px 14px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); }
@@ -923,17 +928,25 @@ function renderQuiz() {
   if (quizIdx >= quizItems.length) { renderQuizResult(); return; }
   quizAnswered = false;
   const it = quizItems[quizIdx];
-  // 정답 + 오답 3개 (중복 뜻 제외)
-  const wrongPool = currentDeck.items.filter((x) => x.ko !== it.ko);
-  const wrongs = shuffle(wrongPool).slice(0, 3).map((x) => x.ko);
-  const options = shuffle([it.ko, ...wrongs]);
-  const isWord = currentDeck.type === 'word';
+  const isKanji = currentDeck.type === 'kanji';
+
+  // 칸지: 읽기(후리가나) 맞히기 / 단어: 뜻 맞히기
+  const correct = isKanji ? it.reading : it.ko;
+  const keyOf = (x) => (isKanji ? x.reading : x.ko);
+  const pool = shuffle(currentDeck.items.filter((x) => keyOf(x) !== correct));
+  const wrongs = [];
+  for (const x of pool) {
+    if (!wrongs.includes(keyOf(x))) wrongs.push(keyOf(x));
+    if (wrongs.length === 3) break;
+  }
+  const options = shuffle([correct, ...wrongs]);
+  const qHtml = isKanji
+    ? `<div class="quiz-jp">${it.jp}</div><div class="quiz-sub">이 칸지의 읽기는?</div>`
+    : `<div class="quiz-jp word">${it.jp}</div><div class="quiz-sub">읽기: ${it.reading} · 뜻은?</div>`;
+
   area.innerHTML = `
     <div class="quiz-progress">${quizIdx + 1} / ${quizItems.length} · 점수 ${quizScore}</div>
-    <div class="quiz-q">
-      <div class="quiz-jp ${isWord ? 'word' : ''}">${it.jp}</div>
-      <div class="quiz-sub">읽기: ${it.reading}</div>
-    </div>
+    <div class="quiz-q">${qHtml}</div>
     <div class="quiz-options" id="quiz-options"></div>
   `;
   const optWrap = document.getElementById('quiz-options');
@@ -941,24 +954,31 @@ function renderQuiz() {
     const b = document.createElement('button');
     b.className = 'quiz-opt';
     b.textContent = opt;
-    b.onclick = () => answerQuiz(b, opt, it.ko);
+    b.onclick = () => answerQuiz(b, opt, correct, it);
     optWrap.appendChild(b);
   });
 }
 
-function answerQuiz(btn, selected, correct) {
+function answerQuiz(btn, selected, correct, it) {
   if (quizAnswered) return;
   quizAnswered = true;
-  const buttons = document.querySelectorAll('#quiz-options .quiz-opt');
-  buttons.forEach((b) => {
+  document.querySelectorAll('#quiz-options .quiz-opt').forEach((b) => {
     b.disabled = true;
     if (b.textContent === correct) b.classList.add('correct');
   });
-  if (selected === correct) {
-    quizScore++;
-  } else {
-    btn.classList.add('wrong');
-  }
+  if (selected === correct) quizScore++;
+  else btn.classList.add('wrong');
+
+  // 정답 공개: 칸지+읽기 / 뜻 / 예시
+  const reveal = document.createElement('div');
+  reveal.className = 'quiz-reveal';
+  reveal.innerHTML = `
+    <div class="quiz-reveal-jp">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>
+    <div class="quiz-reveal-ko">뜻: ${it.ko}</div>
+    ${it.ex ? `<div class="quiz-reveal-ex">예시: ${it.ex}</div>` : ''}
+  `;
+  document.getElementById('quiz-area').appendChild(reveal);
+
   const next = document.createElement('button');
   next.className = 'quiz-next';
   next.textContent = quizIdx + 1 >= quizItems.length ? '결과 보기 →' : '다음 →';
