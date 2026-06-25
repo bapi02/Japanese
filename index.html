@@ -954,8 +954,28 @@ function parseEx(ex) {
   return m ? { word: m[1], yomi: m[2], mean: m[3] } : { word: ex || '', yomi: '', mean: '' };
 }
 
+// 단어와 읽기의 공통 카나 접미사(오쿠리가나)와 칸지부분 읽기(stem) 분리
+function splitOkurigana(word, yomi) {
+  let i = 0;
+  while (i < word.length && i < yomi.length && word[word.length - 1 - i] === yomi[yomi.length - 1 - i]) i++;
+  const oku = i > 0 ? yomi.slice(yomi.length - i) : '';
+  const stem = i > 0 ? yomi.slice(0, yomi.length - i) : yomi;
+  return { oku, stem };
+}
+
+// 칸지부분만 무작위 히라가나로 바꾼 오답 읽기 생성
+const KANA_POOL = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわ'.split('');
+function randomStem(len, exclude) {
+  for (let tries = 0; tries < 60; tries++) {
+    let s = '';
+    for (let k = 0; k < len; k++) s += KANA_POOL[Math.floor(Math.random() * KANA_POOL.length)];
+    if (!exclude.includes(s)) return s;
+  }
+  return null;
+}
+
 function startQuiz() {
-  quizItems = shuffle(currentDeck.items);
+  quizItems = shuffle(currentDeck.items).slice(0, Math.min(15, currentDeck.items.length));
   quizIdx = 0;
   quizScore = 0;
   renderQuiz();
@@ -967,26 +987,34 @@ function renderQuiz() {
   quizAnswered = false;
   const it = quizItems[quizIdx];
   const isKanji = currentDeck.type === 'kanji';
-
-  // 칸지: 예시 단어를 보고 읽기 맞히기 / 단어: 뜻 맞히기
-  let correct, qHtml, keyOf;
+  let correct, qHtml, options;
   if (isKanji) {
-    correct = parseEx(it.ex).yomi;
-    keyOf = (x) => parseEx(x.ex).yomi;
-    qHtml = `<div class="quiz-jp word">${parseEx(it.ex).word}</div><div class="quiz-sub">이 단어의 읽기는?</div>`;
+    // 예시 단어를 보고 읽기 맞히기. 오답은 오쿠리가나는 그대로, 칸지부분만 무작위 변경
+    const p = parseEx(it.ex);
+    const { oku, stem } = splitOkurigana(p.word, p.yomi);
+    correct = p.yomi;
+    const opts = [correct];
+    let guard = 0;
+    while (opts.length < 4 && guard++ < 300) {
+      const rs = randomStem(stem.length || 1, [stem]);
+      if (!rs) break;
+      const cand = rs + oku;
+      if (!opts.includes(cand)) opts.push(cand);
+    }
+    options = shuffle(opts);
+    qHtml = `<div class="quiz-jp word">${p.word}</div><div class="quiz-sub">이 단어의 읽기는?</div>`;
   } else {
+    // 단어: 뜻 맞히기
     correct = it.ko;
-    keyOf = (x) => x.ko;
+    const pool = shuffle(currentDeck.items.filter((x) => x.ko !== correct));
+    const wrongs = [];
+    for (const x of pool) {
+      if (!wrongs.includes(x.ko)) wrongs.push(x.ko);
+      if (wrongs.length === 3) break;
+    }
+    options = shuffle([correct, ...wrongs]);
     qHtml = `<div class="quiz-jp word">${it.jp}</div><div class="quiz-sub">읽기: ${it.reading} · 뜻은?</div>`;
   }
-  const pool = shuffle(currentDeck.items.filter((x) => keyOf(x) !== correct));
-  const wrongs = [];
-  for (const x of pool) {
-    const k = keyOf(x);
-    if (k && !wrongs.includes(k)) wrongs.push(k);
-    if (wrongs.length === 3) break;
-  }
-  const options = shuffle([correct, ...wrongs]);
 
   area.innerHTML = `
     <div class="quiz-progress">${quizIdx + 1} / ${quizItems.length} · 점수 ${quizScore}</div>
