@@ -113,6 +113,14 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .quiz-reveal-sentence { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-family: var(--font-jp); font-size: 16px; line-height: 1.6; }
 .quiz-reveal-sentence .yomi { display: block; font-size: 12px; color: var(--accent2); margin-top: 4px; }
 .quiz-reveal-sentence .trans { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.quiz-popup-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; cursor: pointer; }
+.quiz-popup { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 22px 20px; max-width: 420px; width: 100%; text-align: center; animation: popIn 0.2s ease; }
+.quiz-popup .verdict { font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.quiz-popup .verdict.correct { color: var(--green); }
+.quiz-popup .verdict.wrong { color: var(--red); }
+.quiz-popup-next { width: 100%; padding: 15px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: #fff; font-weight: 700; border: none; cursor: pointer; margin-top: 16px; font-size: 15px; }
+.quiz-popup .tap-hint { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+@keyframes popIn { from { opacity: 0; transform: scale(0.96) translateY(-12px); } to { opacity: 1; transform: none; } }
 
 .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mode-btn { background: var(--card); border: 1.5px solid var(--border); border-radius: var(--r); padding: 16px 14px; cursor: pointer; text-align: center; transition: all 0.2s; color: var(--text); }
@@ -828,6 +836,7 @@ function toggleHideMeaning() {
 }
 
 function setDeckMode(m) {
+  removeQuizPopup();
   if (pronRecording && pronRec) { try { pronRec.stop(); } catch (e) {} }
   deckMode = m;
   document.getElementById('dm-list').classList.toggle('active', m === 'list');
@@ -975,10 +984,26 @@ function randomStem(len, exclude) {
 }
 
 function startQuiz() {
-  quizItems = shuffle(currentDeck.items).slice(0, Math.min(15, currentDeck.items.length));
+  removeQuizPopup();
+  // 같은 예시단어가 여러 칸지에 걸쳐 중복되지 않게 단어 기준으로 정리
+  const isKanji = currentDeck.type === 'kanji';
+  const seen = new Set();
+  const unique = [];
+  for (const it of currentDeck.items) {
+    const key = isKanji ? parseEx(it.ex).word : it.jp;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(it);
+  }
+  quizItems = shuffle(unique).slice(0, Math.min(15, unique.length));
   quizIdx = 0;
   quizScore = 0;
   renderQuiz();
+}
+
+function removeQuizPopup() {
+  const ex = document.querySelector('.quiz-popup-backdrop');
+  if (ex) ex.remove();
 }
 
 function renderQuiz() {
@@ -1038,33 +1063,37 @@ function answerQuiz(btn, selected, correct, it) {
     b.disabled = true;
     if (b.textContent === correct) b.classList.add('correct');
   });
-  if (selected === correct) quizScore++;
+  const isCorrect = selected === correct;
+  if (isCorrect) quizScore++;
   else btn.classList.add('wrong');
 
-  // 정답 공개
-  const reveal = document.createElement('div');
-  reveal.className = 'quiz-reveal';
+  let body;
   if (currentDeck.type === 'kanji') {
     const p = parseEx(it.ex);
-    reveal.innerHTML = `
+    body = `
       <div class="quiz-reveal-jp">${p.word}<span class="quiz-reveal-reading">${p.yomi}</span></div>
       <div class="quiz-reveal-ko">뜻: ${p.mean}</div>
       <div class="quiz-reveal-ex">칸지: ${it.jp}（${it.reading}）${it.ko}</div>
       ${it.s ? `<div class="quiz-reveal-sentence">${it.s}<span class="yomi">${it.sr}</span><span class="trans">${it.sk}</span></div>` : ''}
     `;
   } else {
-    reveal.innerHTML = `
+    body = `
       <div class="quiz-reveal-jp">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>
       <div class="quiz-reveal-ko">뜻: ${it.ko}</div>
     `;
   }
-  document.getElementById('quiz-area').appendChild(reveal);
-
-  const next = document.createElement('button');
-  next.className = 'quiz-next';
-  next.textContent = quizIdx + 1 >= quizItems.length ? '결과 보기 →' : '다음 →';
-  next.onclick = () => { quizIdx++; renderQuiz(); };
-  document.getElementById('quiz-area').appendChild(next);
+  const last = quizIdx + 1 >= quizItems.length;
+  const back = document.createElement('div');
+  back.className = 'quiz-popup-backdrop';
+  back.innerHTML = `
+    <div class="quiz-popup">
+      <div class="verdict ${isCorrect ? 'correct' : 'wrong'}">${isCorrect ? '⭕ 정답!' : '❌ 오답 · 정답: ' + correct}</div>
+      ${body}
+      <button class="quiz-popup-next">${last ? '결과 보기 →' : '다음 →'}</button>
+      <div class="tap-hint">아무 곳이나 탭하면 넘어가요</div>
+    </div>`;
+  back.onclick = () => { back.remove(); quizIdx++; renderQuiz(); };
+  document.body.appendChild(back);
 }
 
 function renderQuizResult() {
@@ -1109,6 +1138,7 @@ function backToHome() {
   if (isRecording && convRec) { try { convRec.stop(); } catch (e) {} }
   if (shadowRecording && shadowRec) { try { shadowRec.stop(); } catch (e) {} }
   if (pronRecording && pronRec) { try { pronRec.stop(); } catch (e) {} }
+  removeQuizPopup();
   document.getElementById('study-screen').style.display = 'none';
   document.getElementById('deck-screen').style.display = 'none';
   document.getElementById('home-screen').style.display = 'block';
