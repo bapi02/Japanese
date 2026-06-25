@@ -948,6 +948,12 @@ function shuffle(arr) {
   return a;
 }
 
+// 'ex' 형식 "단어（よみ）뜻" 파싱
+function parseEx(ex) {
+  const m = (ex || '').match(/^(.+?)（(.+?)）(.+)$/);
+  return m ? { word: m[1], yomi: m[2], mean: m[3] } : { word: ex || '', yomi: '', mean: '' };
+}
+
 function startQuiz() {
   quizItems = shuffle(currentDeck.items);
   quizIdx = 0;
@@ -962,19 +968,25 @@ function renderQuiz() {
   const it = quizItems[quizIdx];
   const isKanji = currentDeck.type === 'kanji';
 
-  // 칸지: 읽기(후리가나) 맞히기 / 단어: 뜻 맞히기
-  const correct = isKanji ? it.reading : it.ko;
-  const keyOf = (x) => (isKanji ? x.reading : x.ko);
+  // 칸지: 예시 단어를 보고 읽기 맞히기 / 단어: 뜻 맞히기
+  let correct, qHtml, keyOf;
+  if (isKanji) {
+    correct = parseEx(it.ex).yomi;
+    keyOf = (x) => parseEx(x.ex).yomi;
+    qHtml = `<div class="quiz-jp word">${parseEx(it.ex).word}</div><div class="quiz-sub">이 단어의 읽기는?</div>`;
+  } else {
+    correct = it.ko;
+    keyOf = (x) => x.ko;
+    qHtml = `<div class="quiz-jp word">${it.jp}</div><div class="quiz-sub">읽기: ${it.reading} · 뜻은?</div>`;
+  }
   const pool = shuffle(currentDeck.items.filter((x) => keyOf(x) !== correct));
   const wrongs = [];
   for (const x of pool) {
-    if (!wrongs.includes(keyOf(x))) wrongs.push(keyOf(x));
+    const k = keyOf(x);
+    if (k && !wrongs.includes(k)) wrongs.push(k);
     if (wrongs.length === 3) break;
   }
   const options = shuffle([correct, ...wrongs]);
-  const qHtml = isKanji
-    ? `<div class="quiz-jp">${it.jp}</div><div class="quiz-sub">이 칸지의 읽기는?</div>`
-    : `<div class="quiz-jp word">${it.jp}</div><div class="quiz-sub">읽기: ${it.reading} · 뜻은?</div>`;
 
   area.innerHTML = `
     <div class="quiz-progress">${quizIdx + 1} / ${quizItems.length} · 점수 ${quizScore}</div>
@@ -1001,15 +1013,23 @@ function answerQuiz(btn, selected, correct, it) {
   if (selected === correct) quizScore++;
   else btn.classList.add('wrong');
 
-  // 정답 공개: 칸지+읽기 / 뜻 / 예시
+  // 정답 공개
   const reveal = document.createElement('div');
   reveal.className = 'quiz-reveal';
-  reveal.innerHTML = `
-    <div class="quiz-reveal-jp">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>
-    <div class="quiz-reveal-ko">뜻: ${it.ko}</div>
-    ${it.ex ? `<div class="quiz-reveal-ex">단어: ${it.ex}</div>` : ''}
-    ${it.s ? `<div class="quiz-reveal-sentence">${it.s}<span class="yomi">${it.sr}</span><span class="trans">${it.sk}</span></div>` : ''}
-  `;
+  if (currentDeck.type === 'kanji') {
+    const p = parseEx(it.ex);
+    reveal.innerHTML = `
+      <div class="quiz-reveal-jp">${p.word}<span class="quiz-reveal-reading">${p.yomi}</span></div>
+      <div class="quiz-reveal-ko">뜻: ${p.mean}</div>
+      <div class="quiz-reveal-ex">칸지: ${it.jp}（${it.reading}）${it.ko}</div>
+      ${it.s ? `<div class="quiz-reveal-sentence">${it.s}<span class="yomi">${it.sr}</span><span class="trans">${it.sk}</span></div>` : ''}
+    `;
+  } else {
+    reveal.innerHTML = `
+      <div class="quiz-reveal-jp">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>
+      <div class="quiz-reveal-ko">뜻: ${it.ko}</div>
+    `;
+  }
   document.getElementById('quiz-area').appendChild(reveal);
 
   const next = document.createElement('button');
