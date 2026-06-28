@@ -210,6 +210,10 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .ft-typing { align-self: flex-start; font-size: 13px; color: var(--text-muted); padding: 6px 4px; }
 .ft-restart { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-size: 13px; cursor: pointer; font-family: inherit; }
 .ft-restart:hover { border-color: var(--accent); color: var(--text); }
+.ft-actions { display: flex; gap: 10px; }
+.ft-send-btn { flex: 1; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: #fff; font-weight: 700; border: none; cursor: pointer; font-size: 15px; font-family: inherit; }
+.ft-redo-btn { flex: 1; padding: 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-size: 15px; font-family: inherit; }
+.ft-redo-btn:hover { border-color: var(--accent); color: var(--text); }
 
 @media (max-width: 400px) {
   .shadow-sentence { font-size: 18px; }
@@ -309,9 +313,17 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
   <!-- 프리토킹 화면 -->
   <div id="freetalk-screen" style="display:none;">
     <div id="ft-log" class="ft-log"></div>
+    <div>
+      <div class="transcript-label">내가 말한 것</div>
+      <div class="transcript-box" id="ft-transcript">마이크 버튼을 눌러 말해보세요...</div>
+    </div>
     <div class="record-area">
       <button class="record-btn" id="ft-record-btn" onclick="toggleFreeTalkRecording()">🎤</button>
       <div class="record-hint" id="ft-record-hint">버튼을 누르고 일본어로 대답해보세요</div>
+    </div>
+    <div class="ft-actions" id="ft-actions" style="display:none;">
+      <button class="ft-send-btn" onclick="ftSend()">📨 보내기</button>
+      <button class="ft-redo-btn" onclick="ftReRecord()">🎤 다시 녹음</button>
     </div>
     <button class="ft-restart" onclick="startFreeTalk()">🔄 새 대화 시작</button>
   </div>
@@ -923,6 +935,7 @@ let quizAnswered = false;
 let ftHistory = [];
 let ftRec = null;
 let ftRecording = false;
+let ftPendingText = '';
 
 // ════════════ 상태 ════════════
 let QUESTIONS = [];
@@ -1352,9 +1365,9 @@ function renderQuizResult() {
 
 // ════════════ 프리토킹 ════════════
 const FT_GREETINGS = [
-  'こんにちは！にほんごきょうしのしゅんです。きょうはいっしょににほんごではなしましょう！',
-  'やあ、こんにちは！しゅんです。きょうもにほんごのれんしゅう、がんばりましょう！',
-  'こんにちは！あいましょう。きょうはなにについてはなしましょうか。',
+  'こんにちは！きょうはいっしょににほんごではなしましょう！',
+  'やあ、こんにちは！きょうもにほんごのれんしゅう、がんばりましょう！',
+  'こんにちは！きょうはなにについてはなしましょうか。',
 ];
 const FT_FIRST_Q = [
   { jp: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?' },
@@ -1366,7 +1379,7 @@ const FT_FIRST_Q = [
   { jp: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?' },
   { jp: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?' },
 ];
-const FT_SYSTEM = 'あなたは「しゅん」という、やさしい日本語の会話パートナーです。相手はGENKI1〜N4レベルの韓国人学習者です。'
+const FT_SYSTEM = 'あなたはやさしい日本語の会話パートナーです。じぶんの名前は名乗らないでください。相手はGENKI1〜N4レベルの韓国人学習者です。'
   + 'かんたんな日本語（ひらがな中心、むずかしい漢字や敬語はさける）で会話してください。'
   + '毎回かならず次のJSONだけで答えてください（マークダウンなし）：'
   + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어","reply_ko":"reply_jp의 한국어 해석"}';
@@ -1395,6 +1408,11 @@ function startFreeTalk() {
   const firstJp = greet + ' ' + q.jp;
   ftAddAi(firstJp, '먼저 인사하고 질문할게요 — ' + q.ko);
   ftHistory.push({ role: 'assistant', content: firstJp });
+  ftPendingText = '';
+  document.getElementById('ft-actions').style.display = 'none';
+  const tr = document.getElementById('ft-transcript');
+  tr.textContent = '마이크 버튼을 눌러 말해보세요...';
+  tr.className = 'transcript-box';
   resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
 }
 
@@ -1425,9 +1443,18 @@ function ftAddFeedback(feedback, correction) {
 
 function toggleFreeTalkRecording() {
   if (ftRecording) { if (ftRec) { try { ftRec.stop(); } catch (e) {} } return; }
+  startFtRecording();
+}
+
+function startFtRecording() {
   ftRecording = true;
+  ftPendingText = '';
+  document.getElementById('ft-actions').style.display = 'none';
+  const el = document.getElementById('ft-transcript');
   const btn = document.getElementById('ft-record-btn');
   const hint = document.getElementById('ft-record-hint');
+  el.textContent = '듣는 중...';
+  el.className = 'transcript-box';
   btn.className = 'record-btn recording';
   btn.textContent = '⏹';
   hint.className = 'record-hint active';
@@ -1437,27 +1464,58 @@ function toggleFreeTalkRecording() {
   ftRec = startSpeech('ja-JP',
     (e) => {
       finalText = '';
-      for (let r of e.results) if (r.isFinal) finalText += r[0].transcript;
+      let interim = '';
+      for (let r of e.results) {
+        if (r.isFinal) finalText += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      el.textContent = finalText || interim || '...';
+      el.className = 'transcript-box has-text';
     },
     () => {
       ftRecording = false;
-      const text = finalText.trim();
-      if (text) {
-        ftAddMe(text);
-        btn.className = 'record-btn processing';
-        btn.textContent = '⏳';
-        hint.className = 'record-hint';
-        hint.textContent = 'AI가 생각 중입니다...';
-        sendFreeTalk(text);
+      btn.className = 'record-btn';
+      btn.textContent = '🎤';
+      hint.className = 'record-hint';
+      const text = (finalText || el.textContent || '').trim();
+      if (text && !['듣는 중...', '...'].includes(text)) {
+        ftPendingText = text;
+        el.textContent = text;
+        el.className = 'transcript-box has-text';
+        document.getElementById('ft-actions').style.display = 'flex';
+        hint.textContent = '📨 보내기 또는 🎤 다시 녹음을 선택하세요';
       } else {
-        resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+        el.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
+        el.className = 'transcript-box';
+        hint.textContent = '버튼을 누르고 일본어로 대답해보세요';
       }
     },
     (e) => {
       ftRecording = false;
-      resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+      btn.className = 'record-btn';
+      btn.textContent = '🎤';
+      hint.className = 'record-hint';
+      hint.textContent = '버튼을 누르고 일본어로 대답해보세요';
     }
   );
+}
+
+function ftReRecord() {
+  document.getElementById('ft-actions').style.display = 'none';
+  startFtRecording();
+}
+
+function ftSend() {
+  const text = ftPendingText;
+  if (!text) return;
+  ftPendingText = '';
+  document.getElementById('ft-actions').style.display = 'none';
+  const el = document.getElementById('ft-transcript');
+  el.textContent = '마이크 버튼을 눌러 말해보세요...';
+  el.className = 'transcript-box';
+  document.getElementById('ft-record-hint').textContent = 'AI가 생각 중입니다...';
+  ftAddMe(text);
+  sendFreeTalk(text);
 }
 
 async function sendFreeTalk(userText) {
@@ -1465,7 +1523,7 @@ async function sendFreeTalk(userText) {
   const log = document.getElementById('ft-log');
   const typing = document.createElement('div');
   typing.className = 'ft-typing';
-  typing.textContent = 'しゅん이 입력 중…';
+  typing.textContent = 'AI가 입력 중…';
   log.appendChild(typing);
   typing.scrollIntoView({ behavior: 'smooth', block: 'end' });
   try {
