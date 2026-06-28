@@ -197,6 +197,20 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 
 .no-speech-notice { background: #2a1a10; border: 1px solid #6b3a20; border-radius: 12px; padding: 14px 16px; font-size: 13px; color: #e8a87c; display: none; }
 
+/* ── 프리토킹 ── */
+.ft-log { display: flex; flex-direction: column; gap: 12px; min-height: 200px; }
+.ft-msg { max-width: 88%; padding: 12px 14px; border-radius: 14px; font-size: 15px; line-height: 1.6; animation: fadeUp 0.25s ease; }
+.ft-msg.ai { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.ft-msg.me { align-self: flex-end; background: #1a2535; border: 1px solid var(--accent2); border-bottom-right-radius: 4px; }
+.ft-jp { font-family: var(--font-jp); font-size: 17px; line-height: 1.7; }
+.ft-ko { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+.ft-fb { align-self: center; width: 100%; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.ft-fb .fb-line { margin-top: 4px; }
+.ft-fb .fb-corr { color: var(--green); font-family: var(--font-jp); }
+.ft-typing { align-self: flex-start; font-size: 13px; color: var(--text-muted); padding: 6px 4px; }
+.ft-restart { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-size: 13px; cursor: pointer; font-family: inherit; }
+.ft-restart:hover { border-color: var(--accent); color: var(--text); }
+
 @media (max-width: 400px) {
   .shadow-sentence { font-size: 18px; }
   .prompt-jp { font-size: 17px; }
@@ -230,6 +244,13 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
     <div class="episode-grid" id="episode-grid"></div>
     <div class="section-label">📚 기초 단어 · 칸지 (N5 · N4)</div>
     <div class="episode-grid" id="deck-grid"></div>
+    <div class="section-label">💬 AI 프리토킹</div>
+    <div class="episode-grid">
+      <div class="episode-card" onclick="openFreeTalk()" style="grid-column:1/-1;">
+        <div class="ep-no" style="font-size:18px">🗣 프리토킹 시작</div>
+        <div class="ep-meta">AI와 일본어로 자유 대화 · 피드백 포함</div>
+      </div>
+    </div>
   </div>
 
   <!-- 단어장 화면 -->
@@ -283,6 +304,16 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
     <div id="deck-quiz-mode" style="display:none;">
       <div id="quiz-area"></div>
     </div>
+  </div>
+
+  <!-- 프리토킹 화면 -->
+  <div id="freetalk-screen" style="display:none;">
+    <div id="ft-log" class="ft-log"></div>
+    <div class="record-area">
+      <button class="record-btn" id="ft-record-btn" onclick="toggleFreeTalkRecording()">🎤</button>
+      <div class="record-hint" id="ft-record-hint">버튼을 누르고 일본어로 대답해보세요</div>
+    </div>
+    <button class="ft-restart" onclick="startFreeTalk()">🔄 새 대화 시작</button>
   </div>
 
   <!-- 학습 화면 -->
@@ -544,57 +575,57 @@ const DECKS = {
     { jp: '校', reading: 'こう', ko: '학교', ex: '学校（がっこう）학교', s: '学校は たのしいです。', sr: 'がっこうは たのしいです', sk: '학교는 즐겁습니다' },
     { jp: '先', reading: 'せん / さき', ko: '먼저, 앞', ex: '先生（せんせい）선생님', s: '先生に しつもんします。', sr: 'せんせいに しつもんします', sk: '선생님에게 질문합니다' },
     { jp: '生', reading: 'せい / い', ko: '살다, 태어나다', ex: '学生（がくせい）학생', s: '学生が たくさん います。', sr: 'がくせいが たくさん います', sk: '학생이 많이 있습니다' },
-    { jp: '年', reading: 'ねん / とし', ko: '해, 년', ex: '今年（ことし）올해' },
-    { jp: '何', reading: 'か / なに', ko: '무엇', ex: '何（なに）무엇' },
-    { jp: '名', reading: 'めい / な', ko: '이름', ex: '名前（なまえ）이름' },
-    { jp: '私', reading: 'し / わたし', ko: '나, 저', ex: '私（わたし）저, 나' },
-    { jp: '友', reading: 'ゆう / とも', ko: '친구', ex: '友達（ともだち）친구' },
-    { jp: '父', reading: 'ふ / ちち', ko: '아버지', ex: 'お父さん（おとうさん）아버지' },
-    { jp: '母', reading: 'ぼ / はは', ko: '어머니', ex: 'お母さん（おかあさん）어머니' },
-    { jp: '男', reading: 'だん / おとこ', ko: '남자', ex: '男の人（おとこのひと）남자' },
-    { jp: '女', reading: 'じょ / おんな', ko: '여자', ex: '女の人（おんなのひと）여자' },
-    { jp: '子', reading: 'し / こ', ko: '아이', ex: '子ども（こども）아이' },
-    { jp: '国', reading: 'こく / くに', ko: '나라', ex: '外国（がいこく）외국' },
-    { jp: '語', reading: 'ご', ko: '말, 언어', ex: '日本語（にほんご）일본어' },
-    { jp: '本', reading: 'ほん / もと', ko: '책', ex: '本（ほん）책' },
-    { jp: '文', reading: 'ぶん', ko: '글, 문장', ex: '文（ぶん）글' },
-    { jp: '字', reading: 'じ', ko: '글자', ex: '漢字（かんじ）한자' },
-    { jp: '高', reading: 'こう / たか', ko: '높다, 비싸다', ex: '高い（たかい）비싸다' },
-    { jp: '安', reading: 'あん / やす', ko: '싸다', ex: '安い（やすい）싸다' },
-    { jp: '新', reading: 'しん / あたら', ko: '새롭다', ex: '新しい（あたらしい）새롭다' },
-    { jp: '古', reading: 'こ / ふる', ko: '낡다', ex: '古い（ふるい）낡다' },
-    { jp: '多', reading: 'た / おお', ko: '많다', ex: '多い（おおい）많다' },
-    { jp: '少', reading: 'しょう / すく', ko: '적다', ex: '少ない（すくない）적다' },
-    { jp: '長', reading: 'ちょう / なが', ko: '길다', ex: '長い（ながい）길다' },
-    { jp: '白', reading: 'はく / しろ', ko: '희다', ex: '白い（しろい）희다' },
-    { jp: '半', reading: 'はん', ko: '반', ex: '半分（はんぶん）절반' },
-    { jp: '毎', reading: 'まい', ko: '매, ~마다', ex: '毎日（まいにち）매일' },
-    { jp: '朝', reading: 'ちょう / あさ', ko: '아침', ex: '朝（あさ）아침' },
-    { jp: '昼', reading: 'ちゅう / ひる', ko: '낮, 점심', ex: '昼ごはん（ひるごはん）점심밥' },
-    { jp: '夜', reading: 'や / よる', ko: '밤', ex: '夜（よる）밤' },
-    { jp: '午', reading: 'ご', ko: '정오', ex: '午前（ごぜん）오전' },
-    { jp: '前', reading: 'ぜん / まえ', ko: '앞, 전', ex: '前（まえ）앞' },
-    { jp: '後', reading: 'ご / あと', ko: '뒤, 후', ex: '後（あと）뒤, 나중' },
-    { jp: '間', reading: 'かん / あいだ', ko: '사이', ex: '時間（じかん）시간' },
-    { jp: '週', reading: 'しゅう', ko: '주', ex: '毎週（まいしゅう）매주' },
-    { jp: '休', reading: 'きゅう / やす', ko: '쉬다', ex: '休む（やすむ）쉬다' },
-    { jp: '立', reading: 'りつ / た', ko: '서다', ex: '立つ（たつ）서다' },
-    { jp: '出', reading: 'しゅつ / で', ko: '나가다', ex: '出る（でる）나가다' },
-    { jp: '入', reading: 'にゅう / はい', ko: '들어가다', ex: '入る（はいる）들어가다' },
-    { jp: '右', reading: 'う / みぎ', ko: '오른쪽', ex: '右（みぎ）오른쪽' },
-    { jp: '左', reading: 'さ / ひだり', ko: '왼쪽', ex: '左（ひだり）왼쪽' },
-    { jp: '外', reading: 'がい / そと', ko: '밖', ex: '外（そと）밖' },
-    { jp: '車', reading: 'しゃ / くるま', ko: '차', ex: '車（くるま）자동차' },
-    { jp: '電', reading: 'でん', ko: '전기', ex: '電車（でんしゃ）전철' },
-    { jp: '気', reading: 'き', ko: '기운', ex: '元気（げんき）건강, 기운' },
-    { jp: '天', reading: 'てん', ko: '하늘', ex: '天気（てんき）날씨' },
-    { jp: '雨', reading: 'う / あめ', ko: '비', ex: '雨（あめ）비' },
-    { jp: '道', reading: 'どう / みち', ko: '길', ex: '道（みち）길' },
-    { jp: '駅', reading: 'えき', ko: '역', ex: '駅（えき）역' },
-    { jp: '店', reading: 'てん / みせ', ko: '가게', ex: '店（みせ）가게' },
-    { jp: '花', reading: 'か / はな', ko: '꽃', ex: '花（はな）꽃' },
-    { jp: '魚', reading: 'ぎょ / さかな', ko: '생선', ex: '魚（さかな）생선' },
-    { jp: '肉', reading: 'にく', ko: '고기', ex: '肉（にく）고기' },
+    { jp: '年', reading: 'ねん / とし', ko: '해, 년', ex: '今年（ことし）올해', s: '今年は にほんへ いきます。', sr: 'ことしは にほんへ いきます', sk: '올해는 일본에 갑니다' },
+    { jp: '何', reading: 'か / なに', ko: '무엇', ex: '何（なに）무엇', s: 'これは 何ですか。', sr: 'これは なんですか', sk: '이것은 무엇입니까?' },
+    { jp: '名', reading: 'めい / な', ko: '이름', ex: '名前（なまえ）이름', s: 'お名前は なんですか。', sr: 'おなまえは なんですか', sk: '이름이 무엇입니까?' },
+    { jp: '私', reading: 'し / わたし', ko: '나, 저', ex: '私（わたし）저, 나', s: '私は がくせいです。', sr: 'わたしは がくせいです', sk: '저는 학생입니다' },
+    { jp: '友', reading: 'ゆう / とも', ko: '친구', ex: '友達（ともだち）친구', s: '友達と えいがを みます。', sr: 'ともだちと えいがを みます', sk: '친구와 영화를 봅니다' },
+    { jp: '父', reading: 'ふ / ちち', ko: '아버지', ex: 'お父さん（おとうさん）아버지', s: 'お父さんは かいしゃいんです。', sr: 'おとうさんは かいしゃいんです', sk: '아버지는 회사원입니다' },
+    { jp: '母', reading: 'ぼ / はは', ko: '어머니', ex: 'お母さん（おかあさん）어머니', s: 'お母さんは りょうりが じょうずです。', sr: 'おかあさんは りょうりが じょうずです', sk: '어머니는 요리를 잘합니다' },
+    { jp: '男', reading: 'だん / おとこ', ko: '남자', ex: '男の人（おとこのひと）남자', s: 'あの 男の人は だれですか。', sr: 'あの おとこのひとは だれですか', sk: '저 남자는 누구입니까?' },
+    { jp: '女', reading: 'じょ / おんな', ko: '여자', ex: '女の人（おんなのひと）여자', s: 'あの 女の人は せんせいです。', sr: 'あの おんなのひとは せんせいです', sk: '저 여자는 선생님입니다' },
+    { jp: '子', reading: 'し / こ', ko: '아이', ex: '子ども（こども）아이', s: 'こうえんで 子どもが あそんでいます。', sr: 'こうえんで こどもが あそんでいます', sk: '공원에서 아이가 놀고 있습니다' },
+    { jp: '国', reading: 'こく / くに', ko: '나라', ex: '外国（がいこく）외국', s: '外国に すみたいです。', sr: 'がいこくに すみたいです', sk: '외국에 살고 싶습니다' },
+    { jp: '語', reading: 'ご', ko: '말, 언어', ex: '日本語（にほんご）일본어', s: '日本語を べんきょうしています。', sr: 'にほんごを べんきょうしています', sk: '일본어를 공부하고 있습니다' },
+    { jp: '本', reading: 'ほん / もと', ko: '책', ex: '本（ほん）책', s: 'としょかんで 本を よみます。', sr: 'としょかんで ほんを よみます', sk: '도서관에서 책을 읽습니다' },
+    { jp: '文', reading: 'ぶん', ko: '글, 문장', ex: '文（ぶん）글', s: 'みじかい 文を かきます。', sr: 'みじかい ぶんを かきます', sk: '짧은 문장을 씁니다' },
+    { jp: '字', reading: 'じ', ko: '글자', ex: '漢字（かんじ）한자', s: '漢字を おぼえます。', sr: 'かんじを おぼえます', sk: '한자를 외웁니다' },
+    { jp: '高', reading: 'こう / たか', ko: '높다, 비싸다', ex: '高い（たかい）비싸다', s: 'この とけいは 高いです。', sr: 'この とけいは たかいです', sk: '이 시계는 비쌉니다' },
+    { jp: '安', reading: 'あん / やす', ko: '싸다', ex: '安い（やすい）싸다', s: 'この みせは 安いです。', sr: 'この みせは やすいです', sk: '이 가게는 쌉니다' },
+    { jp: '新', reading: 'しん / あたら', ko: '새롭다', ex: '新しい（あたらしい）새롭다', s: '新しい くるまが ほしいです。', sr: 'あたらしい くるまが ほしいです', sk: '새 차를 갖고 싶습니다' },
+    { jp: '古', reading: 'こ / ふる', ko: '낡다', ex: '古い（ふるい）낡다', s: 'この 本は 古いです。', sr: 'この ほんは ふるいです', sk: '이 책은 낡았습니다' },
+    { jp: '多', reading: 'た / おお', ko: '많다', ex: '多い（おおい）많다', s: 'ひとが 多いです。', sr: 'ひとが おおいです', sk: '사람이 많습니다' },
+    { jp: '少', reading: 'しょう / すく', ko: '적다', ex: '少ない（すくない）적다', s: 'お金が 少ないです。', sr: 'おかねが すくないです', sk: '돈이 적습니다' },
+    { jp: '長', reading: 'ちょう / なが', ko: '길다', ex: '長い（ながい）길다', s: 'この かわは 長いです。', sr: 'この かわは ながいです', sk: '이 강은 깁니다' },
+    { jp: '白', reading: 'はく / しろ', ko: '희다', ex: '白い（しろい）희다', s: '白い シャツを きます。', sr: 'しろい シャツを きます', sk: '흰 셔츠를 입습니다' },
+    { jp: '半', reading: 'はん', ko: '반', ex: '半分（はんぶん）절반', s: 'ケーキを 半分 たべました。', sr: 'ケーキを はんぶん たべました', sk: '케이크를 절반 먹었습니다' },
+    { jp: '毎', reading: 'まい', ko: '매, ~마다', ex: '毎日（まいにち）매일', s: '毎日 にほんごを べんきょうします。', sr: 'まいにち にほんごを べんきょうします', sk: '매일 일본어를 공부합니다' },
+    { jp: '朝', reading: 'ちょう / あさ', ko: '아침', ex: '朝（あさ）아침', s: '朝 はやく おきます。', sr: 'あさ はやく おきます', sk: '아침 일찍 일어납니다' },
+    { jp: '昼', reading: 'ちゅう / ひる', ko: '낮, 점심', ex: '昼ごはん（ひるごはん）점심밥', s: '昼ごはんを たべましたか。', sr: 'ひるごはんを たべましたか', sk: '점심을 먹었나요?' },
+    { jp: '夜', reading: 'や / よる', ko: '밤', ex: '夜（よる）밤', s: '夜 おそくまで はたらきます。', sr: 'よる おそくまで はたらきます', sk: '밤늦게까지 일합니다' },
+    { jp: '午', reading: 'ご', ko: '정오', ex: '午前（ごぜん）오전', s: '午前 9じに あいましょう。', sr: 'ごぜん くじに あいましょう', sk: '오전 9시에 만납시다' },
+    { jp: '前', reading: 'ぜん / まえ', ko: '앞, 전', ex: '前（まえ）앞', s: 'えきの 前で まっています。', sr: 'えきの まえで まっています', sk: '역 앞에서 기다리고 있습니다' },
+    { jp: '後', reading: 'ご / あと', ko: '뒤, 후', ex: '後（あと）뒤, 나중', s: 'しごとの 後で あいましょう。', sr: 'しごとの あとで あいましょう', sk: '일이 끝난 뒤에 만납시다' },
+    { jp: '間', reading: 'かん / あいだ', ko: '사이', ex: '時間（じかん）시간', s: '時間が ありません。', sr: 'じかんが ありません', sk: '시간이 없습니다' },
+    { jp: '週', reading: 'しゅう', ko: '주', ex: '毎週（まいしゅう）매주', s: '毎週 にちようびに やすみます。', sr: 'まいしゅう にちようびに やすみます', sk: '매주 일요일에 쉽니다' },
+    { jp: '休', reading: 'きゅう / やす', ko: '쉬다', ex: '休む（やすむ）쉬다', s: 'あした がっこうを 休みます。', sr: 'あした がっこうを やすみます', sk: '내일 학교를 쉽니다' },
+    { jp: '立', reading: 'りつ / た', ko: '서다', ex: '立つ（たつ）서다', s: 'せきから 立ちます。', sr: 'せきから たちます', sk: '자리에서 일어섭니다' },
+    { jp: '出', reading: 'しゅつ / で', ko: '나가다', ex: '出る（でる）나가다', s: '7じに いえを 出ます。', sr: 'しちじに いえを でます', sk: '7시에 집을 나섭니다' },
+    { jp: '入', reading: 'にゅう / はい', ko: '들어가다', ex: '入る（はいる）들어가다', s: 'へやに 入ってください。', sr: 'へやに はいってください', sk: '방에 들어오세요' },
+    { jp: '右', reading: 'う / みぎ', ko: '오른쪽', ex: '右（みぎ）오른쪽', s: 'つぎの かどを 右に まがります。', sr: 'つぎの かどを みぎに まがります', sk: '다음 모퉁이를 오른쪽으로 돕니다' },
+    { jp: '左', reading: 'さ / ひだり', ko: '왼쪽', ex: '左（ひだり）왼쪽', s: '左に ぎんこうが あります。', sr: 'ひだりに ぎんこうが あります', sk: '왼쪽에 은행이 있습니다' },
+    { jp: '外', reading: 'がい / そと', ko: '밖', ex: '外（そと）밖', s: '外は さむいです。', sr: 'そとは さむいです', sk: '밖은 춥습니다' },
+    { jp: '車', reading: 'しゃ / くるま', ko: '차', ex: '車（くるま）자동차', s: '車で かいしゃに いきます。', sr: 'くるまで かいしゃに いきます', sk: '차로 회사에 갑니다' },
+    { jp: '電', reading: 'でん', ko: '전기', ex: '電車（でんしゃ）전철', s: '電車で がっこうに いきます。', sr: 'でんしゃで がっこうに いきます', sk: '전철로 학교에 갑니다' },
+    { jp: '気', reading: 'き', ko: '기운', ex: '元気（げんき）건강, 기운', s: 'お元気ですか。', sr: 'おげんきですか', sk: '잘 지내세요?' },
+    { jp: '天', reading: 'てん', ko: '하늘', ex: '天気（てんき）날씨', s: 'きょうは 天気が いいです。', sr: 'きょうは てんきが いいです', sk: '오늘은 날씨가 좋습니다' },
+    { jp: '雨', reading: 'う / あめ', ko: '비', ex: '雨（あめ）비', s: '雨が ふっています。', sr: 'あめが ふっています', sk: '비가 내리고 있습니다' },
+    { jp: '道', reading: 'どう / みち', ko: '길', ex: '道（みち）길', s: '道が わかりません。', sr: 'みちが わかりません', sk: '길을 모르겠습니다' },
+    { jp: '駅', reading: 'えき', ko: '역', ex: '駅（えき）역', s: '駅まで あるきます。', sr: 'えきまで あるきます', sk: '역까지 걷습니다' },
+    { jp: '店', reading: 'てん / みせ', ko: '가게', ex: '店（みせ）가게', s: 'あの 店は ゆうめいです。', sr: 'あの みせは ゆうめいです', sk: '저 가게는 유명합니다' },
+    { jp: '花', reading: 'か / はな', ko: '꽃', ex: '花（はな）꽃', s: '花が きれいです。', sr: 'はなが きれいです', sk: '꽃이 예쁩니다' },
+    { jp: '魚', reading: 'ぎょ / さかな', ko: '생선', ex: '魚（さかな）생선', s: '魚を たべます。', sr: 'さかなを たべます', sk: '생선을 먹습니다' },
+    { jp: '肉', reading: 'にく', ko: '고기', ex: '肉（にく）고기', s: '肉が すきです。', sr: 'にくが すきです', sk: '고기를 좋아합니다' },
   ] },
   n5w: { title: 'N5 단어', type: 'word', items: [
     { jp: 'おはよう', reading: 'ohayou', ko: '좋은 아침 (인사)', ex: '' },
@@ -737,52 +768,52 @@ const DECKS = {
     { jp: '思', reading: 'し / おも', ko: '생각하다', ex: '思う（おもう）생각하다', s: 'あした あめが ふると 思います。', sr: 'あした あめが ふると おもいます', sk: '내일 비가 올 거라 생각합니다' },
     { jp: '教', reading: 'きょう / おし', ko: '가르치다', ex: '教える（おしえる）가르치다', s: 'にほんごを 教えています。', sr: 'にほんごを おしえています', sk: '일본어를 가르치고 있습니다' },
     { jp: '習', reading: 'しゅう / なら', ko: '익히다, 배우다', ex: '習う（ならう）배우다', s: 'ピアノを 習っています。', sr: 'ピアノを ならっています', sk: '피아노를 배우고 있습니다' },
-    { jp: '楽', reading: 'がく / たの', ko: '즐겁다, 음악', ex: '楽しい（たのしい）즐겁다' },
-    { jp: '歌', reading: 'か / うた', ko: '노래', ex: '歌う（うたう）노래하다' },
-    { jp: '映', reading: 'えい / うつ', ko: '비치다', ex: '映画（えいが）영화' },
-    { jp: '画', reading: 'が / かく', ko: '그림, 계획', ex: '計画（けいかく）계획' },
-    { jp: '集', reading: 'しゅう / あつ', ko: '모으다', ex: '集める（あつめる）모으다' },
-    { jp: '建', reading: 'けん / た', ko: '세우다', ex: '建物（たてもの）건물' },
-    { jp: '物', reading: 'ぶつ / もの', ko: '물건', ex: '食べ物（たべもの）음식' },
-    { jp: '品', reading: 'ひん / しな', ko: '물품', ex: '品物（しなもの）물품' },
-    { jp: '工', reading: 'こう', ko: '공업', ex: '工場（こうじょう）공장' },
-    { jp: '場', reading: 'じょう / ば', ko: '장소', ex: '場所（ばしょ）장소' },
-    { jp: '業', reading: 'ぎょう', ko: '일, 수업', ex: '授業（じゅぎょう）수업' },
-    { jp: '研', reading: 'けん', ko: '연구', ex: '研究（けんきゅう）연구' },
-    { jp: '洋', reading: 'よう', ko: '서양', ex: '洋服（ようふく）양복' },
-    { jp: '服', reading: 'ふく', ko: '옷', ex: '服（ふく）옷' },
-    { jp: '親', reading: 'しん / おや', ko: '부모', ex: '両親（りょうしん）부모' },
-    { jp: '切', reading: 'せつ / き', ko: '자르다, 친절', ex: '親切（しんせつ）친절' },
-    { jp: '便', reading: 'べん / びん', ko: '편리', ex: '便利（べんり）편리' },
-    { jp: '不', reading: 'ふ', ko: '아니다', ex: '不便（ふべん）불편' },
-    { jp: '力', reading: 'りょく / ちから', ko: '힘', ex: '力（ちから）힘' },
-    { jp: '心', reading: 'しん / こころ', ko: '마음', ex: '心配（しんぱい）걱정' },
-    { jp: '注', reading: 'ちゅう / そそ', ko: '붓다, 주의', ex: '注意（ちゅうい）주의' },
-    { jp: '用', reading: 'よう', ko: '쓰다, 용무', ex: '用事（ようじ）용무' },
-    { jp: '事', reading: 'じ / こと', ko: '일', ex: '仕事（しごと）일' },
-    { jp: '漢', reading: 'かん', ko: '한, 한자', ex: '漢字（かんじ）한자' },
-    { jp: '英', reading: 'えい', ko: '영어', ex: '英語（えいご）영어' },
-    { jp: '世', reading: 'せ / よ', ko: '세상', ex: '世界（せかい）세계' },
-    { jp: '代', reading: 'だい / か', ko: '대신, 시대', ex: '時代（じだい）시대' },
-    { jp: '有', reading: 'ゆう / あ', ko: '있다', ex: '有名（ゆうめい）유명' },
-    { jp: '重', reading: 'じゅう / おも', ko: '무겁다', ex: '重い（おもい）무겁다' },
-    { jp: '軽', reading: 'けい / かる', ko: '가볍다', ex: '軽い（かるい）가볍다' },
-    { jp: '寒', reading: 'かん / さむ', ko: '춥다', ex: '寒い（さむい）춥다' },
-    { jp: '暑', reading: 'しょ / あつ', ko: '덥다', ex: '暑い（あつい）덥다' },
-    { jp: '明', reading: 'めい / あか', ko: '밝다', ex: '説明（せつめい）설명' },
-    { jp: '特', reading: 'とく', ko: '특별', ex: '特別（とくべつ）특별' },
-    { jp: '歩', reading: 'ほ / ある', ko: '걷다', ex: '歩く（あるく）걷다' },
-    { jp: '止', reading: 'し / と', ko: '멈추다', ex: '止まる（とまる）멈추다' },
-    { jp: '作', reading: 'さく / つく', ko: '만들다', ex: '作る（つくる）만들다' },
-    { jp: '試', reading: 'し / ため', ko: '시험', ex: '試験（しけん）시험' },
-    { jp: '泳', reading: 'えい / およ', ko: '헤엄', ex: '泳ぐ（およぐ）수영하다' },
-    { jp: '死', reading: 'し / し', ko: '죽다', ex: '死ぬ（しぬ）죽다' },
-    { jp: '進', reading: 'しん / すす', ko: '나아가다', ex: '進む（すすむ）나아가다' },
-    { jp: '戻', reading: 'れい / もど', ko: '되돌아가다', ex: '戻る（もどる）되돌아가다' },
-    { jp: '伝', reading: 'でん / つた', ko: '전하다', ex: '伝える（つたえる）전하다' },
-    { jp: '運', reading: 'うん / はこ', ko: '옮기다', ex: '運ぶ（はこぶ）옮기다, 운반하다' },
-    { jp: '習', reading: 'しゅう / なら', ko: '연습', ex: '練習（れんしゅう）연습' },
-    { jp: '天', reading: 'てん', ko: '날씨', ex: '天気（てんき）날씨' },
+    { jp: '楽', reading: 'がく / たの', ko: '즐겁다, 음악', ex: '楽しい（たのしい）즐겁다', s: 'パーティーは 楽しいです。', sr: 'パーティーは たのしいです', sk: '파티는 즐겁습니다' },
+    { jp: '歌', reading: 'か / うた', ko: '노래', ex: '歌う（うたう）노래하다', s: 'カラオケで 歌います。', sr: 'カラオケで うたいます', sk: '노래방에서 노래합니다' },
+    { jp: '映', reading: 'えい / うつ', ko: '비치다', ex: '映画（えいが）영화', s: 'しゅうまつに 映画を みます。', sr: 'しゅうまつに えいがを みます', sk: '주말에 영화를 봅니다' },
+    { jp: '画', reading: 'が / かく', ko: '그림, 계획', ex: '計画（けいかく）계획', s: 'りょこうの 計画を たてます。', sr: 'りょこうの けいかくを たてます', sk: '여행 계획을 세웁니다' },
+    { jp: '集', reading: 'しゅう / あつ', ko: '모으다', ex: '集める（あつめる）모으다', s: 'きってを 集めています。', sr: 'きってを あつめています', sk: '우표를 모으고 있습니다' },
+    { jp: '建', reading: 'けん / た', ko: '세우다', ex: '建物（たてもの）건물', s: 'あの 建物は たかいです。', sr: 'あの たてものは たかいです', sk: '저 건물은 높습니다' },
+    { jp: '物', reading: 'ぶつ / もの', ko: '물건', ex: '食べ物（たべもの）음식', s: 'すきな 食べ物は なんですか。', sr: 'すきな たべものは なんですか', sk: '좋아하는 음식은 무엇인가요?' },
+    { jp: '品', reading: 'ひん / しな', ko: '물품', ex: '品物（しなもの）물품', s: 'この 品物は たかいです。', sr: 'この しなものは たかいです', sk: '이 물품은 비쌉니다' },
+    { jp: '工', reading: 'こう', ko: '공업', ex: '工場（こうじょう）공장', s: 'ちちは 工場で はたらいています。', sr: 'ちちは こうじょうで はたらいています', sk: '아버지는 공장에서 일합니다' },
+    { jp: '場', reading: 'じょう / ば', ko: '장소', ex: '場所（ばしょ）장소', s: 'この 場所を しっていますか。', sr: 'この ばしょを しっていますか', sk: '이 장소를 아나요?' },
+    { jp: '業', reading: 'ぎょう', ko: '일, 수업', ex: '授業（じゅぎょう）수업', s: '9じから 授業が はじまります。', sr: 'くじから じゅぎょうが はじまります', sk: '9시부터 수업이 시작됩니다' },
+    { jp: '研', reading: 'けん', ko: '연구', ex: '研究（けんきゅう）연구', s: 'だいがくで 研究を しています。', sr: 'だいがくで けんきゅうを しています', sk: '대학에서 연구를 하고 있습니다' },
+    { jp: '洋', reading: 'よう', ko: '서양', ex: '洋服（ようふく）양복', s: '洋服を かいました。', sr: 'ようふくを かいました', sk: '옷을 샀습니다' },
+    { jp: '服', reading: 'ふく', ko: '옷', ex: '服（ふく）옷', s: 'あたらしい 服を きます。', sr: 'あたらしい ふくを きます', sk: '새 옷을 입습니다' },
+    { jp: '親', reading: 'しん / おや', ko: '부모', ex: '両親（りょうしん）부모', s: '両親と すんでいます。', sr: 'りょうしんと すんでいます', sk: '부모님과 살고 있습니다' },
+    { jp: '切', reading: 'せつ / き', ko: '자르다, 친절', ex: '親切（しんせつ）친절', s: 'あの ひとは 親切です。', sr: 'あの ひとは しんせつです', sk: '저 사람은 친절합니다' },
+    { jp: '便', reading: 'べん / びん', ko: '편리', ex: '便利（べんり）편리', s: 'コンビニは 便利です。', sr: 'コンビニは べんりです', sk: '편의점은 편리합니다' },
+    { jp: '不', reading: 'ふ', ko: '아니다', ex: '不便（ふべん）불편', s: 'ここは こうつうが 不便です。', sr: 'ここは こうつうが ふべんです', sk: '여기는 교통이 불편합니다' },
+    { jp: '力', reading: 'りょく / ちから', ko: '힘', ex: '力（ちから）힘', s: '力が つよいです。', sr: 'ちからが つよいです', sk: '힘이 셉니다' },
+    { jp: '心', reading: 'しん / こころ', ko: '마음', ex: '心配（しんぱい）걱정', s: 'しけんが 心配です。', sr: 'しけんが しんぱいです', sk: '시험이 걱정입니다' },
+    { jp: '注', reading: 'ちゅう / そそ', ko: '붓다, 주의', ex: '注意（ちゅうい）주의', s: 'くるまに 注意してください。', sr: 'くるまに ちゅういしてください', sk: '차를 조심하세요' },
+    { jp: '用', reading: 'よう', ko: '쓰다, 용무', ex: '用事（ようじ）용무', s: 'きょうは 用事が あります。', sr: 'きょうは ようじが あります', sk: '오늘은 볼일이 있습니다' },
+    { jp: '事', reading: 'じ / こと', ko: '일', ex: '仕事（しごと）일', s: '仕事が いそがしいです。', sr: 'しごとが いそがしいです', sk: '일이 바쁩니다' },
+    { jp: '漢', reading: 'かん', ko: '한, 한자', ex: '漢字（かんじ）한자', s: '漢字を おぼえます。', sr: 'かんじを おぼえます', sk: '한자를 외웁니다' },
+    { jp: '英', reading: 'えい', ko: '영어', ex: '英語（えいご）영어', s: '英語と 日本語を はなします。', sr: 'えいごと にほんごを はなします', sk: '영어와 일본어를 말합니다' },
+    { jp: '世', reading: 'せ / よ', ko: '세상', ex: '世界（せかい）세계', s: '世界を りょこうしたいです。', sr: 'せかいを りょこうしたいです', sk: '세계를 여행하고 싶습니다' },
+    { jp: '代', reading: 'だい / か', ko: '대신, 시대', ex: '時代（じだい）시대', s: 'いまは べんりな 時代です。', sr: 'いまは べんりな じだいです', sk: '지금은 편리한 시대입니다' },
+    { jp: '有', reading: 'ゆう / あ', ko: '있다', ex: '有名（ゆうめい）유명', s: 'この みせは 有名です。', sr: 'この みせは ゆうめいです', sk: '이 가게는 유명합니다' },
+    { jp: '重', reading: 'じゅう / おも', ko: '무겁다', ex: '重い（おもい）무겁다', s: 'この にもつは 重いです。', sr: 'この にもつは おもいです', sk: '이 짐은 무겁습니다' },
+    { jp: '軽', reading: 'けい / かる', ko: '가볍다', ex: '軽い（かるい）가볍다', s: 'この かばんは 軽いです。', sr: 'この かばんは かるいです', sk: '이 가방은 가볍습니다' },
+    { jp: '寒', reading: 'かん / さむ', ko: '춥다', ex: '寒い（さむい）춥다', s: 'ふゆは 寒いです。', sr: 'ふゆは さむいです', sk: '겨울은 춥습니다' },
+    { jp: '暑', reading: 'しょ / あつ', ko: '덥다', ex: '暑い（あつい）덥다', s: 'なつは 暑いです。', sr: 'なつは あついです', sk: '여름은 덥습니다' },
+    { jp: '明', reading: 'めい / あか', ko: '밝다', ex: '説明（せつめい）설명', s: 'もういちど 説明してください。', sr: 'もういちど せつめいしてください', sk: '다시 한 번 설명해 주세요' },
+    { jp: '特', reading: 'とく', ko: '특별', ex: '特別（とくべつ）특별', s: 'きょうは 特別な 日です。', sr: 'きょうは とくべつな ひです', sk: '오늘은 특별한 날입니다' },
+    { jp: '歩', reading: 'ほ / ある', ko: '걷다', ex: '歩く（あるく）걷다', s: 'えきまで 歩きます。', sr: 'えきまで あるきます', sk: '역까지 걷습니다' },
+    { jp: '止', reading: 'し / と', ko: '멈추다', ex: '止まる（とまる）멈추다', s: 'バスが 止まりました。', sr: 'バスが とまりました', sk: '버스가 멈췄습니다' },
+    { jp: '作', reading: 'さく / つく', ko: '만들다', ex: '作る（つくる）만들다', s: 'ばんごはんを 作ります。', sr: 'ばんごはんを つくります', sk: '저녁밥을 만듭니다' },
+    { jp: '試', reading: 'し / ため', ko: '시험', ex: '試験（しけん）시험', s: 'あした 試験が あります。', sr: 'あした しけんが あります', sk: '내일 시험이 있습니다' },
+    { jp: '泳', reading: 'えい / およ', ko: '헤엄', ex: '泳ぐ（およぐ）수영하다', s: 'うみで 泳ぎます。', sr: 'うみで およぎます', sk: '바다에서 수영합니다' },
+    { jp: '死', reading: 'し / し', ko: '죽다', ex: '死ぬ（しぬ）죽다', s: 'はなが 死んでしまいました。', sr: 'はなが しんでしまいました', sk: '꽃이 죽어버렸습니다' },
+    { jp: '進', reading: 'しん / すす', ko: '나아가다', ex: '進む（すすむ）나아가다', s: 'まっすぐ 進んでください。', sr: 'まっすぐ すすんでください', sk: '곧장 나아가세요' },
+    { jp: '戻', reading: 'れい / もど', ko: '되돌아가다', ex: '戻る（もどる）되돌아가다', s: 'いえに 戻ります。', sr: 'いえに もどります', sk: '집에 돌아갑니다' },
+    { jp: '伝', reading: 'でん / つた', ko: '전하다', ex: '伝える（つたえる）전하다', s: 'ともだちに 伝えます。', sr: 'ともだちに つたえます', sk: '친구에게 전합니다' },
+    { jp: '運', reading: 'うん / はこ', ko: '옮기다', ex: '運ぶ（はこぶ）옮기다, 운반하다', s: 'にもつを 運びます。', sr: 'にもつを はこびます', sk: '짐을 옮깁니다' },
+    { jp: '習', reading: 'しゅう / なら', ko: '연습', ex: '練習（れんしゅう）연습', s: 'まいにち 練習します。', sr: 'まいにち れんしゅうします', sk: '매일 연습합니다' },
+    { jp: '天', reading: 'てん', ko: '날씨', ex: '天気（てんき）날씨', s: 'きょうは 天気が いいです。', sr: 'きょうは てんきが いいです', sk: '오늘은 날씨가 좋습니다' },
   ] },
   n4w: { title: 'N4 단어', type: 'word', items: [
     { jp: '約束', reading: 'yakusoku', ko: '약속', ex: '' },
@@ -889,6 +920,9 @@ let quizItems = [];
 let quizIdx = 0;
 let quizScore = 0;
 let quizAnswered = false;
+let ftHistory = [];
+let ftRec = null;
+let ftRecording = false;
 
 // ════════════ 상태 ════════════
 let QUESTIONS = [];
@@ -926,9 +960,16 @@ function openKeySettings() {
   else localStorage.setItem(API_KEY_STORE, v);
   updateKeyBtn();
 }
-async function callClaude(prompt, maxTokens) {
+async function callClaude(prompt, maxTokens, opts) {
   const key = getApiKey();
   if (!key) throw new Error('no-key');
+  opts = opts || {};
+  const body = {
+    model: 'claude-sonnet-4-6',
+    max_tokens: maxTokens,
+    messages: Array.isArray(prompt) ? prompt : [{ role: 'user', content: prompt }]
+  };
+  if (opts.system) body.system = opts.system;
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -937,7 +978,7 @@ async function callClaude(prompt, maxTokens) {
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
-    body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] })
+    body: JSON.stringify(body)
   });
   if (!res.ok) {
     const t = await res.text();
@@ -1309,6 +1350,139 @@ function renderQuizResult() {
     </div>`;
 }
 
+// ════════════ 프리토킹 ════════════
+const FT_GREETINGS = [
+  'こんにちは！にほんごきょうしのしゅんです。きょうはいっしょににほんごではなしましょう！',
+  'やあ、こんにちは！しゅんです。きょうもにほんごのれんしゅう、がんばりましょう！',
+  'こんにちは！あいましょう。きょうはなにについてはなしましょうか。',
+];
+const FT_FIRST_Q = [
+  { jp: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?' },
+  { jp: 'しゅみはなんですか。', ko: '취미는 무엇인가요?' },
+  { jp: 'すきなたべものはなんですか。', ko: '좋아하는 음식은 무엇인가요?' },
+  { jp: 'しゅうまつはよくなにをしますか。', ko: '주말에는 보통 무엇을 하나요?' },
+  { jp: 'にほんにいったことがありますか。', ko: '일본에 가 본 적 있나요?' },
+  { jp: 'すきなえいがやドラマはなんですか。', ko: '좋아하는 영화나 드라마는 무엇인가요?' },
+  { jp: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?' },
+  { jp: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?' },
+];
+const FT_SYSTEM = 'あなたは「しゅん」という、やさしい日本語の会話パートナーです。相手はGENKI1〜N4レベルの韓国人学習者です。'
+  + 'かんたんな日本語（ひらがな中心、むずかしい漢字や敬語はさける）で会話してください。'
+  + '毎回かならず次のJSONだけで答えてください（マークダウンなし）：'
+  + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어","reply_ko":"reply_jp의 한국어 해석"}';
+
+function openFreeTalk() {
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('study-screen').style.display = 'none';
+  document.getElementById('deck-screen').style.display = 'none';
+  const ft = document.getElementById('freetalk-screen');
+  ft.style.display = 'flex';
+  ft.style.flexDirection = 'column';
+  ft.style.gap = '16px';
+  document.getElementById('back-btn').classList.add('show');
+  document.getElementById('header-mode').style.display = 'none';
+  document.getElementById('header-ep').textContent = '💬 프리토킹';
+  document.getElementById('header-title').textContent = 'AI와 자유 대화';
+  startFreeTalk();
+}
+
+function startFreeTalk() {
+  if (ftRecording && ftRec) { try { ftRec.stop(); } catch (e) {} }
+  ftHistory = [];
+  document.getElementById('ft-log').innerHTML = '';
+  const greet = FT_GREETINGS[Math.floor(Math.random() * FT_GREETINGS.length)];
+  const q = FT_FIRST_Q[Math.floor(Math.random() * FT_FIRST_Q.length)];
+  const firstJp = greet + ' ' + q.jp;
+  ftAddAi(firstJp, '먼저 인사하고 질문할게요 — ' + q.ko);
+  ftHistory.push({ role: 'assistant', content: firstJp });
+  resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+}
+
+function ftAddAi(jp, ko) {
+  const log = document.getElementById('ft-log');
+  const d = document.createElement('div');
+  d.className = 'ft-msg ai';
+  d.innerHTML = `<div class="ft-jp">${jp}</div>${ko ? `<div class="ft-ko">${ko}</div>` : ''}`;
+  log.appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+function ftAddMe(text) {
+  const log = document.getElementById('ft-log');
+  const d = document.createElement('div');
+  d.className = 'ft-msg me';
+  d.innerHTML = `<div class="ft-jp">${text}</div>`;
+  log.appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+function ftAddFeedback(feedback, correction) {
+  const log = document.getElementById('ft-log');
+  const d = document.createElement('div');
+  d.className = 'ft-fb';
+  d.innerHTML = `<div>💡 ${feedback || '좋아요!'}</div>${correction ? `<div class="fb-line">✏️ <span class="fb-corr">${correction}</span></div>` : ''}`;
+  log.appendChild(d);
+  d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+
+function toggleFreeTalkRecording() {
+  if (ftRecording) { if (ftRec) { try { ftRec.stop(); } catch (e) {} } return; }
+  ftRecording = true;
+  const btn = document.getElementById('ft-record-btn');
+  const hint = document.getElementById('ft-record-hint');
+  btn.className = 'record-btn recording';
+  btn.textContent = '⏹';
+  hint.className = 'record-hint active';
+  hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
+
+  let finalText = '';
+  ftRec = startSpeech('ja-JP',
+    (e) => {
+      finalText = '';
+      for (let r of e.results) if (r.isFinal) finalText += r[0].transcript;
+    },
+    () => {
+      ftRecording = false;
+      const text = finalText.trim();
+      if (text) {
+        ftAddMe(text);
+        btn.className = 'record-btn processing';
+        btn.textContent = '⏳';
+        hint.className = 'record-hint';
+        hint.textContent = 'AI가 생각 중입니다...';
+        sendFreeTalk(text);
+      } else {
+        resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+      }
+    },
+    (e) => {
+      ftRecording = false;
+      resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+    }
+  );
+}
+
+async function sendFreeTalk(userText) {
+  ftHistory.push({ role: 'user', content: userText });
+  const log = document.getElementById('ft-log');
+  const typing = document.createElement('div');
+  typing.className = 'ft-typing';
+  typing.textContent = 'しゅん이 입력 중…';
+  log.appendChild(typing);
+  typing.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  try {
+    const raw = await callClaude(ftHistory.slice(-12), 700, { system: FT_SYSTEM });
+    typing.remove();
+    const r = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    ftAddFeedback(r.feedback, r.correction);
+    ftAddAi(r.reply_jp, r.reply_ko);
+    ftHistory.push({ role: 'assistant', content: r.reply_jp });
+  } catch (err) {
+    typing.remove();
+    const noKey = String(err.message).includes('no-key');
+    ftAddFeedback(noKey ? '오른쪽 위 🔑 버튼에서 API 키를 입력하면 AI와 대화할 수 있어요.' : '오류가 났어요 (' + err.message + '). 다시 시도해주세요.', '');
+  }
+  resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+}
+
 function selectEpisode(num) {
   currentEpisode = num;
   const ep = EPISODES[num];
@@ -1336,9 +1510,11 @@ function backToHome() {
   if (isRecording && convRec) { try { convRec.stop(); } catch (e) {} }
   if (shadowRecording && shadowRec) { try { shadowRec.stop(); } catch (e) {} }
   if (pronRecording && pronRec) { try { pronRec.stop(); } catch (e) {} }
+  if (ftRecording && ftRec) { try { ftRec.stop(); } catch (e) {} }
   removeQuizPopup();
   document.getElementById('study-screen').style.display = 'none';
   document.getElementById('deck-screen').style.display = 'none';
+  document.getElementById('freetalk-screen').style.display = 'none';
   document.getElementById('home-screen').style.display = 'block';
   document.getElementById('back-btn').classList.remove('show');
   document.getElementById('header-mode').style.display = 'none';
