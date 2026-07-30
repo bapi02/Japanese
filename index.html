@@ -249,6 +249,8 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
     <div class="episode-grid" id="episode-grid"></div>
     <div class="section-label">📚 기초 단어 · 칸지 (N5 · N4)</div>
     <div class="episode-grid" id="deck-grid"></div>
+    <div class="section-label">🔤 가타카나 (発音 연습)</div>
+    <div class="episode-grid" id="kana-grid"></div>
     <div class="section-label">💬 AI 프리토킹</div>
     <div class="episode-grid">
       <div class="episode-card" onclick="openFreeTalk()" style="grid-column:1/-1;">
@@ -920,8 +922,119 @@ const DECKS = {
     { jp: '浅い', reading: 'asai', ko: '얕다' },
     { jp: '美しい', reading: 'utsukushii', ko: '아름답다' },
   ] },
+  kata1: { title: '가타카나 기본', type: 'kana', items: [
+    { jp: 'ア', reading: 'a', ko: '', ex: '' },
+    { jp: 'イ', reading: 'i', ko: '', ex: '' },
+    { jp: 'ウ', reading: 'u', ko: '', ex: '' },
+    { jp: 'エ', reading: 'e', ko: '', ex: '' },
+    { jp: 'オ', reading: 'o', ko: '', ex: '' },
+    { jp: 'カ', reading: 'ka', ko: '', ex: '' },
+    { jp: 'キ', reading: 'ki', ko: '', ex: '' },
+    { jp: 'ク', reading: 'ku', ko: '', ex: '' },
+    { jp: 'ケ', reading: 'ke', ko: '', ex: '' },
+    { jp: 'コ', reading: 'ko', ko: '', ex: '' },
+    { jp: 'サ', reading: 'sa', ko: '', ex: '' },
+    { jp: 'シ', reading: 'shi', ko: '', ex: '' },
+    { jp: 'ス', reading: 'su', ko: '', ex: '' },
+    { jp: 'セ', reading: 'se', ko: '', ex: '' },
+    { jp: 'ソ', reading: 'so', ko: '', ex: '' },
+    { jp: 'タ', reading: 'ta', ko: '', ex: '' },
+    { jp: 'チ', reading: 'chi', ko: '', ex: '' },
+    { jp: 'ツ', reading: 'tsu', ko: '', ex: '' },
+    { jp: 'テ', reading: 'te', ko: '', ex: '' },
+    { jp: 'ト', reading: 'to', ko: '', ex: '' },
+    { jp: 'ナ', reading: 'na', ko: '', ex: '' },
+    { jp: 'ニ', reading: 'ni', ko: '', ex: '' },
+    { jp: 'ヌ', reading: 'nu', ko: '', ex: '' },
+    { jp: 'ネ', reading: 'ne', ko: '', ex: '' },
+    { jp: 'ノ', reading: 'no', ko: '', ex: '' },
+    { jp: 'ハ', reading: 'ha', ko: '', ex: '' },
+    { jp: 'ヒ', reading: 'hi', ko: '', ex: '' },
+    { jp: 'フ', reading: 'fu', ko: '', ex: '' },
+    { jp: 'ヘ', reading: 'he', ko: '', ex: '' },
+    { jp: 'ホ', reading: 'ho', ko: '', ex: '' },
+    { jp: 'マ', reading: 'ma', ko: '', ex: '' },
+    { jp: 'ミ', reading: 'mi', ko: '', ex: '' },
+    { jp: 'ム', reading: 'mu', ko: '', ex: '' },
+    { jp: 'メ', reading: 'me', ko: '', ex: '' },
+    { jp: 'モ', reading: 'mo', ko: '', ex: '' },
+    { jp: 'ヤ', reading: 'ya', ko: '', ex: '' },
+    { jp: 'ユ', reading: 'yu', ko: '', ex: '' },
+    { jp: 'ヨ', reading: 'yo', ko: '', ex: '' },
+    { jp: 'ラ', reading: 'ra', ko: '', ex: '' },
+    { jp: 'リ', reading: 'ri', ko: '', ex: '' },
+    { jp: 'ル', reading: 'ru', ko: '', ex: '' },
+    { jp: 'レ', reading: 're', ko: '', ex: '' },
+    { jp: 'ロ', reading: 'ro', ko: '', ex: '' },
+    { jp: 'ワ', reading: 'wa', ko: '', ex: '' },
+    { jp: 'ヲ', reading: 'wo', ko: '', ex: '' },
+    { jp: 'ン', reading: 'n', ko: '', ex: '' },
+  ] },
+  kata2: { title: '탁음·반탁음', type: 'kana', items: [
+    { jp: 'ガ', reading: 'ga', ko: '', ex: '' },
+    { jp: 'ギ', reading: 'gi', ko: '', ex: '' },
+    { jp: 'グ', reading: 'gu', ko: '', ex: '' },
+    { jp: 'ゲ', reading: 'ge', ko: '', ex: '' },
+    { jp: 'ゴ', reading: 'go', ko: '', ex: '' },
+    { jp: 'ザ', reading: 'za', ko: '', ex: '' },
+    { jp: 'ジ', reading: 'ji', ko: '', ex: '' },
+    { jp: 'ズ', reading: 'zu', ko: '', ex: '' },
+    { jp: 'ゼ', reading: 'ze', ko: '', ex: '' },
+    { jp: 'ゾ', reading: 'zo', ko: '', ex: '' },
+    { jp: 'ダ', reading: 'da', ko: '', ex: '' },
+    { jp: 'ヂ', reading: 'ji', ko: '', ex: '' },
+    { jp: 'ヅ', reading: 'zu', ko: '', ex: '' },
+    { jp: 'デ', reading: 'de', ko: '', ex: '' },
+    { jp: 'ド', reading: 'do', ko: '', ex: '' },
+    { jp: 'バ', reading: 'ba', ko: '', ex: '' },
+    { jp: 'ビ', reading: 'bi', ko: '', ex: '' },
+    { jp: 'ブ', reading: 'bu', ko: '', ex: '' },
+    { jp: 'ベ', reading: 'be', ko: '', ex: '' },
+    { jp: 'ボ', reading: 'bo', ko: '', ex: '' },
+    { jp: 'パ', reading: 'pa', ko: '', ex: '' },
+    { jp: 'ピ', reading: 'pi', ko: '', ex: '' },
+    { jp: 'プ', reading: 'pu', ko: '', ex: '' },
+    { jp: 'ペ', reading: 'pe', ko: '', ex: '' },
+    { jp: 'ポ', reading: 'po', ko: '', ex: '' },
+  ] },
+  kata3: { title: '요음', type: 'kana', items: [
+    { jp: 'キャ', reading: 'kya', ko: '', ex: '' },
+    { jp: 'キュ', reading: 'kyu', ko: '', ex: '' },
+    { jp: 'キョ', reading: 'kyo', ko: '', ex: '' },
+    { jp: 'シャ', reading: 'sha', ko: '', ex: '' },
+    { jp: 'シュ', reading: 'shu', ko: '', ex: '' },
+    { jp: 'ショ', reading: 'sho', ko: '', ex: '' },
+    { jp: 'チャ', reading: 'cha', ko: '', ex: '' },
+    { jp: 'チュ', reading: 'chu', ko: '', ex: '' },
+    { jp: 'チョ', reading: 'cho', ko: '', ex: '' },
+    { jp: 'ニャ', reading: 'nya', ko: '', ex: '' },
+    { jp: 'ニュ', reading: 'nyu', ko: '', ex: '' },
+    { jp: 'ニョ', reading: 'nyo', ko: '', ex: '' },
+    { jp: 'ヒャ', reading: 'hya', ko: '', ex: '' },
+    { jp: 'ヒュ', reading: 'hyu', ko: '', ex: '' },
+    { jp: 'ヒョ', reading: 'hyo', ko: '', ex: '' },
+    { jp: 'ミャ', reading: 'mya', ko: '', ex: '' },
+    { jp: 'ミュ', reading: 'myu', ko: '', ex: '' },
+    { jp: 'ミョ', reading: 'myo', ko: '', ex: '' },
+    { jp: 'リャ', reading: 'rya', ko: '', ex: '' },
+    { jp: 'リュ', reading: 'ryu', ko: '', ex: '' },
+    { jp: 'リョ', reading: 'ryo', ko: '', ex: '' },
+    { jp: 'ギャ', reading: 'gya', ko: '', ex: '' },
+    { jp: 'ギュ', reading: 'gyu', ko: '', ex: '' },
+    { jp: 'ギョ', reading: 'gyo', ko: '', ex: '' },
+    { jp: 'ジャ', reading: 'ja', ko: '', ex: '' },
+    { jp: 'ジュ', reading: 'ju', ko: '', ex: '' },
+    { jp: 'ジョ', reading: 'jo', ko: '', ex: '' },
+    { jp: 'ビャ', reading: 'bya', ko: '', ex: '' },
+    { jp: 'ビュ', reading: 'byu', ko: '', ex: '' },
+    { jp: 'ビョ', reading: 'byo', ko: '', ex: '' },
+    { jp: 'ピャ', reading: 'pya', ko: '', ex: '' },
+    { jp: 'ピュ', reading: 'pyu', ko: '', ex: '' },
+    { jp: 'ピョ', reading: 'pyo', ko: '', ex: '' },
+  ] },
 };
 const DECK_ORDER = ['n5k', 'n5w', 'n4k', 'n4w'];
+const KANA_ORDER = ['kata1', 'kata2', 'kata3'];
 let hideMeaning = false;
 let currentDeckCount = 0;
 let currentDeck = null;
@@ -1056,6 +1169,16 @@ function renderDeckGrid() {
     card.onclick = () => openDeck(id);
     card.innerHTML = `<div class="ep-no" style="font-size:18px">${d.title}</div><div class="ep-meta">${d.items.length}개 단어</div>`;
     grid.appendChild(card);
+  });
+  const kgrid = document.getElementById('kana-grid');
+  kgrid.innerHTML = '';
+  KANA_ORDER.forEach((id) => {
+    const d = DECKS[id];
+    const card = document.createElement('div');
+    card.className = 'episode-card';
+    card.onclick = () => openDeck(id);
+    card.innerHTML = `<div class="ep-no" style="font-size:18px">${d.title}</div><div class="ep-meta">${d.items.length}자</div>`;
+    kgrid.appendChild(card);
   });
 }
 
@@ -1298,6 +1421,17 @@ function renderQuiz() {
     }
     options = shuffle(opts);
     qHtml = `<div class="quiz-jp word">${p.word}</div><div class="quiz-sub">이 단어의 읽기는?</div>`;
+  } else if (currentDeck.type === 'kana') {
+    // 가타카나: 발음(로마자) 맞히기
+    correct = it.reading;
+    const pool = shuffle(currentDeck.items.filter((x) => x.reading !== correct));
+    const wrongs = [];
+    for (const x of pool) {
+      if (!wrongs.includes(x.reading)) wrongs.push(x.reading);
+      if (wrongs.length === 3) break;
+    }
+    options = shuffle([correct, ...wrongs]);
+    qHtml = `<div class="quiz-jp">${it.jp}</div><div class="quiz-sub">이 가타카나의 발음은?</div>`;
   } else {
     // 단어: 뜻 맞히기
     correct = it.ko;
@@ -1350,6 +1484,8 @@ function answerQuiz(btn, selected, correct, it) {
       <div class="quiz-reveal-ex">칸지: ${it.jp}（${it.reading}）${it.ko}</div>
       ${it.s ? `<div class="quiz-reveal-sentence">${it.s}<span class="yomi">${it.sr}</span><span class="trans">${it.sk}</span></div>` : ''}
     `;
+  } else if (currentDeck.type === 'kana') {
+    body = `<div class="quiz-reveal-jp" style="font-size:36px">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>`;
   } else {
     body = `
       <div class="quiz-reveal-jp">${it.jp}<span class="quiz-reveal-reading">${it.reading}</span></div>
