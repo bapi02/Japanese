@@ -6,7 +6,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildTripPlans, DEFAULTS, DESTINATIONS, PATTERNS, ORIGIN } from '../lib/config.mjs';
+import { buildTripPlans, DEFAULTS, DESTINATIONS, PATTERNS, CABINS, ORIGIN } from '../lib/config.mjs';
 import { calendarContext } from '../lib/holidays.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -24,7 +24,10 @@ const ROUTE = {
   OKA: { base: 395000, out: ['OZ170', '07:40'], ret: ['OZ171', '19:40'], min: 140 },
 };
 const DEST_CODES = Object.keys(ROUTE);
-const CLASSES = ['T', 'E', 'S', 'V', 'Q', 'N', 'L', 'K', 'H', 'M', 'B', 'Y'];
+const Y_CLASSES = ['T', 'E', 'S', 'V', 'Q', 'N', 'L', 'K', 'H', 'M', 'B', 'Y'];
+const C_CLASSES = ['Z', 'I', 'D', 'C', 'J'];
+// 노선별 비즈니스 배수 (이코노미 대비) — 단거리 일본 노선 근사치
+const BIZ_RATIO = { NRT: 3.2, HND: 3.0, KIX: 3.4, FUK: 3.6, NGO: 3.3, CTS: 2.9, OKA: 3.1 };
 
 // 결정적 난수 (파일이 매번 흔들리지 않게)
 function rng(seed) {
@@ -58,43 +61,55 @@ for (const plan of plans) {
 
   // 아주 가끔은 그 시간대 조합이 아예 없다고 둔다.
   if (rand() < 0.07) {
-    trips.push({ ...plan, price: null, currency: 'KRW', offerCount: 0, offers: [] });
+    const blank = { ...plan, currency: 'KRW' };
+    for (const c of CABINS) blank[c.key] = { price: null, offerCount: 0, offers: [] };
+    trips.push(blank);
     continue;
   }
 
   const seats = mult > 1.45 ? 1 + Math.floor(rand() * 3) : 3 + Math.floor(rand() * 7);
-  const tier = Math.min(CLASSES.length - 1, Math.floor((mult - 0.85) * 9));
-  const offers = [];
-  const count = 1 + Math.floor(rand() * 3);
-  for (let i = 0; i < count; i++) {
-    const price = Math.round((r.base * mult * (1 + i * 0.14)) / 100) * 100;
-    const outDep = i === 0 ? r.out[1] : addMinutes(r.out[1], -35 + i * 25);
-    const retDep = i === 0 ? r.ret[1] : addMinutes(r.ret[1], 20 * i);
-    offers.push({
-      price, currency: 'KRW',
-      seats: Math.max(1, seats - i),
-      out: {
-        carrier: 'OZ', carrierName: '아시아나항공', operating: 'OZ',
-        number: r.out[0], from: ORIGIN, to: plan.dest,
-        depAt: `${plan.depDate}T${outDep}:00`,
-        arrAt: `${plan.depDate}T${addMinutes(outDep, r.min)}:00`,
-        depTime: outDep, arrTime: addMinutes(outDep, r.min), minutes: r.min,
-        aircraft: 'AIRBUS A321NEO', cabin: 'ECONOMY',
-        bookingClass: CLASSES[Math.min(CLASSES.length - 1, tier + i)], brandedFare: null,
-      },
-      ret: {
-        carrier: 'OZ', carrierName: '아시아나항공', operating: 'OZ',
-        number: r.ret[0], from: plan.dest, to: ORIGIN,
-        depAt: `${plan.retDate}T${retDep}:00`,
-        arrAt: `${plan.retDate}T${addMinutes(retDep, r.min)}:00`,
-        depTime: retDep, arrTime: addMinutes(retDep, r.min), minutes: r.min,
-        aircraft: 'AIRBUS A321NEO', cabin: 'ECONOMY',
-        bookingClass: CLASSES[Math.min(CLASSES.length - 1, tier + i)], brandedFare: null,
-      },
-    });
+  const trip = { ...plan, currency: 'KRW' };
+
+  const mkLeg = (num, from, to, date, depHHMM, cls) => ({
+    carrier: 'OZ', carrierName: '아시아나항공', operating: 'OZ',
+    number: num, from, to,
+    depAt: `${date}T${depHHMM}:00`,
+    arrAt: `${date}T${addMinutes(depHHMM, r.min)}:00`,
+    depTime: depHHMM, arrTime: addMinutes(depHHMM, r.min), minutes: r.min,
+    aircraft: 'AIRBUS A321NEO', cabin: cls.cabin, bookingClass: cls.code, brandedFare: null,
+  });
+
+  for (const cabin of CABINS) {
+    const isBiz = cabin.id === 'BUSINESS';
+    // 비즈니스는 좌석 수 자체가 적어 그 시간대에 아예 안 남는 경우가 잦다.
+    if (isBiz && rand() < 0.22) {
+      trip[cabin.key] = { price: null, offerCount: 0, offers: [] };
+      continue;
+    }
+    // 성수기·연휴에는 비즈니스 배수가 더 벌어진다.
+    const ratio = isBiz ? BIZ_RATIO[plan.dest] * (0.88 + rand() * 0.34) * (mult > 1.35 ? 1.12 : 1) : 1;
+    const pool = isBiz ? C_CLASSES : Y_CLASSES;
+    const tier = Math.min(pool.length - 1, Math.floor((mult - 0.85) * (isBiz ? 3.5 : 9)));
+    const seatBase = isBiz ? Math.max(1, Math.round(seats / 3)) : seats;
+    const count = isBiz ? 1 + Math.floor(rand() * 2) : 1 + Math.floor(rand() * 3);
+
+    const offers = [];
+    for (let i = 0; i < count; i++) {
+      const price = Math.round((r.base * mult * ratio * (1 + i * 0.14)) / 100) * 100;
+      const outDep = i === 0 ? r.out[1] : addMinutes(r.out[1], -35 + i * 25);
+      const retDep = i === 0 ? r.ret[1] : addMinutes(r.ret[1], 20 * i);
+      const cls = { cabin: cabin.id, code: pool[Math.min(pool.length - 1, tier + i)] };
+      offers.push({
+        price, currency: 'KRW',
+        seats: Math.max(1, seatBase - i),
+        out: mkLeg(r.out[0], ORIGIN, plan.dest, plan.depDate, outDep, cls),
+        ret: mkLeg(r.ret[0], plan.dest, ORIGIN, plan.retDate, retDep, cls),
+      });
+    }
+    offers.sort((a, b) => a.price - b.price);
+    trip[cabin.key] = { price: offers[0].price, offerCount: offers.length, offers };
   }
-  offers.sort((a, b) => a.price - b.price);
-  trips.push({ ...plan, price: offers[0].price, currency: 'KRW', offerCount: offers.length, offers });
+  trips.push(trip);
 }
 
 const payload = {
@@ -104,17 +119,18 @@ const payload = {
   currency: 'KRW',
   params: {
     origin: ORIGIN, carriers: DEFAULTS.carriers, nonStop: true,
-    adults: 1, travelClass: 'ECONOMY',
+    adults: 1, cabins: DEFAULTS.cabins,
     depWindow: DEFAULTS.depWindow, retWindow: DEFAULTS.retWindow,
     weeks: DEFAULTS.weeks, patterns: PATTERNS.map(p => p.id),
   },
   destinations: DESTINATIONS.filter(d => DEST_CODES.includes(d.code)),
   patterns: PATTERNS,
+  cabinsMeta: CABINS,
   trips,
   errors: [],
 };
 
 await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify(payload) + '\n', 'utf8');
-const ok = trips.filter(t => t.price).length;
-console.log(`샘플 생성: ${trips.length}건 (가격 ${ok}건) -> ${OUT}`);
+const per = CABINS.map(c => `${c.ko} ${trips.filter(t => t[c.key]?.price).length}`).join(' / ');
+console.log(`샘플 생성: ${trips.length}조합 (${per}) -> ${OUT}`);

@@ -1,13 +1,13 @@
 // 화면 로직 — 저장된 시세(JSON)를 즉시 그리고, 프록시가 설정돼 있으면 라이브로 덮어쓴다.
 
-import { PATTERNS, DESTINATIONS, CARRIER_NAMES } from './lib/config.mjs';
-import { buildBaselines, explain, quantile } from './lib/analyze.mjs';
+import { PATTERNS, DESTINATIONS, CABINS, CARRIER_NAMES } from './lib/config.mjs';
+import { buildBaselines, explain, quantile, priceOf, offersOf } from './lib/analyze.mjs';
 import { calendarContext } from './lib/holidays.mjs';
 
 const $ = (id) => document.getElementById(id);
 const CFG_KEY = 'oz-jp-fare-cfg';
 const DEFAULT_CFG = {
-  proxy: '', adults: 1, limit: 28, autoRefresh: true,
+  proxy: '', adults: 1, limit: 20, autoRefresh: true,
   depFrom: '06:00', depTo: '09:00', retFrom: '18:00', retTo: '21:00',
 };
 
@@ -16,19 +16,27 @@ const state = {
   baselines: null,
   dest: 'ALL',
   pattern: 'ALL',
+  cabin: 'BOTH',      // 'BOTH' | 'economy' | 'business'
   view: 'grid',
   cfg: { ...DEFAULT_CFG },
-  live: new Set(),   // 이번 세션에 라이브로 갱신된 trip id
+  live: new Set(),    // `${tripId}::${cabinKey}` — 좌석등급 단위로 기록한다
   lastLiveAt: null,
   busy: false,
 };
 
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const won = (n) => n.toLocaleString('ko-KR');
+const manwon = (n) => `${(n / 10000).toFixed(1)}만`;
 const md = (iso) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 const mdd = (iso) => `${md(iso)}(${DOW[new Date(iso + 'T00:00:00Z').getUTCDay()]})`;
-const shortWin = (w) => w ? `${+w[0].slice(0,2)}\u2013${+w[1].slice(0,2)}시` : '';
+const shortWin = (w) => w ? `${+w[0].slice(0, 2)}–${+w[1].slice(0, 2)}시` : '';
 const destInfo = (code) => DESTINATIONS.find(d => d.code === code) || { code, ko: code, city: code };
+const cabinMeta = (key) => CABINS.find(c => c.key === key);
+/** 정렬·히트맵 기준이 되는 좌석등급 */
+const primaryCabin = () => state.cabin === 'business' ? 'business' : 'economy';
+const otherCabin = (key) => key === 'economy' ? 'business' : 'economy';
+const isLive = (trip, key) => state.live.has(`${trip.id}::${key}`);
+const liveTripCount = () => new Set([...state.live].map(k => k.split('::')[0])).size;
 
 /* ── 설정 ─────────────────────────────── */
 function loadCfg() {
@@ -63,7 +71,10 @@ async function loadData() {
   const res = await fetch('./data/prices.json?t=' + Date.now(), { cache: 'no-store' });
   if (!res.ok) throw new Error(`prices.json 을 불러오지 못했습니다 (${res.status})`);
   const data = await res.json();
-  data.trips.forEach(t => { t.patternLabel ||= PATTERNS.find(p => p.id === t.pattern)?.label || t.pattern; });
+  for (const t of data.trips) {
+    t.patternLabel ||= PATTERNS.find(p => p.id === t.pattern)?.label || t.pattern;
+    for (const c of CABINS) t[c.key] ||= { price: null, offerCount: 0, offers: [] };
+  }
   state.data = data;
   state.baselines = buildBaselines(data.trips);
 }
@@ -74,48 +85,62 @@ function visibleTrips() {
     (state.pattern === 'ALL' || t.pattern === state.pattern));
 }
 
-/** 주차 × 패턴 셀. 목적지가 '전체'면 최저가 목적지로 대표시킨다. */
+/** 주차 × 패턴 셀. 목적지가 '전체'면 기준 좌석등급 최저가로 대표시킨다. */
 function cellsByWeek() {
-  const trips = visibleTrips();
+  const key = primaryCabin();
   const weeks = new Map();
-  for (const t of trips) {
+  for (const t of visibleTrips()) {
     if (!weeks.has(t.weekOf)) weeks.set(t.weekOf, new Map());
     const byPat = weeks.get(t.weekOf);
     const cur = byPat.get(t.pattern);
-    // 가격이 있는 것 우선, 그 중 최저가
-    if (!cur || (typeof t.price === 'number' && (typeof cur.best.price !== 'number' || t.price < cur.best.price))) {
-      byPat.set(t.pattern, { best: t, all: (cur?.all || []) });
+    if (!cur) {
+      byPat.set(t.pattern, { best: t, all: [t] });
+      continue;
     }
-    byPat.get(t.pattern).all.push(t);
+    cur.all.push(t);
+    const p = priceOf(t, key), q = priceOf(cur.best, key);
+    if (typeof p === 'number' && (typeof q !== 'number' || p < q)) cur.best = t;
   }
   return [...weeks.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
 /* ── 렌더 ─────────────────────────────── */
+function mkChip(label, sub, active, onClick) {
+  const b = document.createElement('button');
+  b.className = 'chip' + (active ? ' on' : '');
+  b.innerHTML = label + (sub ? `<span class="sub">${sub}</span>` : '');
+  b.onclick = onClick;
+  return b;
+}
+
 function renderChips() {
-  const counts = new Map();
+  const key = primaryCabin();
+  const cheapest = new Map();
   for (const t of state.data.trips) {
-    if (typeof t.price !== 'number') continue;
-    const m = counts.get(t.dest);
-    if (!m || t.price < m) counts.set(t.dest, t.price);
+    const p = priceOf(t, key);
+    if (typeof p !== 'number') continue;
+    const m = cheapest.get(t.dest);
+    if (!m || p < m) cheapest.set(t.dest, p);
   }
   const destsInData = state.data.destinations?.map(d => d.code)
     ?? [...new Set(state.data.trips.map(t => t.dest))];
 
+  const cc = $('cabin-chips');
+  cc.innerHTML = '';
+  cc.appendChild(mkChip('이코노미 + 비즈니스', '', state.cabin === 'BOTH',
+    () => { state.cabin = 'BOTH'; render(); }));
+  for (const c of CABINS) {
+    const n = state.data.trips.filter(t => typeof priceOf(t, c.key) === 'number').length;
+    cc.appendChild(mkChip(c.ko, `${n}`, state.cabin === c.key,
+      () => { state.cabin = c.key; render(); }));
+  }
+
   const dc = $('dest-chips');
   dc.innerHTML = '';
-  const mkChip = (label, sub, active, onClick) => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (active ? ' on' : '');
-    b.innerHTML = label + (sub ? `<span class="sub">${sub}</span>` : '');
-    b.onclick = onClick;
-    return b;
-  };
   dc.appendChild(mkChip('전체', '', state.dest === 'ALL', () => { state.dest = 'ALL'; render(); }));
   for (const code of destsInData) {
-    const info = destInfo(code);
-    const min = counts.get(code);
-    dc.appendChild(mkChip(info.ko, min ? `${Math.round(min / 10000)}만~` : '—',
+    const min = cheapest.get(code);
+    dc.appendChild(mkChip(destInfo(code).ko, min ? `${Math.round(min / 10000)}만~` : '—',
       state.dest === code, () => { state.dest = code; render(); }));
   }
 
@@ -132,9 +157,10 @@ function renderHeader() {
   const d = state.data;
   const badge = $('src-badge');
   const isSample = d.source === 'sample';
-  badge.className = 'badge ' + (isSample ? 'sample' : state.live.size ? 'live' : '');
-  badge.textContent = isSample && !state.live.size ? '샘플 데이터'
-    : state.live.size ? '실시간 조회' : '저장된 시세';
+  const liveN = liveTripCount();
+  badge.className = 'badge ' + (isSample && !liveN ? 'sample' : liveN ? 'live' : '');
+  badge.textContent = isSample && !liveN ? '샘플 데이터'
+    : liveN ? '실시간 조회' : '저장된 시세';
 
   const ago = (iso) => {
     const mins = Math.round((Date.now() - new Date(iso)) / 60000);
@@ -145,7 +171,7 @@ function renderHeader() {
   };
   const p = d.params || {};
   const when = state.lastLiveAt
-    ? `실시간 ${state.live.size}건 ${ago(state.lastLiveAt)} · 나머지 ${ago(d.generatedAt)} 수집분`
+    ? `실시간 ${liveN}건 ${ago(state.lastLiveAt)} · 나머지 ${ago(d.generatedAt)} 수집분`
     : `${ago(d.generatedAt)} 갱신`;
   $('updated').textContent =
     `${when} · ${shortWin(p.depWindow)} 출발 / ${shortWin(p.retWindow)} 귀국 · ${(p.carriers || ['OZ']).map(c => CARRIER_NAMES[c] || c).join('/')} 직항`;
@@ -159,7 +185,7 @@ function renderNotice() {
   slot.innerHTML = '';
   const msgs = [];
   if (state.data.source === 'sample' && state.live.size) {
-    msgs.push(`<b>● 실시간</b> 표시가 붙은 ${state.live.size}건만 실제 조회 값이고, 나머지는 화면 확인용 예시입니다.`);
+    msgs.push(`<b>● 실시간</b> 표시가 붙은 값만 실제 조회 결과이고, 나머지는 화면 확인용 예시입니다.`);
   } else if (state.data.source === 'sample') {
     msgs.push('지금 보이는 값은 <b>화면 확인용 예시</b>입니다. 실제 시세를 보려면 Amadeus 키를 등록하세요 — 자동 수집은 저장소 시크릿, 실시간 조회는 ⚙ 설정의 프록시 주소.');
   } else if (!state.cfg.proxy) {
@@ -182,27 +208,42 @@ function heatOf(price, qs) {
   return 4;
 }
 
+/** 셀 안의 보조 좌석등급 한 줄 */
+function subCabinLine(trip, subKey) {
+  const meta = cabinMeta(subKey);
+  const p = priceOf(trip, subKey);
+  const main = priceOf(trip, primaryCabin());
+  if (typeof p !== 'number') {
+    return `<span class="subcabin none">${meta.short} 해당 시간대 없음</span>`;
+  }
+  const ratio = typeof main === 'number' && main > 0
+    ? (subKey === 'business' ? (p / main) : (main / p)) : null;
+  return `<span class="subcabin"><b>${meta.short}</b> ${won(p)}원${
+    ratio ? `<span class="x">×${ratio.toFixed(1)}</span>` : ''}${
+    isLive(trip, subKey) ? '<span class="x" style="color:var(--green)">●</span>' : ''}</span>`;
+}
+
 function renderGrid() {
   const main = $('main');
   main.innerHTML = '';
+  const key = primaryCabin();
   const weeks = cellsByWeek();
-  const prices = visibleTrips().map(t => t.price).filter(p => typeof p === 'number');
+  const prices = visibleTrips().map(t => priceOf(t, key)).filter(p => typeof p === 'number');
   if (!prices.length) {
     main.innerHTML = '<div class="empty-state">조건에 맞는 항공편이 없습니다.<br>필터를 바꿔보세요.</div>';
+    $('stat-line').textContent = '';
     return;
   }
   const qs = [quantile(prices, .2), quantile(prices, .4), quantile(prices, .6), quantile(prices, .85)];
-  $('stat-line').textContent = `최저 ${won(Math.min(...prices))}원 · 중앙 ${won(quantile(prices, .5))}원`;
+  $('stat-line').textContent =
+    `${cabinMeta(key).ko} 최저 ${manwon(Math.min(...prices))} · 중앙 ${manwon(quantile(prices, .5))}`;
 
   for (const [weekOf, byPat] of weeks) {
     const card = document.createElement('div');
     card.className = 'week';
-
-    const anyTrip = [...byPat.values()][0]?.best;
     const lastRet = [...byPat.values()].reduce((a, c) => c.best.retDate > a ? c.best.retDate : a, weekOf);
     const cal = calendarContext(weekOf, lastRet);
     const holidayTag = cal.kr[0]?.name || cal.seasons[0]?.name || cal.jp[0]?.name || '';
-
     const nth = Math.ceil(+weekOf.slice(8, 10) / 7);
     card.innerHTML = `
       <div class="week-head">
@@ -218,27 +259,28 @@ function renderGrid() {
       const entry = byPat.get(p.id);
       const btn = document.createElement('button');
       btn.className = 'cell';
-      if (!entry || typeof entry.best.price !== 'number') {
+      const t = entry?.best;
+      const price = t ? priceOf(t, key) : null;
+
+      if (typeof price !== 'number') {
         btn.classList.add('empty');
-        const dep = entry?.best.depDate, ret = entry?.best.retDate;
         btn.innerHTML = `
           <span class="pat">${p.label}</span>
-          <span class="dates">${dep ? `${md(dep)} → ${md(ret)}` : ''}</span>
+          <span class="dates">${t ? `${md(t.depDate)} → ${md(t.retDate)}` : ''}</span>
           <span class="price">해당 시간대 없음</span>`;
-        if (entry) btn.onclick = () => openDetail(entry);
+        if (t) btn.onclick = () => openDetail(entry);
       } else {
-        const t = entry.best;
-        const h = heatOf(t.price, qs);
-        const reasons = explain(t, state.baselines);
-        const topUp = reasons.find(r => r.tone === 'up');
+        const h = heatOf(price, qs);
+        const topUp = explain(t, state.baselines, key).find(r => r.tone === 'up');
         btn.innerHTML = `
           <i class="bar b${h}"></i>
           <span class="pat">${p.label}</span>
           <span class="dates">${md(t.depDate)} → ${md(t.retDate)} · ${p.nights}박</span>
-          <span class="price h${h}">${won(t.price)}<span class="won">원</span></span>
+          <span class="price h${h}">${won(price)}<span class="won">원</span></span>
+          ${state.cabin === 'BOTH' ? subCabinLine(t, otherCabin(key)) : ''}
           <span class="meta">
             ${state.dest === 'ALL' ? `<span class="dest-tag">${destInfo(t.dest).city}</span>` : ''}
-            ${state.live.has(t.id) ? '<span style="color:var(--green)">● 실시간</span>' : ''}
+            ${isLive(t, key) ? '<span style="color:var(--green)">● 실시간</span>' : ''}
           </span>
           ${topUp ? `<span class="why">↑ ${topUp.label}</span>` : ''}`;
         btn.onclick = () => openDetail(entry);
@@ -253,19 +295,23 @@ function renderGrid() {
 function renderList() {
   const main = $('main');
   main.innerHTML = '';
-  const trips = visibleTrips().filter(t => typeof t.price === 'number').sort((a, b) => a.price - b.price);
+  const key = primaryCabin();
+  const trips = visibleTrips()
+    .filter(t => typeof priceOf(t, key) === 'number')
+    .sort((a, b) => priceOf(a, key) - priceOf(b, key));
   if (!trips.length) {
     main.innerHTML = '<div class="empty-state">조건에 맞는 항공편이 없습니다.</div>';
+    $('stat-line').textContent = '';
     return;
   }
-  const prices = trips.map(t => t.price);
+  const prices = trips.map(t => priceOf(t, key));
   const qs = [quantile(prices, .2), quantile(prices, .4), quantile(prices, .6), quantile(prices, .85)];
-  $('stat-line').textContent = `${trips.length}건 · 최저 ${won(prices[0])}원`;
+  $('stat-line').textContent = `${cabinMeta(key).ko} ${trips.length}건 · 최저 ${manwon(prices[0])}`;
 
   trips.slice(0, 60).forEach((t, i) => {
-    const h = heatOf(t.price, qs);
-    const reasons = explain(t, state.baselines);
-    const top = reasons.find(r => r.tone === 'up') || reasons[0];
+    const price = priceOf(t, key);
+    const h = heatOf(price, qs);
+    const top = explain(t, state.baselines, key).find(r => r.tone === 'up');
     const b = document.createElement('button');
     b.className = 'list-item';
     b.innerHTML = `
@@ -274,8 +320,9 @@ function renderList() {
         <span class="li-top">${destInfo(t.dest).ko}
           <span class="badge">${t.patternLabel}</span></span>
         <span class="li-sub">${mdd(t.depDate)} → ${mdd(t.retDate)} · ${t.nights ?? ''}박${top ? ` · ${top.label}` : ''}</span>
+        ${state.cabin === 'BOTH' ? `<span class="li-sub">${subCabinLine(t, otherCabin(key))}</span>` : ''}
       </span>
-      <span class="li-price h${h}">${won(t.price)}<span class="won" style="font-size:11px">원</span></span>`;
+      <span class="li-price h${h}">${won(price)}<span class="won" style="font-size:11px">원</span></span>`;
     b.onclick = () => openDetail({ best: t, all: [t] });
     main.appendChild(b);
   });
@@ -301,21 +348,31 @@ function legHtml(dir, leg) {
     </div>`;
 }
 
-function openDetail(entry) {
+function openDetail(entry, cabinKey = primaryCabin()) {
   const t = entry.best;
   const info = destInfo(t.dest);
-  const reasons = explain(t, state.baselines);
+  const price = priceOf(t, cabinKey);
+  const meta = cabinMeta(cabinKey);
+  const reasons = explain(t, state.baselines, cabinKey);
 
   $('detail-head').innerHTML = `
     <div class="st">${info.ko} <span style="color:var(--text-muted);font-weight:600;font-size:13px">${t.dest}</span></div>
     <div class="ss">${mdd(t.depDate)} → ${mdd(t.retDate)} · ${t.patternLabel} (${t.nights ?? ''}박${(t.nights ?? 0) + 1}일)</div>
-    ${typeof t.price === 'number'
-      ? `<div class="sp">${won(t.price)}<span class="won">원</span>
-           <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-left:6px">성인 ${state.cfg.adults}인 · 총액</span></div>`
-      : `<div class="sp" style="font-size:16px;color:var(--text-dim)">해당 시간대 운항 없음</div>`}`;
+    <div class="cabin-seg">
+      ${CABINS.map(c => {
+        const p = priceOf(t, c.key);
+        return `<button class="${c.key === cabinKey ? 'on' : ''}" data-cabin="${c.key}">
+          ${c.ko}${isLive(t, c.key) ? ' ●' : ''}<span>${typeof p === 'number' ? won(p) + '원' : '없음'}</span></button>`;
+      }).join('')}
+    </div>
+    ${typeof price === 'number'
+      ? `<div class="sp">${won(price)}<span class="won">원</span>
+           <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-left:6px">${meta.ko} · 성인 ${state.cfg.adults}인 · 총액</span></div>`
+      : `<div class="sp" style="font-size:16px;color:var(--text-dim)">${meta.ko}는 이 시간대에 운항/좌석이 없습니다</div>`}`;
 
-  const others = (entry.all || []).filter(x => x.dest !== t.dest && typeof x.price === 'number')
-    .sort((a, b) => a.price - b.price);
+  const others = (entry.all || []).filter(x => x.dest !== t.dest && typeof priceOf(x, cabinKey) === 'number')
+    .sort((a, b) => priceOf(a, cabinKey) - priceOf(b, cabinKey));
+  const offers = offersOf(t, cabinKey);
 
   $('detail-body').innerHTML = `
     <div class="sec-t">가격 근거</div>
@@ -325,9 +382,9 @@ function openDetail(entry) {
         <span class="rtext"><span class="rl">${r.label}</span><span class="rd">${r.detail}</span></span>
       </div>`).join('') || '<div class="reason"><span class="dot"></span><span class="rtext"><span class="rl">특이사항 없음</span><span class="rd">평균 수준의 가격입니다.</span></span></div>'}
 
-    ${t.offers?.length ? `
-      <div class="sec-t">항공편 ${t.offers.length}개</div>
-      ${t.offers.map(o => `
+    ${offers.length ? `
+      <div class="sec-t">${meta.ko} 항공편 ${offers.length}개</div>
+      ${offers.map(o => `
         <div class="flight">
           <div class="fh">
             <span class="fp">${won(o.price)}원</span>
@@ -338,48 +395,55 @@ function openDetail(entry) {
         </div>`).join('')}` : ''}
 
     ${others.length ? `
-      <div class="sec-t">같은 날짜 다른 목적지</div>
+      <div class="sec-t">같은 날짜 다른 목적지 · ${meta.ko}</div>
       ${others.map(o => `
         <button class="list-item" data-trip="${o.id}" style="margin-bottom:6px">
           <span class="li-main"><span class="li-top">${destInfo(o.dest).ko}</span>
-            <span class="li-sub">${o.offerCount}편 · ${o.dest}</span></span>
-          <span class="li-price">${won(o.price)}<span class="won" style="font-size:11px">원</span></span>
+            <span class="li-sub">${o[cabinKey].offerCount}편 · ${o.dest}</span></span>
+          <span class="li-price">${won(priceOf(o, cabinKey))}<span class="won" style="font-size:11px">원</span></span>
         </button>`).join('')}` : ''}
 
     <div class="link-row">
       <a class="link-btn" target="_blank" rel="noopener"
-         href="https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ICN to ${t.dest} on ${t.depDate} through ${t.retDate} nonstop Asiana`)}">구글 항공권에서 비교</a>
+         href="https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ICN to ${t.dest} on ${t.depDate} through ${t.retDate} nonstop Asiana ${cabinKey === 'business' ? 'business class' : 'economy'}`)}">구글 항공권에서 비교</a>
       <a class="link-btn primary" target="_blank" rel="noopener" href="https://flyasiana.com">아시아나 예매</a>
     </div>
-    ${state.cfg.proxy && typeof t.price === 'number' ? `
-      <button class="link-btn" id="reload-one" style="width:100%;margin-top:8px">이 조합만 지금 다시 조회</button>` : ''}`;
+    ${state.cfg.proxy ? `<button class="link-btn" id="reload-one" style="width:100%;margin-top:8px">이 조합만 지금 다시 조회</button>` : ''}`;
 
+  $('detail-head').querySelectorAll('[data-cabin]').forEach(b => {
+    b.onclick = () => openDetail(entry, b.dataset.cabin);
+  });
   $('detail-body').querySelectorAll('[data-trip]').forEach(b => {
     b.onclick = () => {
       const next = state.data.trips.find(x => x.id === b.dataset.trip);
-      if (next) openDetail({ best: next, all: entry.all });
+      if (next) openDetail({ best: next, all: entry.all }, cabinKey);
     };
   });
   const one = $('reload-one');
   if (one) one.onclick = async () => {
     one.textContent = '조회 중…';
     const ok = await fetchLive(t);
+    state.baselines = buildBaselines(state.data.trips);
     render();
-    if (ok) { const fresh = state.data.trips.find(x => x.id === t.id); openDetail({ best: fresh, all: entry.all }); }
-    else one.textContent = '조회 실패 — 다시 시도';
+    if (ok) {
+      const fresh = state.data.trips.find(x => x.id === t.id);
+      openDetail({ best: fresh, all: entry.all }, cabinKey);
+    } else one.textContent = '조회 실패 — 다시 시도';
   };
 
   openSheet('detail-sheet');
 }
 
 /* ── 라이브 조회 ───────────────────────── */
+
 /** 갱신 대상 선정: (날짜+패턴) 셀 단위로 묶고, 한도를 넘기면 셀 경계에서 끊는다.
  *  한 셀 안의 목적지 일부만 갱신돼 비교 기준이 섞이는 걸 막는다. */
 function refreshTargets(limit) {
   const cells = new Map();
   for (const t of visibleTrips()) {
     const key = `${t.depDate}|${t.retDate}`;
-    (cells.get(key) ?? cells.set(key, []).get(key)).push(t);
+    if (!cells.has(key)) cells.set(key, []);
+    cells.get(key).push(t);
   }
   const ordered = [...cells.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const out = [];
@@ -393,9 +457,13 @@ function refreshTargets(limit) {
 
 function proxyUrl(trip) {
   const base = state.cfg.proxy.replace(/\/+$/, '');
+  const cabins = state.cabin === 'BOTH'
+    ? CABINS.map(c => c.id)
+    : [CABINS.find(c => c.key === state.cabin).id];
   const q = new URLSearchParams({
     dest: trip.dest, dep: trip.depDate, ret: trip.retDate,
     adults: String(state.cfg.adults),
+    cabins: cabins.join(','),
     depWindow: `${state.cfg.depFrom}-${state.cfg.depTo}`,
     retWindow: `${state.cfg.retFrom}-${state.cfg.retTo}`,
     pattern: trip.pattern || '', weekOf: trip.weekOf || '',
@@ -410,12 +478,13 @@ async function fetchLive(trip) {
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     const idx = state.data.trips.findIndex(x => x.id === trip.id);
     if (idx >= 0) {
-      state.data.trips[idx] = {
-        ...state.data.trips[idx],
-        price: body.price, offers: body.offers || [], offerCount: body.offerCount ?? 0,
-        fetchedAt: body.fetchedAt,
-      };
-      state.live.add(trip.id);
+      const next = { ...state.data.trips[idx], fetchedAt: body.fetchedAt };
+      for (const c of CABINS) {
+        if (!body[c.key]) continue;
+        next[c.key] = body[c.key];
+        state.live.add(`${trip.id}::${c.key}`);
+      }
+      state.data.trips[idx] = next;
     }
     return true;
   } catch (err) {
@@ -452,8 +521,7 @@ async function refreshLive({ silent = false } = {}) {
   let cursor = 0;
   const worker = async () => {
     while (cursor < targets.length) {
-      const t = targets[cursor++];
-      if (await fetchLive(t)) ok++;
+      if (await fetchLive(targets[cursor++])) ok++;
       done++; tick();
     }
   };

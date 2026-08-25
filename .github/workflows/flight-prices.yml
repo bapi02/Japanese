@@ -14,6 +14,10 @@ on:
         description: '앞으로 몇 주치 주말을 볼지'
         required: false
         default: ''
+      cabins:
+        description: '좌석등급 (ECONOMY / BUSINESS / ECONOMY,BUSINESS)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -38,7 +42,8 @@ jobs:
           AMADEUS_CLIENT_SECRET: ${{ secrets.AMADEUS_CLIENT_SECRET }}
           AMADEUS_ENV: ${{ vars.AMADEUS_ENV || 'production' }}
           DESTS: ${{ github.event.inputs.dests || vars.FARE_DESTS || 'NRT,HND,KIX,FUK,NGO' }}
-          WEEKS: ${{ github.event.inputs.weeks || vars.FARE_WEEKS || '8' }}
+          WEEKS: ${{ github.event.inputs.weeks || vars.FARE_WEEKS || '6' }}
+          CABINS: ${{ github.event.inputs.cabins || vars.FARE_CABINS || 'ECONOMY,BUSINESS' }}
           CONCURRENCY: '3'
         run: node flights/scripts/collect.mjs
 

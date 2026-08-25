@@ -100,8 +100,10 @@ header {
 /* ── 히트맵 범례 ─────────────────────── */
 .legend {
   display: flex; align-items: center; gap: 7px; padding: 9px 14px;
-  font-size: 10.5px; color: var(--text-muted);
+  font-size: 10.5px; color: var(--text-muted); white-space: nowrap;
 }
+.legend > span { flex-shrink: 0; }
+.legend #stat-line { flex: 1; text-align: right; overflow: hidden; text-overflow: ellipsis; }
 .legend .bars { display: flex; gap: 3px; }
 .legend i { width: 17px; height: 7px; border-radius: 2px; display: block; }
 
@@ -138,6 +140,20 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 .cell .dest-tag { font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--card2); color: var(--text-dim); }
 .cell.empty .price { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 8px; }
 .cell .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.cell .subcabin {
+  font-size: 11px; font-weight: 600; color: var(--accent2); margin-top: 1px;
+  display: flex; align-items: baseline; gap: 4px; white-space: nowrap;
+}
+.cell .subcabin b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px;
+  background: rgba(78,205,196,.16); color: var(--accent2); }
+.cell .subcabin .x { font-size: 9.5px; color: var(--text-muted); font-weight: 600; }
+.cell .subcabin.none { color: var(--text-muted); font-weight: 500; }
+.cell .subcabin.none b { background: var(--card2); color: var(--text-muted); }
+.list-item .subcabin { display: inline-flex; gap: 4px; align-items: baseline; color: var(--accent2); font-weight: 600; }
+.list-item .subcabin b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px;
+  background: rgba(78,205,196,.16); }
+.list-item .subcabin.none { color: var(--text-muted); }
+.list-item .subcabin.none b { background: var(--card2); }
 .cell .why { font-size: 9.5px; color: var(--orange); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell.stale { opacity: .5; }
 
@@ -179,6 +195,14 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 .sheet-head { padding: 6px 18px 14px; border-bottom: 1px solid var(--border); }
 .sheet-head .st { font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
 .sheet-head .ss { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.cabin-seg { display: flex; gap: 6px; margin-top: 12px; }
+.cabin-seg button {
+  flex: 1; padding: 8px 6px; border-radius: 10px; font-size: 12px; font-weight: 700;
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+  display: flex; flex-direction: column; gap: 2px; align-items: center;
+}
+.cabin-seg button span { font-size: 11px; font-weight: 600; opacity: .8; }
+.cabin-seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .sheet-head .sp { font-size: 26px; font-weight: 800; margin-top: 9px; letter-spacing: -.8px; }
 .sheet-head .sp .won { font-size: 14px; font-weight: 600; opacity: .6; }
 .sheet-body { padding: 14px 18px 4px; }
@@ -277,6 +301,7 @@ footer { text-align: center; font-size: 10.5px; color: var(--text-muted); paddin
 </header>
 
 <div class="filters">
+  <div class="chip-row" id="cabin-chips"></div>
   <div class="chip-row" id="dest-chips"></div>
   <div class="chip-row" id="pat-chips"></div>
 </div>
@@ -323,12 +348,15 @@ footer { text-align: center; font-size: 10.5px; color: var(--text-muted); paddin
         </select>
       </div>
       <div class="field">
-        <label>한 번에 조회할 개수</label>
+        <label>한 번에 조회할 조합 수</label>
         <select id="cfg-limit">
-          <option value="16">16개</option><option value="28">28개</option>
-          <option value="40">40개</option><option value="60">60개</option>
+          <option value="12">12조합</option><option value="20">20조합</option>
+          <option value="28">28조합</option><option value="40">40조합</option>
         </select>
       </div>
+    </div>
+    <div class="hint" style="font-size:10.5px;color:var(--text-muted);margin:-6px 0 13px;line-height:1.45">
+      좌석등급을 <b>이코노미 + 비즈니스</b>로 보면 조합 1건당 API 호출이 2회입니다.
     </div>
     <div class="field-row">
       <div class="field">

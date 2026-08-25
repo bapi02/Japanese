@@ -7,7 +7,7 @@
 
 import { createClient } from '../lib/amadeus.mjs';
 import { searchTrip } from '../lib/search.mjs';
-import { DEFAULTS, ORIGIN, DESTINATIONS, PATTERNS } from '../lib/config.mjs';
+import { DEFAULTS, ORIGIN, DESTINATIONS, PATTERNS, CABINS } from '../lib/config.mjs';
 
 const CACHE_SECONDS = 600; // 10분 — 같은 조합을 연달아 새로고침해도 쿼터를 태우지 않는다.
 
@@ -46,6 +46,7 @@ export default {
         amadeusEnv: env.AMADEUS_ENV || 'production',
         destinations: DESTINATIONS,
         patterns: PATTERNS,
+        cabins: CABINS,
         defaults: DEFAULTS,
       }, env);
     }
@@ -83,7 +84,10 @@ export default {
       adults: Math.min(9, Math.max(1, Number(url.searchParams.get('adults') || DEFAULTS.adults))),
       depWindow: parseWindow(url.searchParams.get('depWindow'), DEFAULTS.depWindow),
       retWindow: parseWindow(url.searchParams.get('retWindow'), DEFAULTS.retWindow),
+      cabins: (url.searchParams.get('cabins') || '').split(',').map(s => s.trim().toUpperCase())
+        .filter(c => CABINS.some(x => x.id === c)),
     };
+    if (!opts.cabins.length) opts.cabins = DEFAULTS.cabins;
 
     const client = createClient({
       clientId: env.AMADEUS_CLIENT_ID,

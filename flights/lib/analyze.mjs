@@ -1,8 +1,8 @@
 // "왜 이 가격인가" 분석 — 달력(연휴·성수기), 좌석 잔여, 예약클래스,
-// 같은 노선 중앙값 대비 편차, 여행 패턴 프리미엄을 근거로 배지를 만든다.
+// 같은 노선 중앙값 대비 편차, 여행 패턴 프리미엄, 이코노미↔비즈니스 격차를 근거로 배지를 만든다.
 
 import { calendarContext } from './holidays.mjs';
-import { PATTERNS } from './config.mjs';
+import { PATTERNS, CABINS } from './config.mjs';
 
 export function median(nums) {
   const a = nums.filter(n => typeof n === 'number' && isFinite(n)).sort((x, y) => x - y);
@@ -20,70 +20,122 @@ export function quantile(nums, q) {
 }
 
 // 이코노미 예약클래스 대략적 등급 (항공사 공통 관행 기준, 정확한 운임규정은 항공사 공지 우선)
-const CLASS_TIERS = {
+const Y_TIERS = {
   Y: ['정규 운임', 3], B: ['상위 운임', 3], M: ['상위 운임', 3],
   H: ['중간 운임', 2], K: ['중간 운임', 2], L: ['중간 운임', 2],
   S: ['할인 운임', 0], V: ['할인 운임', 0], Q: ['할인 운임', 0],
   N: ['할인 운임', 0], T: ['특가 운임', 0], E: ['특가 운임', 0],
   G: ['특가 운임', 0], W: ['할인 운임', 0], U: ['할인 운임', 0],
 };
+// 비즈니스 예약클래스
+const C_TIERS = {
+  J: ['정규 운임', 3], C: ['정규 운임', 3],
+  D: ['할인 운임', 1], I: ['할인 운임', 0], Z: ['특가 운임', 0],
+};
+
+export const priceOf = (trip, cabinKey) => trip?.[cabinKey]?.price ?? null;
+export const offersOf = (trip, cabinKey) => trip?.[cabinKey]?.offers || [];
 
 function pct(value, base) {
   if (!base) return 0;
   return Math.round(((value - base) / base) * 100);
 }
 
-/** 데이터셋 전체에서 비교 기준(노선별·패턴별 중앙값)을 미리 계산한다. */
-export function buildBaselines(trips) {
+function baselineFor(trips, cabinKey) {
   const byDest = new Map();
-  const byDestPattern = new Map();
   const byDestWeekPattern = new Map();
   for (const t of trips) {
-    if (typeof t.price !== 'number') continue;
-    (byDest.get(t.dest) ?? byDest.set(t.dest, []).get(t.dest)).push(t.price);
-    const dp = `${t.dest}|${t.pattern}`;
-    (byDestPattern.get(dp) ?? byDestPattern.set(dp, []).get(dp)).push(t.price);
-    byDestWeekPattern.set(`${t.dest}|${t.weekOf}|${t.pattern}`, t.price);
+    const p = priceOf(t, cabinKey);
+    if (typeof p !== 'number') continue;
+    if (!byDest.has(t.dest)) byDest.set(t.dest, []);
+    byDest.get(t.dest).push(p);
+    byDestWeekPattern.set(`${t.dest}|${t.weekOf}|${t.pattern}`, p);
   }
-  const all = trips.map(t => t.price).filter(p => typeof p === 'number');
+  const all = [...byDest.values()].flat();
   return {
     destMedian: new Map([...byDest].map(([k, v]) => [k, median(v)])),
-    destPatternMedian: new Map([...byDestPattern].map(([k, v]) => [k, median(v)])),
     destWeekPattern: byDestWeekPattern,
     all: {
       min: all.length ? Math.min(...all) : null,
       median: median(all),
-      p25: quantile(all, 0.25),
-      p50: quantile(all, 0.5),
-      p75: quantile(all, 0.75),
-      p90: quantile(all, 0.9),
+      p25: quantile(all, 0.25), p50: quantile(all, 0.5),
+      p75: quantile(all, 0.75), p90: quantile(all, 0.9),
     },
   };
 }
 
+/** 좌석등급별 비교 기준 + 노선별 '비즈니스 ÷ 이코노미' 배수의 평소 수준. */
+export function buildBaselines(trips) {
+  const out = {};
+  for (const c of CABINS) out[c.key] = baselineFor(trips, c.key);
+
+  const ratios = new Map();
+  for (const t of trips) {
+    const y = priceOf(t, 'economy'), c = priceOf(t, 'business');
+    if (typeof y !== 'number' || typeof c !== 'number' || !y) continue;
+    if (!ratios.has(t.dest)) ratios.set(t.dest, []);
+    ratios.get(t.dest).push(c / y);
+  }
+  out.ratioByDest = new Map([...ratios].map(([k, v]) => {
+    const m = median(v.map(x => Math.round(x * 100)));
+    return [k, m ? m / 100 : null];
+  }));
+  return out;
+}
+
 /**
- * 한 조합의 가격 근거 배지 목록.
- * @param trip 정규화된 조합 결과 (price, offers, depDate, retDate, dest, pattern, weekOf)
- * @param baselines buildBaselines() 결과
- * @param today 기준일 (D-day 계산)
+ * 한 조합 · 한 좌석등급의 가격 근거 배지 목록.
+ * @param cabinKey 'economy' | 'business'
  */
-export function explain(trip, baselines, today = new Date()) {
+export function explain(trip, baselines, cabinKey = 'economy', today = new Date()) {
   const reasons = [];
-  if (typeof trip.price !== 'number') {
-    return [{ key: 'none', tone: 'info', label: '해당 시간대 운항 없음',
+  const price = priceOf(trip, cabinKey);
+  const base = baselines[cabinKey];
+  const cabinKo = CABINS.find(c => c.key === cabinKey)?.ko || cabinKey;
+
+  if (typeof price !== 'number') {
+    return [{ key: 'none', tone: 'info', label: `${cabinKo} 해당 시간대 없음`,
       detail: '지정한 출발·귀국 시간대에 아시아나 직항 왕복 조합이 없습니다.' }];
   }
 
-  const destMed = baselines.destMedian.get(trip.dest);
-  const diff = pct(trip.price, destMed);
+  const destMed = base.destMedian.get(trip.dest);
+  const diff = pct(price, destMed);
   if (destMed && Math.abs(diff) >= 8) {
     reasons.push(diff > 0
       ? { key: 'vs-route', tone: 'up', weight: Math.min(4, Math.round(diff / 12)),
-          label: `이 노선 평균 대비 +${diff}%`,
+          label: `이 노선 ${cabinKo} 평균 대비 +${diff}%`,
           detail: `${trip.dest} 노선 수집 구간 중앙값 ${destMed.toLocaleString('ko-KR')}원보다 비쌉니다.` }
       : { key: 'vs-route', tone: 'down', weight: 0,
-          label: `이 노선 평균 대비 ${diff}%`,
+          label: `이 노선 ${cabinKo} 평균 대비 ${diff}%`,
           detail: `${trip.dest} 노선 중앙값 ${destMed.toLocaleString('ko-KR')}원보다 쌉니다.` });
+  }
+
+  // ── 이코노미↔비즈니스 격차 ──────────────────────────
+  const yPrice = priceOf(trip, 'economy');
+  const cPrice = priceOf(trip, 'business');
+  if (typeof yPrice === 'number' && typeof cPrice === 'number' && yPrice > 0) {
+    const ratio = cPrice / yPrice;
+    const usual = baselines.ratioByDest?.get(trip.dest);
+    const gap = cPrice - yPrice;
+    const cheapForBiz = usual && ratio <= usual * 0.85;
+
+    if (cabinKey === 'business') {
+      reasons.push({
+        key: 'biz-ratio', tone: cheapForBiz ? 'down' : 'info', weight: cheapForBiz ? 0 : 1,
+        label: cheapForBiz
+          ? `비즈니스 가성비 · 이코노미의 ${ratio.toFixed(1)}배`
+          : `이코노미의 ${ratio.toFixed(1)}배`,
+        detail: usual
+          ? `${trip.dest} 노선은 보통 ${usual.toFixed(1)}배입니다. 차액은 ${gap.toLocaleString('ko-KR')}원.`
+          : `이코노미와의 차액은 ${gap.toLocaleString('ko-KR')}원입니다.`,
+      });
+    } else if (cheapForBiz) {
+      reasons.push({
+        key: 'biz-hint', tone: 'info', weight: 1,
+        label: `+${gap.toLocaleString('ko-KR')}원이면 비즈니스`,
+        detail: `${trip.dest} 노선 평소 배수(${usual.toFixed(1)}배)보다 격차가 좁습니다. 비즈니스 탭에서 확인해보세요.`,
+      });
+    }
   }
 
   const cal = calendarContext(trip.depDate, trip.retDate);
@@ -103,15 +155,16 @@ export function explain(trip, baselines, today = new Date()) {
       detail: '해마다 수요가 몰리는 시즌이라 기본 운임대 자체가 높게 잡힙니다.' });
   }
 
-  const best = trip.offers?.[0];
+  const best = offersOf(trip, cabinKey)[0];
   if (best) {
-    if (typeof best.seats === 'number' && best.seats <= 4) {
+    const seatLimit = cabinKey === 'business' ? 2 : 4;
+    if (typeof best.seats === 'number' && best.seats <= seatLimit) {
       reasons.push({ key: 'seats', tone: 'up', weight: 3,
         label: `잔여석 ${best.seats}석`,
         detail: '해당 운임으로 남은 좌석이 얼마 없어 다음 조회 때 가격이 오를 수 있습니다.' });
     }
     const cls = best.out?.bookingClass;
-    const tier = cls ? CLASS_TIERS[cls] : null;
+    const tier = cls ? (cabinKey === 'business' ? C_TIERS : Y_TIERS)[cls] : null;
     if (tier && tier[1] >= 2) {
       reasons.push({ key: 'class', tone: 'up', weight: tier[1],
         label: `예약클래스 ${cls} · ${tier[0]}`,
@@ -129,10 +182,9 @@ export function explain(trip, baselines, today = new Date()) {
   }
 
   // 같은 노선·같은 주에서 가장 짧은 일정(토·일) 대비 프리미엄
-  const baseKey = `${trip.dest}|${trip.weekOf}|SAT_SUN`;
-  const basePrice = baselines.destWeekPattern.get(baseKey);
+  const basePrice = base.destWeekPattern.get(`${trip.dest}|${trip.weekOf}|SAT_SUN`);
   if (basePrice && trip.pattern !== 'SAT_SUN') {
-    const p = pct(trip.price, basePrice);
+    const p = pct(price, basePrice);
     if (p >= 10) {
       const label = PATTERNS.find(x => x.id === trip.pattern)?.label || trip.pattern;
       reasons.push({ key: 'pattern', tone: 'up', weight: 1,
@@ -148,9 +200,9 @@ export function explain(trip, baselines, today = new Date()) {
       detail: '출발 3주 이내에는 남은 저가 클래스가 거의 소진되어 운임이 올라갑니다.' });
   }
 
-  if (baselines.all.min && trip.price === baselines.all.min) {
+  if (base.all.min && price === base.all.min) {
     reasons.unshift({ key: 'cheapest', tone: 'down', weight: 0,
-      label: '수집 구간 전체 최저가',
+      label: `수집 구간 ${cabinKo} 최저가`,
       detail: '지금 데이터 안에서 가장 싼 조합입니다.' });
   }
 

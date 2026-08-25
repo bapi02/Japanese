@@ -11,7 +11,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '../lib/amadeus.mjs';
 import { searchMany } from '../lib/search.mjs';
-import { buildTripPlans, DEFAULTS, DEFAULT_DEST_CODES, DESTINATIONS, PATTERNS, ORIGIN } from '../lib/config.mjs';
+import { buildTripPlans, DEFAULTS, DEFAULT_DEST_CODES, DESTINATIONS, PATTERNS, CABINS, ORIGIN } from '../lib/config.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '..', process.env.OUT || 'data/prices.json');
@@ -28,6 +28,7 @@ const opts = {
   adults: Number(process.env.ADULTS || DEFAULTS.adults),
   depWindow: win(process.env.DEP_WINDOW, DEFAULTS.depWindow),
   retWindow: win(process.env.RET_WINDOW, DEFAULTS.retWindow),
+  cabins: list(process.env.CABINS) || DEFAULTS.cabins,
   origin: ORIGIN,
 };
 
@@ -38,7 +39,8 @@ const concurrency = Number(process.env.CONCURRENCY || 4);
 
 const plans = buildTripPlans({ destCodes, weeks, patternIds });
 
-console.log(`[collect] ${destCodes.length}개 노선 × ${weeks}주 × ${patternIds.length}패턴 = ${plans.length}건 조회`);
+console.log(`[collect] ${destCodes.length}개 노선 × ${weeks}주 × ${patternIds.length}패턴 = ${plans.length}조합`);
+console.log(`[collect] 좌석등급 ${opts.cabins.join(', ')} → API 호출 ${plans.length * opts.cabins.length}회`);
 console.log(`[collect] 출발 ${opts.depWindow.join('~')} / 귀국 ${opts.retWindow.join('~')} · ${opts.carriers.join(',')} 직항만`);
 
 const client = createClient({
@@ -55,8 +57,20 @@ const { results, errors } = await searchMany(client, plans, opts, {
   },
 });
 
-const found = results.filter(r => typeof r.price === 'number');
-console.log(`[collect] 완료 ${((Date.now() - started) / 1000).toFixed(1)}s · 가격 확보 ${found.length}/${results.length} · 오류 ${errors.length}`);
+const hasPrice = (r) => CABINS.some(c => typeof r[c.key]?.price === 'number');
+const found = results.filter(hasPrice);
+const activeCabins = CABINS.filter(c => opts.cabins.includes(c.id));
+const perCabin = activeCabins
+  .map(c => `${c.ko} ${results.filter(r => typeof r[c.key]?.price === 'number').length}`).join(' / ');
+// 좌석등급 하나만 실패한 경우는 조합 자체가 실패로 잡히지 않으므로 따로 센다.
+const cabinErrors = [];
+for (const r of results) {
+  for (const c of activeCabins) {
+    if (r[c.key]?.error) cabinErrors.push({ plan: r.id, cabin: c.id, message: r[c.key].error });
+  }
+}
+console.log(`[collect] 완료 ${((Date.now() - started) / 1000).toFixed(1)}s · 가격 확보 ${found.length}/${results.length}건 (${perCabin}) · 조합 실패 ${errors.length} · 등급별 실패 ${cabinErrors.length}`);
+if (cabinErrors.length) console.log('[collect] 등급별 실패 예시:', JSON.stringify(cabinErrors.slice(0, 3)));
 if (errors.length) console.log('[collect] 오류 예시:', JSON.stringify(errors.slice(0, 3), null, 2));
 
 if (!found.length) {
@@ -69,7 +83,12 @@ if (!found.length) {
 
 // 저장 용량 절약 — 화면에 필요한 만큼만 남긴다 (라이브 조회는 전체를 그대로 씀).
 const MAX_STORED_OFFERS = 3;
-for (const r of results) if (r.offers?.length > MAX_STORED_OFFERS) r.offers = r.offers.slice(0, MAX_STORED_OFFERS);
+for (const r of results) {
+  for (const c of CABINS) {
+    const slot = r[c.key];
+    if (slot?.offers?.length > MAX_STORED_OFFERS) slot.offers = slot.offers.slice(0, MAX_STORED_OFFERS);
+  }
+}
 
 const payload = {
   generatedAt: new Date().toISOString(),
@@ -80,7 +99,7 @@ const payload = {
     carriers: opts.carriers,
     nonStop: opts.nonStop,
     adults: opts.adults,
-    travelClass: opts.travelClass,
+    cabins: opts.cabins,
     depWindow: opts.depWindow,
     retWindow: opts.retWindow,
     weeks,
@@ -88,8 +107,9 @@ const payload = {
   },
   destinations: DESTINATIONS.filter(d => destCodes.includes(d.code)),
   patterns: PATTERNS.filter(p => patternIds.includes(p.id)),
+  cabinsMeta: CABINS.filter(c => opts.cabins.includes(c.id)),
   trips: results,
-  errors: errors.slice(0, 20),
+  errors: [...errors, ...cabinErrors].slice(0, 20),
 };
 
 await mkdir(dirname(OUT), { recursive: true });

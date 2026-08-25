@@ -30,12 +30,18 @@ export const PATTERNS = [
   { id: 'FRI_MON',     label: '금·토·일·월', short: '금토일월', depOffset: 0, retOffset: 3, nights: 3 },
 ];
 
+export const CABINS = [
+  { id: 'ECONOMY',  key: 'economy',  ko: '이코노미', short: 'Y' },
+  { id: 'BUSINESS', key: 'business', ko: '비즈니스', short: 'C' },
+];
+export const cabinOf = (id) => CABINS.find(c => c.id === id);
+
 export const DEFAULTS = {
   carriers: ['OZ'],        // Only 아시아나
   nonStop: true,           // 직항만
   adults: 1,
   currency: 'KRW',
-  travelClass: 'ECONOMY',
+  cabins: ['ECONOMY', 'BUSINESS'],   // 좌석등급마다 조회를 따로 한다 (호출 수 = 조합 × 등급 수)
   depWindow: ['06:00', '09:00'],  // 인천 출발 시각 (현지)
   retWindow: ['18:00', '21:00'],  // 일본 출발 시각 (현지)
   weeks: 10,               // 앞으로 몇 주치 주말을 볼지

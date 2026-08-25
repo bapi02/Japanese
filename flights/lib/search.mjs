@@ -1,6 +1,6 @@
 // Amadeus 응답을 앱이 쓰는 형태로 정규화하고, 시간대 · 항공사 · 직항 조건으로 거른다.
 
-import { DEFAULTS, ORIGIN } from './config.mjs';
+import { DEFAULTS, ORIGIN, CABINS, cabinOf } from './config.mjs';
 
 const hhmm = (isoLocal) => isoLocal.slice(11, 16);
 
@@ -45,6 +45,7 @@ export function normalizeOffers(body, opts = {}) {
     carriers = DEFAULTS.carriers,
     depWindow = DEFAULTS.depWindow,
     retWindow = DEFAULTS.retWindow,
+    cabin = null,
   } = opts;
   const dict = body?.dictionaries || {};
   const out = [];
@@ -65,6 +66,9 @@ export function normalizeOffers(body, opts = {}) {
     const fares = offer.travelerPricings?.[0]?.fareDetailsBySegment || [];
     const fareFor = (segId) => fares.find(f => f.segmentId === segId) || null;
 
+    // 요청한 좌석등급과 실제 응답 등급이 다른 경우가 있어 한 번 더 확인한다.
+    if (cabin && !([outSeg, retSeg].every(sg => (fareFor(sg.id)?.cabin || cabin) === cabin))) continue;
+
     out.push({
       price: Math.round(Number(offer.price?.grandTotal ?? offer.price?.total ?? 0)),
       currency: offer.price?.currency || DEFAULTS.currency,
@@ -78,8 +82,8 @@ export function normalizeOffers(body, opts = {}) {
   return out;
 }
 
-/** 한 조합(목적지+날짜)에 대해 Amadeus 를 호출하고 정규화 결과를 돌려준다. */
-export async function searchTrip(client, plan, opts = {}) {
+/** 한 조합 × 한 좌석등급을 조회한다. */
+export async function searchCabin(client, plan, cabin, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
   const body = await client.flightOffers({
     originLocationCode: opts.origin || ORIGIN,
@@ -89,19 +93,37 @@ export async function searchTrip(client, plan, opts = {}) {
     adults: o.adults,
     nonStop: o.nonStop,
     currencyCode: o.currency,
-    travelClass: o.travelClass,
+    travelClass: cabin,
     includedAirlineCodes: o.carriers.join(','),
     max: o.maxOffersPerTrip,
   });
-  const offers = normalizeOffers(body, o);
+  const offers = normalizeOffers(body, { ...o, cabin });
   return {
-    ...plan,
     price: offers.length ? offers[0].price : null,
-    currency: o.currency,
     offerCount: offers.length,
     rawCount: body?.meta?.count ?? (body?.data?.length || 0),
     offers,
   };
+}
+
+/** 한 조합을 좌석등급별로 모두 조회해 하나의 trip 객체로 합친다. */
+export async function searchTrip(client, plan, opts = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  const trip = { ...plan, currency: o.currency };
+  const errors = [];
+  for (const id of o.cabins) {
+    const c = cabinOf(id);
+    if (!c) continue;
+    try {
+      trip[c.key] = await searchCabin(client, plan, id, o);
+    } catch (err) {
+      trip[c.key] = { price: null, offerCount: 0, offers: [], error: err.message };
+      errors.push(err);
+    }
+  }
+  // 좌석등급을 전부 실패했을 때만 조합 자체를 실패로 본다.
+  if (errors.length === o.cabins.length) throw errors[0];
+  return trip;
 }
 
 /** 동시 실행 수를 제한하며 여러 조합을 조회한다. */
@@ -118,7 +140,9 @@ export async function searchMany(client, plans, opts = {}, { concurrency = 4, on
         results.push(await searchTrip(client, plan, opts));
       } catch (err) {
         errors.push({ plan: plan.id, message: err.message, status: err.status ?? null });
-        results.push({ ...plan, price: null, currency: opts.currency || DEFAULTS.currency, offerCount: 0, offers: [], error: err.message });
+        const blank = { ...plan, currency: opts.currency || DEFAULTS.currency, error: err.message };
+        for (const c of CABINS) blank[c.key] = { price: null, offerCount: 0, offers: [] };
+        results.push(blank);
       }
       onProgress?.(++done, plans.length);
     }
