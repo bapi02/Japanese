@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<meta name="theme-color" content="#0d0f14">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9C%88%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<title>ICN → 日本 · 아시아나 직항 시세</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161820;
+  --card: #1e2130;
+  --card2: #252939;
+  --border: #2a2d3e;
+  --text: #eceef5;
+  --text-dim: #8b8fa8;
+  --text-muted: #565a70;
+  --accent: #7c6ef5;
+  --accent2: #4ecdc4;
+  --red: #ff6b6b;
+  --orange: #ff9f43;
+  --yellow: #ffe66d;
+  --green: #51cf66;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --r: 14px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { background: var(--bg); }
+body {
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100dvh;
+  font-size: 15px;
+  line-height: 1.45;
+  padding-bottom: calc(24px + var(--safe-b));
+}
+button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+input, select { font-family: inherit; }
+
+/* ── 헤더 ───────────────────────────── */
+header {
+  position: sticky; top: 0; z-index: 30;
+  background: rgba(22,24,32,.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px 10px;
+}
+.h-row { display: flex; align-items: center; gap: 10px; }
+.h-title { font-size: 15px; font-weight: 800; letter-spacing: -.2px; }
+.h-title .arrow { color: var(--accent); margin: 0 4px; }
+.h-sub { font-size: 11px; color: var(--text-dim); margin-top: 7px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.h-spacer { flex: 1; }
+.icon-btn {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  display: grid; place-items: center; font-size: 15px; flex-shrink: 0;
+}
+.icon-btn:active { background: var(--card2); }
+.badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+  white-space: nowrap;
+}
+.badge.sample { background: rgba(255,159,67,.14); border-color: rgba(255,159,67,.4); color: var(--orange); }
+.badge.live { background: rgba(81,207,102,.14); border-color: rgba(81,207,102,.4); color: var(--green); }
+
+.refresh-btn {
+  padding: 7px 13px; border-radius: 10px; font-size: 12.5px; font-weight: 700;
+  background: var(--accent); color: #fff; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+}
+.refresh-btn:disabled { opacity: .45; }
+.refresh-btn.ghost { background: var(--card); border: 1px solid var(--border); color: var(--text-dim); }
+
+.progress { height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 9px; display: none; }
+.progress.on { display: block; }
+.progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+
+/* ── 필터 ───────────────────────────── */
+.filters { padding: 10px 0 2px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.chip-row {
+  display: flex; gap: 6px; overflow-x: auto; padding: 0 14px 9px;
+  scrollbar-width: none;
+}
+.chip-row::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0; padding: 6px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+  background: var(--card); border: 1px solid var(--border); color: var(--text-dim);
+  white-space: nowrap;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip .sub { font-size: 10px; opacity: .7; margin-left: 3px; font-weight: 500; }
+
+/* ── 히트맵 범례 ─────────────────────── */
+.legend {
+  display: flex; align-items: center; gap: 7px; padding: 9px 14px;
+  font-size: 10.5px; color: var(--text-muted);
+}
+.legend .bars { display: flex; gap: 3px; }
+.legend i { width: 17px; height: 7px; border-radius: 2px; display: block; }
+
+/* ── 주차 카드 ───────────────────────── */
+main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
+.week {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+  margin-bottom: 12px; overflow: hidden;
+}
+.week-head {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 11px 13px 9px; border-bottom: 1px solid var(--border);
+}
+.week-head .wk { font-size: 13.5px; font-weight: 800; }
+.week-head .rng { font-size: 11px; color: var(--text-dim); }
+.week-head .tag {
+  margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px;
+  background: rgba(255,107,107,.14); color: var(--red); white-space: nowrap;
+}
+.cells { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--border); }
+@media (min-width: 560px) { .cells { grid-template-columns: repeat(4, 1fr); } }
+
+.cell {
+  background: var(--surface); padding: 10px 11px 11px; text-align: left;
+  display: flex; flex-direction: column; gap: 3px; min-height: 88px;
+  position: relative; transition: background .12s;
+}
+.cell:active { background: var(--card); }
+.cell .pat { font-size: 11px; font-weight: 700; color: var(--text-dim); letter-spacing: -.2px; }
+.cell .dates { font-size: 10px; color: var(--text-muted); }
+.cell .price { font-size: 17px; font-weight: 800; letter-spacing: -.5px; margin-top: 3px; }
+.cell .price .won { font-size: 11px; font-weight: 600; opacity: .65; margin-left: 1px; }
+.cell .meta { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+.cell .dest-tag { font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--card2); color: var(--text-dim); }
+.cell.empty .price { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 8px; }
+.cell .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.cell .why { font-size: 9.5px; color: var(--orange); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cell.stale { opacity: .5; }
+
+.h0 { color: var(--green); }      .b0 { background: var(--green); }
+.h1 { color: #a9e34b; }           .b1 { background: #a9e34b; }
+.h2 { color: var(--yellow); }     .b2 { background: var(--yellow); }
+.h3 { color: var(--orange); }     .b3 { background: var(--orange); }
+.h4 { color: var(--red); }        .b4 { background: var(--red); }
+
+/* ── 리스트 뷰 ───────────────────────── */
+.list-item {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 11px 13px; margin-bottom: 8px; text-align: left;
+}
+.list-item .rank { font-size: 11px; font-weight: 800; color: var(--text-muted); width: 18px; flex-shrink: 0; }
+.list-item .li-main { flex: 1; min-width: 0; }
+.list-item .li-top { font-size: 13px; font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.list-item .li-sub { font-size: 10.5px; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list-item .li-price { font-size: 16px; font-weight: 800; text-align: right; flex-shrink: 0; letter-spacing: -.4px; }
+
+/* ── 바텀시트 ───────────────────────── */
+.scrim {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 40;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.scrim.on { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
+  background: var(--surface); border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0; max-height: 88dvh; overflow-y: auto;
+  transform: translateY(102%); transition: transform .26s cubic-bezier(.32,.72,0,1);
+  padding-bottom: calc(18px + var(--safe-b));
+  max-width: 720px; margin: 0 auto;
+}
+.sheet.on { transform: translateY(0); }
+.grab { display: block; width: 46px; height: 5px; border-radius: 5px; background: var(--border); margin: 10px auto 4px; padding: 0; }
+.grab:active { background: var(--text-muted); }
+.sheet-head { padding: 6px 18px 14px; border-bottom: 1px solid var(--border); }
+.sheet-head .st { font-size: 17px; font-weight: 800; letter-spacing: -.3px; }
+.sheet-head .ss { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.sheet-head .sp { font-size: 26px; font-weight: 800; margin-top: 9px; letter-spacing: -.8px; }
+.sheet-head .sp .won { font-size: 14px; font-weight: 600; opacity: .6; }
+.sheet-body { padding: 14px 18px 4px; }
+.sec-t { font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: .6px; text-transform: uppercase; margin: 16px 0 8px; }
+.sec-t:first-child { margin-top: 0; }
+
+.reason {
+  display: flex; gap: 9px; padding: 9px 11px; border-radius: 10px;
+  background: var(--card); border: 1px solid var(--border); margin-bottom: 6px;
+}
+.reason .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: var(--text-muted); }
+.reason.up .dot { background: var(--red); }
+.reason.down .dot { background: var(--green); }
+.reason .rl { display: block; font-size: 12.5px; font-weight: 700; }
+.reason .rtext { flex: 1; min-width: 0; }
+.reason.up .rl { color: var(--orange); }
+.reason.down .rl { color: var(--green); }
+.reason .rd { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+
+.flight {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 11px 13px; margin-bottom: 8px;
+}
+.flight .fh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.flight .fp { font-size: 15px; font-weight: 800; }
+.flight .fseat { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: var(--card2); color: var(--text-dim); }
+.flight .fseat.low { background: rgba(255,107,107,.15); color: var(--red); }
+.leg { display: flex; align-items: center; gap: 9px; padding: 6px 0; }
+.leg + .leg { border-top: 1px dashed var(--border); }
+.leg .dir { font-size: 9.5px; font-weight: 800; color: var(--text-muted); width: 28px; flex-shrink: 0; white-space: nowrap; }
+.leg .legmain { flex: 1; min-width: 0; }
+.leg .times { display: block; font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.leg .times .mid { color: var(--text-muted); font-weight: 400; margin: 0 5px; }
+.leg .route { display: block; font-size: 10px; color: var(--text-dim); margin-top: 1px; }
+.leg .fno { flex-shrink: 0; text-align: right; white-space: nowrap; font-size: 10px; color: var(--text-dim); }
+.leg .fno .cls { display: inline-block; margin-top: 2px; padding: 1px 5px; border-radius: 4px; background: var(--card2); font-weight: 700; }
+
+.link-row { display: flex; gap: 8px; margin-top: 14px; }
+.link-btn {
+  flex: 1; text-align: center; padding: 11px; border-radius: 11px; font-size: 12.5px; font-weight: 700;
+  background: var(--card); border: 1px solid var(--border); color: var(--text); text-decoration: none;
+}
+.link-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* ── 설정 ───────────────────────────── */
+.field { margin-bottom: 13px; }
+.field label { display: block; font-size: 11.5px; font-weight: 700; color: var(--text-dim); margin-bottom: 5px; }
+.field input, .field select {
+  width: 100%; padding: 10px 12px; border-radius: 10px; font-size: 14px;
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+}
+.field input:focus, .field select:focus { outline: none; border-color: var(--accent); }
+.field .hint { font-size: 10.5px; color: var(--text-muted); margin-top: 5px; line-height: 1.45; }
+.field-row { display: flex; gap: 9px; }
+.field-row > * { flex: 1; }
+.switch-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; }
+.switch-row .sl { font-size: 13px; font-weight: 600; }
+.switch-row .shint { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+.sw { width: 44px; height: 26px; border-radius: 26px; background: var(--card2); position: relative; transition: background .15s; flex-shrink: 0; }
+.sw.on { background: var(--accent); }
+.sw::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.sw.on::after { transform: translateX(18px); }
+
+.notice {
+  margin: 12px 14px; padding: 11px 13px; border-radius: 11px; font-size: 11.5px; line-height: 1.5;
+  background: rgba(255,159,67,.09); border: 1px solid rgba(255,159,67,.28); color: #ffcf9b;
+}
+.notice b { color: var(--orange); }
+.notice a { color: var(--accent2); }
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 13px; }
+.toast {
+  position: fixed; left: 50%; bottom: calc(22px + var(--safe-b)); transform: translate(-50%, 18px);
+  background: var(--card2); border: 1px solid var(--border); color: var(--text);
+  padding: 10px 16px; border-radius: 22px; font-size: 12.5px; font-weight: 600;
+  z-index: 60; opacity: 0; pointer-events: none; transition: all .2s; max-width: 90vw; text-align: center;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+footer { text-align: center; font-size: 10.5px; color: var(--text-muted); padding: 22px 20px 0; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="h-row">
+    <div class="h-title">ICN <span class="arrow">→</span> 日本</div>
+    <div class="h-spacer"></div>
+    <button class="icon-btn" id="view-btn" title="보기 전환">▦</button>
+    <button class="icon-btn" id="cfg-btn" title="설정">⚙</button>
+    <button class="refresh-btn" id="refresh-btn">↻ 지금 시세</button>
+  </div>
+  <div class="h-sub" id="h-sub">
+    <span class="badge" id="src-badge">불러오는 중</span>
+    <span id="updated"></span>
+  </div>
+  <div class="progress" id="progress"><i></i></div>
+</header>
+
+<div class="filters">
+  <div class="chip-row" id="dest-chips"></div>
+  <div class="chip-row" id="pat-chips"></div>
+</div>
+
+<div class="legend">
+  <span>싸다</span>
+  <span class="bars"><i class="b0"></i><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></span>
+  <span>비싸다</span>
+  <span style="margin-left:auto" id="stat-line"></span>
+</div>
+
+<div id="notice-slot"></div>
+
+<main id="main"></main>
+
+<footer>
+  아시아나항공(OZ) 인천 출발 <b>직항 왕복</b>만 · 성인 1인 총액 기준<br>
+  표시 가격은 조회 시점의 참고값이며 실제 결제 금액은 예매 화면에서 확인하세요.
+</footer>
+
+<div class="scrim" id="scrim"></div>
+
+<div class="sheet" id="detail-sheet">
+  <button class="grab" aria-label="닫기"></button>
+  <div class="sheet-head" id="detail-head"></div>
+  <div class="sheet-body" id="detail-body"></div>
+</div>
+
+<div class="sheet" id="cfg-sheet">
+  <button class="grab" aria-label="닫기"></button>
+  <div class="sheet-head"><div class="st">설정</div><div class="ss">이 기기에만 저장됩니다</div></div>
+  <div class="sheet-body">
+    <div class="field">
+      <label>라이브 시세 프록시 주소</label>
+      <input id="cfg-proxy" type="url" inputmode="url" placeholder="https://asiana-japan-fare.<계정>.workers.dev" autocomplete="off">
+      <div class="hint">Cloudflare Worker 를 배포하고 그 주소를 넣으면 <b>새로고침 · ‘지금 시세’ 버튼이 실시간 조회</b>로 동작합니다. 비워두면 자동 수집된 저장 시세만 보여줍니다.</div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>인원</label>
+        <select id="cfg-adults">
+          <option value="1">1명</option><option value="2">2명</option>
+          <option value="3">3명</option><option value="4">4명</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>한 번에 조회할 개수</label>
+        <select id="cfg-limit">
+          <option value="16">16개</option><option value="28">28개</option>
+          <option value="40">40개</option><option value="60">60개</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>인천 출발 시간대</label>
+        <div class="field-row">
+          <input id="cfg-dep-from" type="time" value="06:00"><input id="cfg-dep-to" type="time" value="09:00">
+        </div>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>일본 출발(귀국) 시간대</label>
+        <div class="field-row">
+          <input id="cfg-ret-from" type="time" value="18:00"><input id="cfg-ret-to" type="time" value="21:00">
+        </div>
+      </div>
+    </div>
+    <div class="switch-row">
+      <div>
+        <div class="sl">열 때 자동으로 시세 갱신</div>
+        <div class="shint">페이지를 새로고침하면 현재 필터 범위를 자동 조회합니다</div>
+      </div>
+      <div class="sw on" id="cfg-auto"></div>
+    </div>
+    <div class="link-row">
+      <button class="link-btn" id="cfg-reset">기본값</button>
+      <button class="link-btn primary" id="cfg-save">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>
