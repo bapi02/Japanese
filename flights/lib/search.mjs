@@ -1,112 +1,148 @@
-// Amadeus 응답을 앱이 쓰는 형태로 정규화하고, 시간대 · 항공사 · 직항 조건으로 거른다.
+// SerpApi Google Flights 응답을 앱이 쓰는 형태로 정규화하고,
+// 시간대 · 항공사 · 직항 조건을 한 번 더 확인한다.
+// (요청 단계에서 stops=1 / include_airlines / outbound_times 로 이미 좁히지만,
+//  outbound_times 는 '시' 단위라 09:00 초과분이 섞여 들어올 수 있어 정확히 다시 거른다.)
 
 import { DEFAULTS, ORIGIN, CABINS, cabinOf } from './config.mjs';
 
-const hhmm = (isoLocal) => isoLocal.slice(11, 16);
-
-function inWindow(isoLocal, [from, to]) {
-  const t = hhmm(isoLocal);
-  return t >= from && t <= to;
-}
-
-/** "PT2H15M" -> 135 (분) */
-export function durationToMinutes(iso) {
-  const m = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(iso || '');
+/** "2026-09-04 08:20" → { at: "2026-09-04T08:20:00", date: "2026-09-04", time: "08:20" } */
+export function parseWhen(raw) {
+  if (typeof raw !== 'string') return null;
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(raw.trim());
   if (!m) return null;
-  return (Number(m[1] || 0)) * 60 + Number(m[2] || 0);
+  return { at: `${m[1]}T${m[2]}:00`, date: m[1], time: m[2] };
 }
 
-function legFrom(segment, fareDetail, dict) {
+/** "OZ 132" → { carrier: "OZ", number: "OZ132" } */
+export function parseFlightNumber(raw) {
+  const m = /^([A-Z0-9]{2})\s*(\d+)/.exec(String(raw || '').trim().toUpperCase());
+  return m ? { carrier: m[1], number: `${m[1]}${m[2]}` } : { carrier: null, number: raw || null };
+}
+
+const inWindow = (time, [from, to]) => time >= from && time <= to;
+
+function legFrom(flight) {
+  const dep = parseWhen(flight.departure_airport?.time);
+  const arr = parseWhen(flight.arrival_airport?.time);
+  const { carrier, number } = parseFlightNumber(flight.flight_number);
   return {
-    carrier: segment.carrierCode,
-    carrierName: dict?.carriers?.[segment.carrierCode] || segment.carrierCode,
-    operating: segment.operating?.carrierCode || segment.carrierCode,
-    number: `${segment.carrierCode}${segment.number}`,
-    from: segment.departure.iataCode,
-    to: segment.arrival.iataCode,
-    depAt: segment.departure.at,
-    arrAt: segment.arrival.at,
-    depTime: hhmm(segment.departure.at),
-    arrTime: hhmm(segment.arrival.at),
-    minutes: durationToMinutes(segment.duration),
-    aircraft: dict?.aircraft?.[segment.aircraft?.code] || segment.aircraft?.code || null,
-    cabin: fareDetail?.cabin || null,
-    bookingClass: fareDetail?.class || null,
-    brandedFare: fareDetail?.brandedFareLabel || fareDetail?.brandedFare || null,
+    carrier,
+    carrierName: flight.airline || carrier,
+    operating: carrier,
+    number,
+    from: flight.departure_airport?.id || null,
+    to: flight.arrival_airport?.id || null,
+    depAt: dep?.at || null,
+    arrAt: arr?.at || null,
+    depTime: dep?.time || null,
+    arrTime: arr?.time || null,
+    minutes: typeof flight.duration === 'number' ? flight.duration : null,
+    aircraft: flight.airplane || null,
+    cabin: flight.travel_class || null,
+    legroom: flight.legroom || null,
+    oftenDelayed: flight.often_delayed_by_over_30_min === true,
+  };
+}
+
+/** price_insights 를 저장 가능한 크기로 정리 */
+function insightsFrom(body) {
+  const pi = body?.price_insights;
+  if (!pi) return null;
+  const range = Array.isArray(pi.typical_price_range) ? pi.typical_price_range : [];
+  return {
+    level: pi.price_level || null,          // "low" | "typical" | "high"
+    lowest: typeof pi.lowest_price === 'number' ? pi.lowest_price : null,
+    typicalLow: typeof range[0] === 'number' ? range[0] : null,
+    typicalHigh: typeof range[1] === 'number' ? range[1] : null,
   };
 }
 
 /**
- * Amadeus flight-offers 응답 -> 정규화된 오퍼 배열.
- * 왕복(itineraries 2개) · 직항 · 지정 항공사 · 지정 시간대만 남긴다.
+ * 1단계 응답 → 가는편 기준 왕복 후보.
+ * SerpApi 왕복 검색의 price 는 '왕복 총액'이다.
  */
-export function normalizeOffers(body, opts = {}) {
+export function normalizeOutbound(body, opts = {}) {
   const {
     carriers = DEFAULTS.carriers,
     depWindow = DEFAULTS.depWindow,
-    retWindow = DEFAULTS.retWindow,
-    cabin = null,
+    nonStop = true,
   } = opts;
-  const dict = body?.dictionaries || {};
+
   const out = [];
-
-  for (const offer of body?.data || []) {
-    const its = offer.itineraries || [];
-    if (its.length !== 2) continue;
-    const outSegs = its[0].segments || [];
-    const retSegs = its[1].segments || [];
-    if (outSegs.length !== 1 || retSegs.length !== 1) continue;   // 직항만
-
-    const outSeg = outSegs[0];
-    const retSeg = retSegs[0];
-    if (!carriers.includes(outSeg.carrierCode) || !carriers.includes(retSeg.carrierCode)) continue;
-    if (!inWindow(outSeg.departure.at, depWindow)) continue;
-    if (!inWindow(retSeg.departure.at, retWindow)) continue;
-
-    const fares = offer.travelerPricings?.[0]?.fareDetailsBySegment || [];
-    const fareFor = (segId) => fares.find(f => f.segmentId === segId) || null;
-
-    // 요청한 좌석등급과 실제 응답 등급이 다른 경우가 있어 한 번 더 확인한다.
-    if (cabin && !([outSeg, retSeg].every(sg => (fareFor(sg.id)?.cabin || cabin) === cabin))) continue;
+  for (const item of [...(body?.best_flights || []), ...(body?.other_flights || [])]) {
+    const legs = item.flights || [];
+    if (nonStop && legs.length !== 1) continue;      // 직항만
+    const leg = legFrom(legs[0]);
+    if (carriers.length && !carriers.includes(leg.carrier)) continue;
+    if (!leg.depTime || !inWindow(leg.depTime, depWindow)) continue;
 
     out.push({
-      price: Math.round(Number(offer.price?.grandTotal ?? offer.price?.total ?? 0)),
-      currency: offer.price?.currency || DEFAULTS.currency,
-      seats: offer.numberOfBookableSeats ?? null,
-      out: legFrom(outSeg, fareFor(outSeg.id), dict),
-      ret: legFrom(retSeg, fareFor(retSeg.id), dict),
+      price: typeof item.price === 'number' ? Math.round(item.price) : null,
+      currency: opts.currency || DEFAULTS.currency,
+      seats: null,                                    // Google Flights 는 잔여석을 주지 않는다
+      out: leg,
+      ret: null,                                      // departure_token 2차 조회 전까지 미상
+      departureToken: item.departure_token || null,
+      totalMinutes: typeof item.total_duration === 'number' ? item.total_duration : null,
     });
   }
-
-  out.sort((a, b) => a.price - b.price);
+  out.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
   return out;
 }
 
-/** 한 조합 × 한 좌석등급을 조회한다. */
+/** 2단계 응답 → 오는편 후보 */
+export function normalizeReturn(body, opts = {}) {
+  const {
+    carriers = DEFAULTS.carriers,
+    retWindow = DEFAULTS.retWindow,
+    nonStop = true,
+  } = opts;
+
+  const out = [];
+  for (const item of [...(body?.best_flights || []), ...(body?.other_flights || [])]) {
+    const legs = item.flights || [];
+    if (nonStop && legs.length !== 1) continue;
+    const leg = legFrom(legs[0]);
+    if (carriers.length && !carriers.includes(leg.carrier)) continue;
+    if (!leg.depTime || !inWindow(leg.depTime, retWindow)) continue;
+    out.push({
+      price: typeof item.price === 'number' ? Math.round(item.price) : null,
+      leg,
+      bookingToken: item.booking_token || null,
+    });
+  }
+  out.sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  return out;
+}
+
+/** 한 조합 × 한 좌석등급을 조회한다 (SerpApi 호출 1회). */
 export async function searchCabin(client, plan, cabin, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
-  const body = await client.flightOffers({
-    originLocationCode: opts.origin || ORIGIN,
-    destinationLocationCode: plan.dest,
-    departureDate: plan.depDate,
-    returnDate: plan.retDate,
+  const body = await client.searchOutbound({
+    origin: o.origin || ORIGIN,
+    dest: plan.dest,
+    depDate: plan.depDate,
+    retDate: plan.retDate,
+    cabin,
     adults: o.adults,
+    depWindow: o.depWindow,
+    retWindow: o.retWindow,
     nonStop: o.nonStop,
-    currencyCode: o.currency,
-    travelClass: cabin,
-    includedAirlineCodes: o.carriers.join(','),
-    max: o.maxOffersPerTrip,
+    carriers: o.carriers,
+    currency: o.currency,
+    deepSearch: o.deepSearch,
   });
-  const offers = normalizeOffers(body, { ...o, cabin });
+  const offers = normalizeOutbound(body, { ...o, cabin }).slice(0, o.maxOffersPerTrip);
   return {
     price: offers.length ? offers[0].price : null,
     offerCount: offers.length,
-    rawCount: body?.meta?.count ?? (body?.data?.length || 0),
+    rawCount: (body?.best_flights?.length || 0) + (body?.other_flights?.length || 0),
     offers,
+    insights: insightsFrom(body),
   };
 }
 
-/** 한 조합을 좌석등급별로 모두 조회해 하나의 trip 객체로 합친다. */
+/** 한 조합을 좌석등급별로 조회해 하나의 trip 객체로 합친다. */
 export async function searchTrip(client, plan, opts = {}) {
   const o = { ...DEFAULTS, ...opts };
   const trip = { ...plan, currency: o.currency };
@@ -121,13 +157,31 @@ export async function searchTrip(client, plan, opts = {}) {
       errors.push(err);
     }
   }
-  // 좌석등급을 전부 실패했을 때만 조합 자체를 실패로 본다.
   if (errors.length === o.cabins.length) throw errors[0];
   return trip;
 }
 
+/** 상세 화면용 — 고른 가는편에 붙는 오는편 후보 (SerpApi 호출 1회). */
+export async function searchReturnLegs(client, plan, cabin, departureToken, opts = {}) {
+  const o = { ...DEFAULTS, ...opts };
+  const body = await client.searchReturn({
+    departureToken,
+    origin: o.origin || ORIGIN,
+    dest: plan.dest,
+    depDate: plan.depDate,
+    retDate: plan.retDate,
+    cabin,
+    adults: o.adults,
+    retWindow: o.retWindow,
+    nonStop: o.nonStop,
+    carriers: o.carriers,
+    currency: o.currency,
+  });
+  return normalizeReturn(body, o).slice(0, o.maxOffersPerTrip);
+}
+
 /** 동시 실행 수를 제한하며 여러 조합을 조회한다. */
-export async function searchMany(client, plans, opts = {}, { concurrency = 4, onProgress } = {}) {
+export async function searchMany(client, plans, opts = {}, { concurrency = 3, onProgress } = {}) {
   const results = [];
   const errors = [];
   let cursor = 0;

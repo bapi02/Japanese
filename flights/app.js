@@ -73,7 +73,7 @@ async function loadData() {
   const data = await res.json();
   for (const t of data.trips) {
     t.patternLabel ||= PATTERNS.find(p => p.id === t.pattern)?.label || t.pattern;
-    for (const c of CABINS) t[c.key] ||= { price: null, offerCount: 0, offers: [] };
+    for (const c of CABINS) t[c.key] ||= { price: null, offerCount: 0, offers: [], notQueried: true };
   }
   state.data = data;
   state.baselines = buildBaselines(data.trips);
@@ -187,7 +187,7 @@ function renderNotice() {
   if (state.data.source === 'sample' && state.live.size) {
     msgs.push(`<b>● 실시간</b> 표시가 붙은 값만 실제 조회 결과이고, 나머지는 화면 확인용 예시입니다.`);
   } else if (state.data.source === 'sample') {
-    msgs.push('지금 보이는 값은 <b>화면 확인용 예시</b>입니다. 실제 시세를 보려면 Amadeus 키를 등록하세요 — 자동 수집은 저장소 시크릿, 실시간 조회는 ⚙ 설정의 프록시 주소.');
+    msgs.push('지금 보이는 값은 <b>화면 확인용 예시</b>입니다. 실제 시세를 보려면 SerpApi 키를 등록하세요 — 자동 수집은 저장소 시크릿, 실시간 조회는 ⚙ 설정의 프록시 주소.');
   } else if (!state.cfg.proxy) {
     msgs.push('프록시 주소가 없어 <b>자동 수집된 저장 시세</b>만 보고 있습니다. ⚙ 설정에 Worker 주소를 넣으면 새로고침할 때마다 현시점 시세를 조회합니다.');
   }
@@ -214,7 +214,9 @@ function subCabinLine(trip, subKey) {
   const p = priceOf(trip, subKey);
   const main = priceOf(trip, primaryCabin());
   if (typeof p !== 'number') {
-    return `<span class="subcabin none">${meta.short} 해당 시간대 없음</span>`;
+    return trip[subKey]?.notQueried
+      ? `<span class="subcabin ask"><b>${meta.short}</b> 탭해서 조회</span>`
+      : `<span class="subcabin none">${meta.short} 해당 시간대 없음</span>`;
   }
   const ratio = typeof main === 'number' && main > 0
     ? (subKey === 'business' ? (p / main) : (main / p)) : null;
@@ -230,7 +232,12 @@ function renderGrid() {
   const weeks = cellsByWeek();
   const prices = visibleTrips().map(t => priceOf(t, key)).filter(p => typeof p === 'number');
   if (!prices.length) {
-    main.innerHTML = '<div class="empty-state">조건에 맞는 항공편이 없습니다.<br>필터를 바꿔보세요.</div>';
+    const allUnqueried = visibleTrips().every(t => t[key]?.notQueried);
+    main.innerHTML = allUnqueried
+      ? `<div class="empty-state">${cabinMeta(key).ko}는 자동 수집하지 않습니다.<br>
+         <span style="font-size:11.5px">무료 조회 한도를 아끼려고, 보고 싶은 칸을 열었을 때만 조회합니다.<br>
+         위에서 <b>이코노미 + 비즈니스</b>를 고른 뒤 칸을 눌러보세요.</span></div>`
+      : '<div class="empty-state">조건에 맞는 항공편이 없습니다.<br>필터를 바꿔보세요.</div>';
     $('stat-line').textContent = '';
     return;
   }
@@ -361,20 +368,30 @@ function openDetail(entry, cabinKey = primaryCabin()) {
     <div class="cabin-seg">
       ${CABINS.map(c => {
         const p = priceOf(t, c.key);
-        return `<button class="${c.key === cabinKey ? 'on' : ''}" data-cabin="${c.key}">
-          ${c.ko}${isLive(t, c.key) ? ' ●' : ''}<span>${typeof p === 'number' ? won(p) + '원' : '없음'}</span></button>`;
+        const label = typeof p === 'number' ? won(p) + '원'
+          : t[c.key]?.notQueried ? '조회하기' : '없음';
+        return `<button class="${c.key === cabinKey ? 'on' : ''}${t[c.key]?.notQueried ? ' ask' : ''}" data-cabin="${c.key}">
+          ${c.ko}${isLive(t, c.key) ? ' ●' : ''}<span>${label}</span></button>`;
       }).join('')}
     </div>
     ${typeof price === 'number'
       ? `<div class="sp">${won(price)}<span class="won">원</span>
            <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-left:6px">${meta.ko} · 성인 ${state.cfg.adults}인 · 총액</span></div>`
-      : `<div class="sp" style="font-size:16px;color:var(--text-dim)">${meta.ko}는 이 시간대에 운항/좌석이 없습니다</div>`}`;
+      : t[cabinKey]?.notQueried
+        ? `<div class="sp" style="font-size:15px;color:var(--text-dim)">${meta.ko}는 아직 조회하지 않았습니다</div>`
+        : `<div class="sp" style="font-size:16px;color:var(--text-dim)">${meta.ko}는 이 시간대에 운항/좌석이 없습니다</div>`}`;
 
   const others = (entry.all || []).filter(x => x.dest !== t.dest && typeof priceOf(x, cabinKey) === 'number')
     .sort((a, b) => priceOf(a, cabinKey) - priceOf(b, cabinKey));
   const offers = offersOf(t, cabinKey);
 
+  const ins = t[cabinKey]?.insights;
   $('detail-body').innerHTML = `
+    ${ins?.typicalLow && ins?.typicalHigh ? `
+      <div class="insight ${ins.level || 'typical'}">
+        <span class="ilevel">${({ low: '평소보다 쌈', typical: '평소 수준', high: '평소보다 비쌈' })[ins.level] || '평소 수준'}</span>
+        <span class="irange">통상 ${won(ins.typicalLow)}~${won(ins.typicalHigh)}원</span>
+      </div>` : ''}
     <div class="sec-t">가격 근거</div>
     ${reasons.map(r => `
       <div class="reason ${r.tone}">
@@ -384,14 +401,20 @@ function openDetail(entry, cabinKey = primaryCabin()) {
 
     ${offers.length ? `
       <div class="sec-t">${meta.ko} 항공편 ${offers.length}개</div>
-      ${offers.map(o => `
+      ${offers.map((o, i) => `
         <div class="flight">
           <div class="fh">
             <span class="fp">${won(o.price)}원</span>
-            ${typeof o.seats === 'number' ? `<span class="fseat ${o.seats <= 4 ? 'low' : ''}">잔여 ${o.seats}석</span>` : ''}
+            <span class="fseat">왕복 총액</span>
           </div>
           ${legHtml('출국', o.out)}
-          ${legHtml('귀국', o.ret)}
+          ${o.ret ? legHtml('귀국', o.ret)
+            : o.returns?.length
+              ? `<div class="ret-note">귀국편 후보 ${o.returns.length}개</div>` + o.returns.map(r => legHtml('귀국', r.leg)).join('')
+              : `<div class="ret-ask">
+                   <span>귀국편은 ${state.cfg.retFrom}–${state.cfg.retTo} 조건으로 값이 계산됐습니다. 실제 편명·시각은 따로 조회합니다.</span>
+                   <button class="ret-btn" data-ret="${i}"${o.departureToken ? '' : ' disabled'}>귀국편 후보 보기</button>
+                 </div>`}
         </div>`).join('')}` : ''}
 
     ${others.length ? `
@@ -411,7 +434,33 @@ function openDetail(entry, cabinKey = primaryCabin()) {
     ${state.cfg.proxy ? `<button class="link-btn" id="reload-one" style="width:100%;margin-top:8px">이 조합만 지금 다시 조회</button>` : ''}`;
 
   $('detail-head').querySelectorAll('[data-cabin]').forEach(b => {
-    b.onclick = () => openDetail(entry, b.dataset.cabin);
+    b.onclick = async () => {
+      const key = b.dataset.cabin;
+      if (t[key]?.notQueried) {
+        if (!state.cfg.proxy) { openSheet('cfg-sheet'); toast('프록시 주소를 먼저 등록하세요'); return; }
+        b.querySelector('span').textContent = '조회 중…';
+        const ok = await fetchLive(t, [key]);
+        state.baselines = buildBaselines(state.data.trips);
+        render();
+        const fresh = state.data.trips.find(x => x.id === t.id) || t;
+        openDetail({ best: fresh, all: entry.all }, key);
+        if (!ok) toast(`조회 실패 — ${state.lastError || '프록시 응답 없음'}`);
+        return;
+      }
+      openDetail(entry, key);
+    };
+  });
+
+  $('detail-body').querySelectorAll('[data-ret]').forEach(b => {
+    b.onclick = async () => {
+      if (!state.cfg.proxy) { openSheet('cfg-sheet'); toast('프록시 주소를 먼저 등록하세요'); return; }
+      const offer = offers[Number(b.dataset.ret)];
+      b.textContent = '조회 중…';
+      b.disabled = true;
+      const returns = await fetchReturns(t, cabinKey, offer);
+      if (returns) { offer.returns = returns; openDetail(entry, cabinKey); }
+      else { b.textContent = '조회 실패 — 다시 시도'; b.disabled = false; }
+    };
   });
   $('detail-body').querySelectorAll('[data-trip]').forEach(b => {
     b.onclick = () => {
@@ -455,11 +504,11 @@ function refreshTargets(limit) {
   return out.length ? out : (ordered[0]?.[1] || []).slice(0, limit);
 }
 
-function proxyUrl(trip) {
+function proxyUrl(trip, cabinKeys) {
   const base = state.cfg.proxy.replace(/\/+$/, '');
-  const cabins = state.cabin === 'BOTH'
-    ? CABINS.map(c => c.id)
-    : [CABINS.find(c => c.key === state.cabin).id];
+  const keys = cabinKeys?.length ? cabinKeys
+    : state.cabin === 'BOTH' ? CABINS.map(c => c.key) : [state.cabin];
+  const cabins = keys.map(k => CABINS.find(c => c.key === k)?.id).filter(Boolean);
   const q = new URLSearchParams({
     dest: trip.dest, dep: trip.depDate, ret: trip.retDate,
     adults: String(state.cfg.adults),
@@ -471,9 +520,9 @@ function proxyUrl(trip) {
   return `${base}/api/trip?${q}`;
 }
 
-async function fetchLive(trip) {
+async function fetchLive(trip, cabinKeys) {
   try {
-    const res = await fetch(proxyUrl(trip), { cache: 'no-store' });
+    const res = await fetch(proxyUrl(trip, cabinKeys), { cache: 'no-store' });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
     const idx = state.data.trips.findIndex(x => x.id === trip.id);
@@ -491,6 +540,28 @@ async function fetchLive(trip) {
     console.warn('[live]', trip.id, err.message);
     state.lastError = err.message;
     return false;
+  }
+}
+
+/** 고른 가는편에 붙는 오는편 후보를 조회한다 (SerpApi 호출 1회). */
+async function fetchReturns(trip, cabinKey, offer) {
+  try {
+    const base = state.cfg.proxy.replace(/\/+$/, '');
+    const q = new URLSearchParams({
+      dest: trip.dest, dep: trip.depDate, ret: trip.retDate,
+      adults: String(state.cfg.adults),
+      cabin: CABINS.find(c => c.key === cabinKey)?.id || 'ECONOMY',
+      token: offer.departureToken || '',
+      retWindow: `${state.cfg.retFrom}-${state.cfg.retTo}`,
+    });
+    const res = await fetch(`${base}/api/return?${q}`, { cache: 'no-store' });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || `HTTP ${res.status}`);
+    return body.returns || [];
+  } catch (err) {
+    console.warn('[return]', err.message);
+    state.lastError = err.message;
+    return null;
   }
 }
 

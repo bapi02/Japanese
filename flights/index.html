@@ -148,6 +148,8 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
   background: rgba(78,205,196,.16); color: var(--accent2); }
 .cell .subcabin .x { font-size: 9.5px; color: var(--text-muted); font-weight: 600; }
 .cell .subcabin.none { color: var(--text-muted); font-weight: 500; }
+.cell .subcabin.ask { color: var(--text-dim); font-weight: 600; }
+.cell .subcabin.ask b { background: var(--card2); color: var(--text-dim); }
 .cell .subcabin.none b { background: var(--card2); color: var(--text-muted); }
 .list-item .subcabin { display: inline-flex; gap: 4px; align-items: baseline; color: var(--accent2); font-weight: 600; }
 .list-item .subcabin b { font-size: 9px; font-weight: 800; padding: 1px 4px; border-radius: 4px;
@@ -203,6 +205,36 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 }
 .cabin-seg button span { font-size: 11px; font-weight: 600; opacity: .8; }
 .cabin-seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cabin-seg button.ask { border-style: dashed; }
+.cabin-seg button.ask.on { border-style: solid; }
+
+.insight {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 12px; border-radius: 10px; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--border);
+}
+.insight .ilevel { font-size: 12.5px; font-weight: 800; }
+.insight .irange { font-size: 11px; color: var(--text-dim); }
+.insight.low  { background: rgba(81,207,102,.10); border-color: rgba(81,207,102,.35); }
+.insight.low .ilevel { color: var(--green); }
+.insight.high { background: rgba(255,107,107,.10); border-color: rgba(255,107,107,.35); }
+.insight.high .ilevel { color: var(--red); }
+.insight.typical .ilevel { color: var(--text-dim); }
+
+.ret-note {
+  font-size: 9.5px; font-weight: 800; color: var(--text-muted); letter-spacing: .4px;
+  border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 8px;
+}
+.ret-ask {
+  border-top: 1px dashed var(--border); margin-top: 6px; padding-top: 9px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.ret-ask > span { font-size: 10.5px; color: var(--text-muted); line-height: 1.45; }
+.ret-btn {
+  padding: 8px 10px; border-radius: 9px; font-size: 12px; font-weight: 700;
+  background: var(--card2); border: 1px solid var(--border); color: var(--text);
+}
+.ret-btn:disabled { opacity: .45; }
 .sheet-head .sp { font-size: 26px; font-weight: 800; margin-top: 9px; letter-spacing: -.8px; }
 .sheet-head .sp .won { font-size: 14px; font-weight: 600; opacity: .6; }
 .sheet-body { padding: 14px 18px 4px; }

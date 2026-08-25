@@ -16,8 +16,11 @@ export const DESTINATIONS = [
   { code: 'KMJ', city: '구마모토', ko: '구마모토',      region: '규슈' },
 ];
 
-/** 기본 수집 대상 (호출 수를 아끼려고 주요 노선만). 나머지는 DESTS 환경변수로 켠다. */
-export const DEFAULT_DEST_CODES = ['NRT', 'HND', 'KIX', 'FUK', 'NGO', 'CTS', 'OKA'];
+/**
+ * 자동 수집 기본 대상. SerpApi 무료 한도(250회/월)에 맞춘 값이라 일부러 좁다.
+ * 한도에 여유가 생기면 DESTS 환경변수로 늘리면 된다.
+ */
+export const DEFAULT_DEST_CODES = ['NRT', 'KIX'];
 
 /**
  * 주말 여행 패턴. dep/ret 은 요일 번호(0=일 … 6=토).
@@ -41,11 +44,13 @@ export const DEFAULTS = {
   nonStop: true,           // 직항만
   adults: 1,
   currency: 'KRW',
-  cabins: ['ECONOMY', 'BUSINESS'],   // 좌석등급마다 조회를 따로 한다 (호출 수 = 조합 × 등급 수)
+  cabins: ['ECONOMY', 'BUSINESS'],   // 화면에서 볼 수 있는 좌석등급
+  collectCabins: ['ECONOMY'],        // 자동 수집이 도는 등급. 비즈니스는 셀을 열 때 온디맨드로 조회한다.
+  deepSearch: false,                 // 켜면 브라우저와 동일한 결과를 노리지만 응답이 느려진다
   depWindow: ['06:00', '09:00'],  // 인천 출발 시각 (현지)
   retWindow: ['18:00', '21:00'],  // 일본 출발 시각 (현지)
-  weeks: 10,               // 앞으로 몇 주치 주말을 볼지
-  maxOffersPerTrip: 30,
+  weeks: 5,                // 앞으로 몇 주치 주말을 볼지
+  maxOffersPerTrip: 8,
 };
 
 export const CARRIER_NAMES = {

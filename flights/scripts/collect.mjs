@@ -1,15 +1,16 @@
 #!/usr/bin/env node
-// GitHub Actions 용 시세 수집기: Amadeus 를 돌면서 flights/data/prices.json 을 갱신한다.
+// GitHub Actions 용 시세 수집기: SerpApi Google Flights 를 돌면서
+// flights/data/prices.json 을 갱신한다.
 //
-// 필수 환경변수: AMADEUS_CLIENT_ID, AMADEUS_CLIENT_SECRET
-// 선택: AMADEUS_ENV(test|production, 기본 production), DESTS(쉼표구분), WEEKS,
-//       PATTERNS(쉼표구분 id), ADULTS, DEP_WINDOW("06:00-09:00"), RET_WINDOW("18:00-21:00"),
+// 필수 환경변수: SERPAPI_KEY
+// 선택: DESTS(쉼표구분), WEEKS, PATTERNS, ADULTS, CABINS(기본 ECONOMY),
+//       DEP_WINDOW("06:00-09:00"), RET_WINDOW("18:00-21:00"), DEEP_SEARCH,
 //       CONCURRENCY, OUT(파일 경로)
 
 import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '../lib/amadeus.mjs';
+import { createClient } from '../lib/serpapi.mjs';
 import { searchMany } from '../lib/search.mjs';
 import { buildTripPlans, DEFAULTS, DEFAULT_DEST_CODES, DESTINATIONS, PATTERNS, CABINS, ORIGIN } from '../lib/config.mjs';
 
@@ -28,7 +29,8 @@ const opts = {
   adults: Number(process.env.ADULTS || DEFAULTS.adults),
   depWindow: win(process.env.DEP_WINDOW, DEFAULTS.depWindow),
   retWindow: win(process.env.RET_WINDOW, DEFAULTS.retWindow),
-  cabins: list(process.env.CABINS) || DEFAULTS.cabins,
+  cabins: list(process.env.CABINS) || DEFAULTS.collectCabins,
+  deepSearch: process.env.DEEP_SEARCH === 'true',
   origin: ORIGIN,
 };
 
@@ -40,14 +42,14 @@ const concurrency = Number(process.env.CONCURRENCY || 4);
 const plans = buildTripPlans({ destCodes, weeks, patternIds });
 
 console.log(`[collect] ${destCodes.length}개 노선 × ${weeks}주 × ${patternIds.length}패턴 = ${plans.length}조합`);
-console.log(`[collect] 좌석등급 ${opts.cabins.join(', ')} → API 호출 ${plans.length * opts.cabins.length}회`);
+console.log(`[collect] 좌석등급 ${opts.cabins.join(', ')} → SerpApi 호출 ${plans.length * opts.cabins.length}회`);
 console.log(`[collect] 출발 ${opts.depWindow.join('~')} / 귀국 ${opts.retWindow.join('~')} · ${opts.carriers.join(',')} 직항만`);
 
-const client = createClient({
-  clientId: process.env.AMADEUS_CLIENT_ID,
-  clientSecret: process.env.AMADEUS_CLIENT_SECRET,
-  env: process.env.AMADEUS_ENV || 'production',
-});
+if (!process.env.SERPAPI_KEY) {
+  console.error('[collect] SERPAPI_KEY 가 없습니다. 저장소 Secrets 에 등록하세요.');
+  process.exit(1);
+}
+const client = createClient({ apiKey: process.env.SERPAPI_KEY });
 
 const started = Date.now();
 const { results, errors } = await searchMany(client, plans, opts, {
@@ -85,6 +87,12 @@ if (!found.length) {
 const MAX_STORED_OFFERS = 3;
 for (const r of results) {
   for (const c of CABINS) {
+    // 이번에 돌지 않은 좌석등급은 '없음'이 아니라 '아직 안 봄'으로 남긴다.
+    // 화면에서 그 칸을 열 때 온디맨드로 조회한다.
+    if (!opts.cabins.includes(c.id)) {
+      r[c.key] = { price: null, offerCount: 0, offers: [], notQueried: true };
+      continue;
+    }
     const slot = r[c.key];
     if (slot?.offers?.length > MAX_STORED_OFFERS) slot.offers = slot.offers.slice(0, MAX_STORED_OFFERS);
   }
@@ -100,6 +108,8 @@ const payload = {
     nonStop: opts.nonStop,
     adults: opts.adults,
     cabins: opts.cabins,
+    viewableCabins: DEFAULTS.cabins,
+    provider: 'serpapi-google-flights',
     depWindow: opts.depWindow,
     retWindow: opts.retWindow,
     weeks,

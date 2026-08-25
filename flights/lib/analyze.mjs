@@ -1,4 +1,4 @@
-// "왜 이 가격인가" 분석 — 달력(연휴·성수기), 좌석 잔여, 예약클래스,
+// "왜 이 가격인가" 분석 — 구글의 시세 판정(price_insights), 달력(연휴·성수기),
 // 같은 노선 중앙값 대비 편차, 여행 패턴 프리미엄, 이코노미↔비즈니스 격차를 근거로 배지를 만든다.
 
 import { calendarContext } from './holidays.mjs';
@@ -18,20 +18,6 @@ export function quantile(nums, q) {
   const lo = Math.floor(pos), hi = Math.ceil(pos);
   return lo === hi ? a[lo] : Math.round(a[lo] + (a[hi] - a[lo]) * (pos - lo));
 }
-
-// 이코노미 예약클래스 대략적 등급 (항공사 공통 관행 기준, 정확한 운임규정은 항공사 공지 우선)
-const Y_TIERS = {
-  Y: ['정규 운임', 3], B: ['상위 운임', 3], M: ['상위 운임', 3],
-  H: ['중간 운임', 2], K: ['중간 운임', 2], L: ['중간 운임', 2],
-  S: ['할인 운임', 0], V: ['할인 운임', 0], Q: ['할인 운임', 0],
-  N: ['할인 운임', 0], T: ['특가 운임', 0], E: ['특가 운임', 0],
-  G: ['특가 운임', 0], W: ['할인 운임', 0], U: ['할인 운임', 0],
-};
-// 비즈니스 예약클래스
-const C_TIERS = {
-  J: ['정규 운임', 3], C: ['정규 운임', 3],
-  D: ['할인 운임', 1], I: ['할인 운임', 0], Z: ['특가 운임', 0],
-};
 
 export const priceOf = (trip, cabinKey) => trip?.[cabinKey]?.price ?? null;
 export const offersOf = (trip, cabinKey) => trip?.[cabinKey]?.offers || [];
@@ -155,30 +141,31 @@ export function explain(trip, baselines, cabinKey = 'economy', today = new Date(
       detail: '해마다 수요가 몰리는 시즌이라 기본 운임대 자체가 높게 잡힙니다.' });
   }
 
+  // Google Flights 가 직접 주는 시세 판정 (평소 가격대 대비)
+  const ins = trip?.[cabinKey]?.insights;
+  if (ins?.level === 'high') {
+    reasons.push({ key: 'insight', tone: 'up', weight: 4,
+      label: '구글 기준 · 평소보다 비쌈',
+      detail: ins.typicalLow && ins.typicalHigh
+        ? `이 노선·기간의 통상 가격대는 ${ins.typicalLow.toLocaleString('ko-KR')}~${ins.typicalHigh.toLocaleString('ko-KR')}원입니다.`
+        : '구글이 같은 노선의 과거 가격과 비교해 높은 편으로 판정했습니다.' });
+  } else if (ins?.level === 'low') {
+    reasons.push({ key: 'insight', tone: 'down', weight: 0,
+      label: '구글 기준 · 평소보다 쌈',
+      detail: ins.typicalLow && ins.typicalHigh
+        ? `통상 가격대 ${ins.typicalLow.toLocaleString('ko-KR')}~${ins.typicalHigh.toLocaleString('ko-KR')}원보다 낮습니다.`
+        : '구글이 같은 노선의 과거 가격과 비교해 낮은 편으로 판정했습니다.' });
+  } else if (ins?.typicalHigh && price > ins.typicalHigh) {
+    reasons.push({ key: 'insight', tone: 'up', weight: 3,
+      label: `통상 가격대 상단 초과`,
+      detail: `평소 ${ins.typicalLow?.toLocaleString('ko-KR') ?? '?'}~${ins.typicalHigh.toLocaleString('ko-KR')}원 구간을 넘었습니다.` });
+  }
+
   const best = offersOf(trip, cabinKey)[0];
-  if (best) {
-    const seatLimit = cabinKey === 'business' ? 2 : 4;
-    if (typeof best.seats === 'number' && best.seats <= seatLimit) {
-      reasons.push({ key: 'seats', tone: 'up', weight: 3,
-        label: `잔여석 ${best.seats}석`,
-        detail: '해당 운임으로 남은 좌석이 얼마 없어 다음 조회 때 가격이 오를 수 있습니다.' });
-    }
-    const cls = best.out?.bookingClass;
-    const tier = cls ? (cabinKey === 'business' ? C_TIERS : Y_TIERS)[cls] : null;
-    if (tier && tier[1] >= 2) {
-      reasons.push({ key: 'class', tone: 'up', weight: tier[1],
-        label: `예약클래스 ${cls} · ${tier[0]}`,
-        detail: '더 싼 할인 운임 클래스가 이미 마감되어 상위 클래스만 남은 상태입니다.' });
-    } else if (tier && tier[1] === 0) {
-      reasons.push({ key: 'class', tone: 'down', weight: 0,
-        label: `예약클래스 ${cls} · ${tier[0]}`,
-        detail: '할인 운임 클래스가 아직 열려 있습니다.' });
-    }
-    if (best.out?.operating && best.out.operating !== best.out.carrier) {
-      reasons.push({ key: 'codeshare', tone: 'info', weight: 0,
-        label: `공동운항 (운항 ${best.out.operating})`,
-        detail: '아시아나 편명이지만 실제 운항사는 다릅니다.' });
-    }
+  if (best?.out?.oftenDelayed) {
+    reasons.push({ key: 'delay', tone: 'info', weight: 0,
+      label: '지연 잦은 편',
+      detail: '구글이 이 편을 30분 이상 지연이 잦은 항공편으로 표시했습니다.' });
   }
 
   // 같은 노선·같은 주에서 가장 짧은 일정(토·일) 대비 프리미엄
