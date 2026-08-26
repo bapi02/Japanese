@@ -250,7 +250,9 @@ function renderNotice() {
   slot.innerHTML = '';
   const msgs = [];
   if (globalThis.__PREVIEW__) {
-    msgs.push('이 페이지는 <b>미리보기</b>입니다 — 예시 데이터가 인라인되어 있고, 실시간 조회는 배포본(GitHub Pages + Worker)에서만 동작합니다.');
+    const snap = state.data.generatedAt ? new Date(state.data.generatedAt) : null;
+    const when = snap ? `${snap.getMonth() + 1}/${snap.getDate()} ${String(snap.getHours()).padStart(2, '0')}:${String(snap.getMinutes()).padStart(2, '0')}` : '';
+    msgs.push(`이 페이지는 <b>미리보기</b>입니다 — ${state.data.source === 'sample' ? '예시 데이터' : `${when} 수집 시세의 스냅샷`}이고, 실시간 조회는 배포본(GitHub Pages + Worker)에서 동작합니다.`);
   }
   if (globalThis.__PREVIEW__) {
     // 미리보기에서는 키 안내가 무의미하므로 아래 분기들을 건너뛴다
