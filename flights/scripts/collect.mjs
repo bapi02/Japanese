@@ -11,7 +11,7 @@ import { writeFile, mkdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '../lib/serpapi.mjs';
-import { searchMany } from '../lib/search.mjs';
+import { searchMany, searchReturnLegs } from '../lib/search.mjs';
 import { buildTripPlans, DEFAULTS, DEFAULT_DEST_CODES, DESTINATIONS, PATTERNS, CABINS, ORIGIN } from '../lib/config.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -125,6 +125,37 @@ if (prevReal) {
   }
 }
 
+// ── 귀국편 시간표 수집 ──────────────────────────────────────────
+// 왕복 검색 1회로는 가는편 + 왕복 총액까지만 나온다(Google Flights 구조).
+// 오는편 시각은 departure_token 재조회가 필요한데, 조합마다 부르면 호출이
+// 두 배라 목적지 × 귀국요일별 대표 1건만 조회해 시간표로 공유한다.
+// (같은 노선·같은 요일의 저녁 OZ 스케줄은 사실상 동일하다.)
+const returnSchedules = {};
+{
+  const wanted = new Map();   // "DEST|dow" -> 대표 trip
+  for (const r of results) {
+    const best = r.economy?.offers?.[0];
+    if (!best?.departureToken) continue;
+    const dow = new Date(r.retDate + 'T00:00:00Z').getUTCDay();
+    const key = `${r.dest}|${dow}`;
+    if (!wanted.has(key)) wanted.set(key, r);
+  }
+  console.log(`[collect] 귀국편 시간표 ${wanted.size}건 추가 조회`);
+  for (const [key, trip] of wanted) {
+    try {
+      const legs = await searchReturnLegs(client, trip, 'ECONOMY', trip.economy.offers[0].departureToken, opts);
+      returnSchedules[key] = {
+        sampledDate: trip.retDate,
+        legs: legs.map(x => ({ price: x.price, leg: x.leg })),
+      };
+    } catch (err) {
+      console.warn(`[collect] 귀국편 조회 실패 ${key}: ${err.message}`);
+    }
+  }
+  const got = Object.values(returnSchedules).reduce((n, v) => n + v.legs.length, 0);
+  console.log(`[collect] 귀국편 시간표 확보: ${Object.keys(returnSchedules).length}키 · ${got}편`);
+}
+
 const payload = {
   generatedAt: new Date().toISOString(),
   source: 'github-actions',
@@ -145,6 +176,7 @@ const payload = {
   destinations: DESTINATIONS.filter(d => destCodes.includes(d.code)),
   patterns: PATTERNS.filter(p => patternIds.includes(p.id)),
   cabinsMeta: CABINS.filter(c => opts.cabins.includes(c.id)),
+  returnSchedules,
   trips: results,
   errors: [...errors, ...cabinErrors].slice(0, 20),
 };
