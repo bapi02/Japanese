@@ -124,6 +124,22 @@ export function explain(trip, baselines, cabinKey = 'economy', today = new Date(
     }
   }
 
+  // 지난 수집 대비 변화 — 우리가 직접 지켜본 그 조합의 가격 변화
+  const slot = trip?.[cabinKey];
+  if (typeof slot?.prevPrice === 'number' && slot.prevPrice > 0) {
+    const d = pct(price, slot.prevPrice);
+    const when = slot.prevAt ? `${+slot.prevAt.slice(5, 7)}/${+slot.prevAt.slice(8, 10)} 수집` : '지난 수집';
+    if (d >= 5) {
+      reasons.push({ key: 'trend', tone: 'up', weight: Math.min(4, Math.round(d / 8)),
+        label: `지난 수집 대비 +${d}%`,
+        detail: `${when} 때 ${slot.prevPrice.toLocaleString('ko-KR')}원이었습니다. 오르는 추세면 미루지 않는 편이 낫습니다.` });
+    } else if (d <= -5) {
+      reasons.push({ key: 'trend', tone: 'down', weight: 0,
+        label: `지난 수집 대비 ${d}%`,
+        detail: `${when} 때 ${slot.prevPrice.toLocaleString('ko-KR')}원에서 내려왔습니다.` });
+    }
+  }
+
   const cal = calendarContext(trip.depDate, trip.retDate);
   if (cal.kr.length) {
     reasons.push({ key: 'kr-holiday', tone: 'up', weight: 4,

@@ -2,7 +2,7 @@
 
 import { PATTERNS, DESTINATIONS, CABINS, CARRIER_NAMES } from './lib/config.mjs';
 import { buildBaselines, explain, quantile, priceOf, offersOf } from './lib/analyze.mjs';
-import { calendarContext } from './lib/holidays.mjs';
+import { calendarContext, HOLIDAY_DATA_END } from './lib/holidays.mjs';
 
 const $ = (id) => document.getElementById(id);
 const CFG_KEY = 'oz-jp-fare-cfg';
@@ -27,6 +27,16 @@ const state = {
 const DOW = ['일', '월', '화', '수', '목', '금', '토'];
 const won = (n) => n.toLocaleString('ko-KR');
 const manwon = (n) => `${(n / 10000).toFixed(1)}만`;
+/** 지난 수집 대비 델타 뱃지 (±5% 이상일 때만) */
+function deltaBadge(trip, key) {
+  const slot = trip?.[key];
+  if (typeof slot?.prevPrice !== 'number' || typeof slot?.price !== 'number' || !slot.prevPrice) return '';
+  const d = Math.round(((slot.price - slot.prevPrice) / slot.prevPrice) * 100);
+  if (Math.abs(d) < 5) return '';
+  return d > 0
+    ? `<span class="delta up">▲${d}%</span>`
+    : `<span class="delta down">▼${-d}%</span>`;
+}
 const md = (iso) => `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 const mdd = (iso) => `${md(iso)}(${DOW[new Date(iso + 'T00:00:00Z').getUTCDay()]})`;
 const shortWin = (w) => w ? `${+w[0].slice(0, 2)}–${+w[1].slice(0, 2)}시` : '';
@@ -37,6 +47,54 @@ const primaryCabin = () => state.cabin === 'business' ? 'business' : 'economy';
 const otherCabin = (key) => key === 'economy' ? 'business' : 'economy';
 const isLive = (trip, key) => state.live.has(`${trip.id}::${key}`);
 const liveTripCount = () => new Set([...state.live].map(k => k.split('::')[0])).size;
+
+/* ── 라이브 캐시 ───────────────────────── */
+// 온디맨드로 조회한 등급 슬롯을 기기에 보존한다. 새로고침해도 무료 한도를 다시 쓰지 않게.
+const LIVE_CACHE_KEY = 'oz-jp-live-cache';
+const LIVE_CACHE_TTL = 6 * 60 * 60 * 1000;   // 6시간
+
+function readLiveCache() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(LIVE_CACHE_KEY) || '{}');
+    const now = Date.now();
+    const fresh = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (v?.at && now - new Date(v.at) < LIVE_CACHE_TTL) fresh[k] = v;
+    }
+    return fresh;
+  } catch { return {}; }
+}
+
+function saveLiveCache(tripId, cabinKey, slot) {
+  try {
+    const cache = readLiveCache();
+    cache[`${tripId}::${cabinKey}`] = { at: new Date().toISOString(), slot };
+    const entries = Object.entries(cache);
+    // 오래된 것부터 버려 200개로 제한
+    if (entries.length > 200) {
+      entries.sort((a, b) => a[1].at.localeCompare(b[1].at));
+      for (const [k] of entries.slice(0, entries.length - 200)) delete cache[k];
+    }
+    localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify(cache));
+  } catch {}
+}
+
+/** 저장 시세보다 새로운 캐시 항목을 데이터에 덮어쓴다. */
+function applyLiveCache(data) {
+  const cache = readLiveCache();
+  let applied = 0;
+  const generatedAt = new Date(data.generatedAt || 0);
+  const byId = new Map(data.trips.map(t => [t.id, t]));
+  for (const [k, v] of Object.entries(cache)) {
+    const [tripId, cabinKey] = k.split('::');
+    const trip = byId.get(tripId);
+    if (!trip || !v.slot) continue;
+    if (new Date(v.at) <= generatedAt) continue;   // 그 사이 새 수집이 돌았으면 수집분 우선
+    trip[cabinKey] = { ...v.slot, cachedAt: v.at };
+    applied++;
+  }
+  return applied;
+}
 
 /* ── 설정 ─────────────────────────────── */
 function loadCfg() {
@@ -68,13 +126,20 @@ function closeSheets() {
 
 /* ── 데이터 ───────────────────────────── */
 async function loadData() {
-  const res = await fetch('./data/prices.json?t=' + Date.now(), { cache: 'no-store' });
-  if (!res.ok) throw new Error(`prices.json 을 불러오지 못했습니다 (${res.status})`);
-  const data = await res.json();
+  let data;
+  if (globalThis.__PRICES__) {
+    // 단일 파일 빌드(미리보기)에서는 데이터가 인라인으로 들어온다
+    data = globalThis.__PRICES__;
+  } else {
+    const res = await fetch('./data/prices.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`prices.json 을 불러오지 못했습니다 (${res.status})`);
+    data = await res.json();
+  }
   for (const t of data.trips) {
     t.patternLabel ||= PATTERNS.find(p => p.id === t.pattern)?.label || t.pattern;
     for (const c of CABINS) t[c.key] ||= { price: null, offerCount: 0, offers: [], notQueried: true };
   }
+  applyLiveCache(data);
   state.data = data;
   state.baselines = buildBaselines(data.trips);
 }
@@ -184,12 +249,20 @@ function renderNotice() {
   const slot = $('notice-slot');
   slot.innerHTML = '';
   const msgs = [];
-  if (state.data.source === 'sample' && state.live.size) {
+  if (globalThis.__PREVIEW__) {
+    msgs.push('이 페이지는 <b>미리보기</b>입니다 — 예시 데이터가 인라인되어 있고, 실시간 조회는 배포본(GitHub Pages + Worker)에서만 동작합니다.');
+  }
+  if (globalThis.__PREVIEW__) {
+    // 미리보기에서는 키 안내가 무의미하므로 아래 분기들을 건너뛴다
+  } else if (state.data.source === 'sample' && state.live.size) {
     msgs.push(`<b>● 실시간</b> 표시가 붙은 값만 실제 조회 결과이고, 나머지는 화면 확인용 예시입니다.`);
   } else if (state.data.source === 'sample') {
     msgs.push('지금 보이는 값은 <b>화면 확인용 예시</b>입니다. 실제 시세를 보려면 SerpApi 키를 등록하세요 — 자동 수집은 저장소 시크릿, 실시간 조회는 ⚙ 설정의 프록시 주소.');
   } else if (!state.cfg.proxy) {
     msgs.push('프록시 주소가 없어 <b>자동 수집된 저장 시세</b>만 보고 있습니다. ⚙ 설정에 Worker 주소를 넣으면 새로고침할 때마다 현시점 시세를 조회합니다.');
+  }
+  if (visibleTrips().some(t => t.retDate > HOLIDAY_DATA_END)) {
+    msgs.push(`공휴일 정보는 <b>${HOLIDAY_DATA_END.slice(0, 4)}년까지</b>만 들어 있습니다. 그 이후 날짜의 연휴·성수기 근거는 비어 있을 수 있습니다.`);
   }
   for (const m of msgs) {
     const div = document.createElement('div');
@@ -283,7 +356,7 @@ function renderGrid() {
           <i class="bar b${h}"></i>
           <span class="pat">${p.label}</span>
           <span class="dates">${md(t.depDate)} → ${md(t.retDate)} · ${p.nights}박</span>
-          <span class="price h${h}">${won(price)}<span class="won">원</span></span>
+          <span class="price h${h}">${won(price)}<span class="won">원</span>${deltaBadge(t, key)}</span>
           ${state.cabin === 'BOTH' ? subCabinLine(t, otherCabin(key)) : ''}
           <span class="meta">
             ${state.dest === 'ALL' ? `<span class="dest-tag">${destInfo(t.dest).city}</span>` : ''}
@@ -376,7 +449,9 @@ function openDetail(entry, cabinKey = primaryCabin()) {
     </div>
     ${typeof price === 'number'
       ? `<div class="sp">${won(price)}<span class="won">원</span>
-           <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-left:6px">${meta.ko} · 성인 ${state.cfg.adults}인 · 총액</span></div>`
+           <span style="font-size:11px;color:var(--text-muted);font-weight:600;margin-left:6px">${meta.ko} · 성인 ${state.cfg.adults}인 · 총액${
+             t[cabinKey]?.cachedAt && !isLive(t, cabinKey)
+               ? ` · ${Math.max(1, Math.round((Date.now() - new Date(t[cabinKey].cachedAt)) / 60000))}분 전 조회` : ''}</span></div>`
       : t[cabinKey]?.notQueried
         ? `<div class="sp" style="font-size:15px;color:var(--text-dim)">${meta.ko}는 아직 조회하지 않았습니다</div>`
         : `<div class="sp" style="font-size:16px;color:var(--text-dim)">${meta.ko}는 이 시간대에 운항/좌석이 없습니다</div>`}`;
@@ -532,6 +607,7 @@ async function fetchLive(trip, cabinKeys) {
         if (!body[c.key]) continue;
         next[c.key] = body[c.key];
         state.live.add(`${trip.id}::${c.key}`);
+        saveLiveCache(trip.id, c.key, body[c.key]);
       }
       state.data.trips[idx] = next;
     }

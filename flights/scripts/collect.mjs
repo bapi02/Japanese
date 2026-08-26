@@ -16,6 +16,12 @@ import { buildTripPlans, DEFAULTS, DEFAULT_DEST_CODES, DESTINATIONS, PATTERNS, C
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, '..', process.env.OUT || 'data/prices.json');
+const HISTORY = resolve(here, '..', process.env.HISTORY_OUT || 'data/history.json');
+const HISTORY_MAX = 30;   // 주 1회 수집 기준 약 7개월치
+
+// 지난 수집분 — 이번 결과에 '지난 수집 대비' 가격을 심는 데 쓴다. 샘플 데이터는 비교하지 않는다.
+const prevData = await readFile(OUT, 'utf8').then(JSON.parse).catch(() => null);
+const prevReal = prevData && prevData.source !== 'sample' ? prevData : null;
 
 const win = (raw, fallback) => {
   if (!raw) return fallback;
@@ -43,6 +49,11 @@ const plans = buildTripPlans({ destCodes, weeks, patternIds });
 
 console.log(`[collect] ${destCodes.length}개 노선 × ${weeks}주 × ${patternIds.length}패턴 = ${plans.length}조합`);
 console.log(`[collect] 좌석등급 ${opts.cabins.join(', ')} → SerpApi 호출 ${plans.length * opts.cabins.length}회`);
+{
+  const { HOLIDAY_DATA_END } = await import('../lib/holidays.mjs');
+  const beyond = plans.filter(p => p.retDate > HOLIDAY_DATA_END).length;
+  if (beyond) console.warn(`[collect] ⚠ ${beyond}개 조합이 공휴일 표 범위(${HOLIDAY_DATA_END})를 벗어났습니다. lib/holidays.mjs 에 다음 해 공휴일을 추가하세요 — 그 전까지 해당 조합의 연휴 근거가 비어 나옵니다.`);
+}
 console.log(`[collect] 출발 ${opts.depWindow.join('~')} / 귀국 ${opts.retWindow.join('~')} · ${opts.carriers.join(',')} 직항만`);
 
 if (!process.env.SERPAPI_KEY) {
@@ -98,6 +109,22 @@ for (const r of results) {
   }
 }
 
+// '지난 수집 대비' — 같은 조합·같은 등급의 직전 실수집 가격을 슬롯에 심는다.
+if (prevReal) {
+  const prevById = new Map(prevReal.trips.map(t => [t.id, t]));
+  for (const r of results) {
+    const before = prevById.get(r.id);
+    if (!before) continue;
+    for (const c of CABINS) {
+      const now = r[c.key];
+      const old = before[c.key];
+      if (!now || now.notQueried || typeof old?.price !== 'number') continue;
+      now.prevPrice = old.price;
+      now.prevAt = prevReal.generatedAt;
+    }
+  }
+}
+
 const payload = {
   generatedAt: new Date().toISOString(),
   source: 'github-actions',
@@ -124,4 +151,22 @@ const payload = {
 
 await mkdir(dirname(OUT), { recursive: true });
 await writeFile(OUT, JSON.stringify(payload) + '\n', 'utf8');
+
+// 조합별 최저가만 요약해 이력에 쌓는다. 나중에 추이 그래프를 그릴 재료.
+try {
+  const history = await readFile(HISTORY, 'utf8').then(JSON.parse).catch(() => []);
+  const snapshot = { at: payload.generatedAt, prices: {} };
+  for (const r of results) {
+    const entry = {};
+    for (const c of CABINS) {
+      if (typeof r[c.key]?.price === 'number') entry[c.short.toLowerCase()] = r[c.key].price;
+    }
+    if (Object.keys(entry).length) snapshot.prices[r.id] = entry;
+  }
+  history.push(snapshot);
+  await writeFile(HISTORY, JSON.stringify(history.slice(-HISTORY_MAX)) + '\n', 'utf8');
+  console.log(`[collect] 이력 저장: ${history.length <= HISTORY_MAX ? history.length : HISTORY_MAX}개 스냅샷`);
+} catch (err) {
+  console.warn('[collect] 이력 저장 실패(치명적 아님):', err.message);
+}
 console.log(`[collect] 저장: ${OUT} (${(JSON.stringify(payload).length / 1024).toFixed(0)} KB)`);

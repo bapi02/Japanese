@@ -108,10 +108,19 @@ for (const plan of plans) {
     }
     offers.sort((a, b) => a.price - b.price);
     const base = r.base * ratio;
+    // 지난 수집 대비 미리보기: 약 절반의 조합에 ±5~18% 변화를 심는다
+    const drift = rand();
+    const prevPrice = drift < 0.55
+      ? Math.round(offers[0].price / (1 + (drift - 0.27) * 0.6) / 100) * 100
+      : null;
+    const prevAt = new Date(today);
+    prevAt.setUTCDate(prevAt.getUTCDate() - 7);
     trip[cabin.key] = {
       price: offers[0].price,
       offerCount: offers.length,
       offers,
+      ...(prevPrice && Math.abs(offers[0].price - prevPrice) / prevPrice >= 0.04
+        ? { prevPrice, prevAt: prevAt.toISOString() } : {}),
       insights: {
         level: mult > 1.45 ? 'high' : mult < 1.05 ? 'low' : 'typical',
         lowest: offers[0].price,
