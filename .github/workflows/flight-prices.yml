@@ -1,0 +1,65 @@
+name: 항공권 시세 수집
+
+on:
+  schedule:
+    # 매주 월요일 03:00 KST (일요일 18:00 UTC).
+    # SerpApi 무료 한도(250회/월)에 맞춰 주 1회로 잡았습니다.
+    # GitHub 은 스케줄을 기본 브랜치에서만 실행하므로 이 파일은 기본 브랜치에도
+    # 있어야 합니다. 실행 자체는 아래 checkout 이 main 을 받아서 main 에 커밋합니다
+    # (GitHub Pages 가 main 을 서빙하므로 데이터가 항상 웹에 반영되게).
+    - cron: '0 18 * * 0'
+  workflow_dispatch:
+    inputs:
+      dests:
+        description: '조회할 목적지 (쉼표 구분, 예: NRT,KIX)'
+        required: false
+        default: ''
+      weeks:
+        description: '앞으로 몇 주치 주말을 볼지'
+        required: false
+        default: ''
+      cabins:
+        description: '좌석등급 (기본 ECONOMY. 비즈니스까지 켜면 호출이 2배)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: flight-prices
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 시세 수집
+        env:
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          DESTS: ${{ github.event.inputs.dests || vars.FARE_DESTS || 'NRT,KIX' }}
+          WEEKS: ${{ github.event.inputs.weeks || vars.FARE_WEEKS || '5' }}
+          CABINS: ${{ github.event.inputs.cabins || vars.FARE_CABINS || 'ECONOMY' }}
+          CONCURRENCY: '2'
+        run: node flights/scripts/collect.mjs
+
+      - name: 변경분 커밋
+        run: |
+          git add flights/data/prices.json
+          [ -f flights/data/history.json ] && git add flights/data/history.json
+          if git diff --cached --quiet; then
+            echo "가격 변동 없음 — 커밋 생략"
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(flights): 항공권 시세 갱신 ($(date -u +%Y-%m-%d\ %H:%M) UTC)"
+          git push
