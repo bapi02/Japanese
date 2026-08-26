@@ -7,7 +7,7 @@ import { calendarContext } from './lib/holidays.mjs';
 const $ = (id) => document.getElementById(id);
 const CFG_KEY = 'oz-jp-fare-cfg';
 const DEFAULT_CFG = {
-  proxy: '', adults: 1, limit: 20, autoRefresh: true,
+  proxy: '', adults: 1, limit: 12, autoRefresh: true,
   depFrom: '06:00', depTo: '09:00', retFrom: '18:00', retTo: '21:00',
 };
 
@@ -471,7 +471,7 @@ function openDetail(entry, cabinKey = primaryCabin()) {
   const one = $('reload-one');
   if (one) one.onclick = async () => {
     one.textContent = '조회 중…';
-    const ok = await fetchLive(t);
+    const ok = await fetchLive(t, [cabinKey]);
     state.baselines = buildBaselines(state.data.trips);
     render();
     if (ok) {
@@ -592,7 +592,8 @@ async function refreshLive({ silent = false } = {}) {
   let cursor = 0;
   const worker = async () => {
     while (cursor < targets.length) {
-      if (await fetchLive(targets[cursor++])) ok++;
+      // 일괄 갱신은 기준 등급만 부른다. 비즈니스는 셀을 열 때 온디맨드로 조회한다.
+      if (await fetchLive(targets[cursor++], [primaryCabin()])) ok++;
       done++; tick();
     }
   };
