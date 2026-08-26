@@ -1,0 +1,9 @@
+name = "asiana-japan-fare"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+[vars]
+# 배포한 웹 주소로 좁혀두는 걸 권장합니다. 예: "https://bapi02.github.io"
+ALLOWED_ORIGIN = "*"
+# API 키는 vars 가 아니라 시크릿으로 넣으세요:
+#   npx wrangler secret put SERPAPI_KEY
