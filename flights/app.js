@@ -418,6 +418,12 @@ function render() {
   state.view === 'grid' ? renderGrid() : renderList();
 }
 
+/** 수집기가 저장해 둔 귀국편 시간표 (목적지 × 귀국요일 대표 조회값) */
+function returnSchedule(trip) {
+  const dow = new Date(trip.retDate + 'T00:00:00Z').getUTCDay();
+  return state.data.returnSchedules?.[`${trip.dest}|${dow}`] || null;
+}
+
 /* ── 상세 시트 ─────────────────────────── */
 function legHtml(dir, leg) {
   return `
@@ -488,12 +494,34 @@ function openDetail(entry, cabinKey = primaryCabin()) {
           ${legHtml('출국', o.out)}
           ${o.ret ? legHtml('귀국', o.ret)
             : o.returns?.length
-              ? `<div class="ret-note">귀국편 후보 ${o.returns.length}개</div>` + o.returns.map(r => legHtml('귀국', r.leg)).join('')
-              : `<div class="ret-ask">
-                   <span>귀국편은 ${state.cfg.retFrom}–${state.cfg.retTo} 조건으로 값이 계산됐습니다. 실제 편명·시각은 따로 조회합니다.</span>
-                   <button class="ret-btn" data-ret="${i}"${o.departureToken ? '' : ' disabled'}>귀국편 후보 보기</button>
-                 </div>`}
-        </div>`).join('')}` : ''}
+              ? `<div class="ret-note">이 출국편 기준 귀국 후보 ${o.returns.length}개</div>` + o.returns.map(r => legHtml('귀국', r.leg)).join('')
+              : state.cfg.proxy
+                ? `<div class="ret-ask">
+                     <button class="ret-btn" data-ret="${i}"${o.departureToken ? '' : ' disabled'}>이 출국편의 귀국 후보 조회</button>
+                   </div>`
+                : ''}
+        </div>`).join('')}
+
+      ${(() => {
+        // 오퍼별 정확 조회가 없을 때 공용 시간표를 한 번만 보여준다
+        if (offers.some(o => o.ret || o.returns?.length)) return '';
+        const sched = returnSchedule(t);
+        if (!sched?.legs?.length) return `
+          <div class="flight" style="border-style:dashed">
+            <div class="ret-note" style="border:0;margin:0;padding:0">귀국편 시각은 다음 주간 수집 때 함께 저장됩니다. 위 가격은 ${state.cfg.retFrom}–${state.cfg.retTo} 귀국 조건이 이미 반영된 왕복 총액입니다.</div>
+          </div>`;
+        const cheapest = Math.min(...sched.legs.map(x => x.price ?? Infinity));
+        return `
+          <div class="sec-t">귀국편 시간표 · ${DOW[new Date(t.retDate + 'T00:00:00Z').getUTCDay()]}요일</div>
+          <div class="flight">
+            ${sched.legs.map(x => {
+              const diff = typeof x.price === 'number' && isFinite(cheapest) ? x.price - cheapest : null;
+              const tag = diff === null ? '' : diff === 0 ? ' · 최저' : ` · +${won(diff)}원`;
+              return legHtml('귀국', { ...x.leg, aircraft: (x.leg.aircraft || '') + tag });
+            }).join('')}
+            <div class="ret-note">${md(sched.sampledDate)} ${DOW[new Date(sched.sampledDate + 'T00:00:00Z').getUTCDay()]}요일 최저 출국편 기준 조회값 — 같은 노선·같은 요일이면 스케줄이 사실상 동일합니다. 위 왕복 총액은 이 시간대(${state.cfg.retFrom}–${state.cfg.retTo}) 귀국 조건으로 계산된 값입니다.</div>
+          </div>`;
+      })()}` : ''}
 
     ${others.length ? `
       <div class="sec-t">같은 날짜 다른 목적지 · ${meta.ko}</div>

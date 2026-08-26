@@ -132,6 +132,33 @@ for (const plan of plans) {
   trips.push(trip);
 }
 
+// 귀국편 시간표 (목적지 × 귀국요일 공용)
+const RET = {
+  NRT: [['OZ101', '18:30'], ['OZ105', '20:05']],
+  KIX: [['OZ113', '19:05'], ['OZ115', '20:20']],
+};
+const returnSchedules = {};
+for (const dest of DEST_CODES) {
+  for (const dow of [0, 1]) {   // 일 · 월
+    const sample = trips.find(t => t.dest === dest && new Date(t.retDate + 'T00:00:00Z').getUTCDay() === dow && t.economy?.price);
+    if (!sample) continue;
+    const r = ROUTE[dest];
+    returnSchedules[`${dest}|${dow}`] = {
+      sampledDate: sample.retDate,
+      legs: (RET[dest] || []).map(([num, dep], i) => ({
+        price: sample.economy.price + i * 41000,
+        leg: {
+          carrier: 'OZ', carrierName: '아시아나항공', operating: 'OZ', number: num,
+          from: dest, to: ORIGIN,
+          depAt: `${sample.retDate}T${dep}:00`, arrAt: `${sample.retDate}T${addMinutes(dep, r.min)}:00`,
+          depTime: dep, arrTime: addMinutes(dep, r.min), minutes: r.min,
+          aircraft: 'Airbus A321neo', cabin: 'Economy', legroom: '79 cm', oftenDelayed: false,
+        },
+      })),
+    };
+  }
+}
+
 const payload = {
   generatedAt: new Date().toISOString(),
   source: 'sample',
@@ -147,6 +174,7 @@ const payload = {
   destinations: DESTINATIONS.filter(d => DEST_CODES.includes(d.code)),
   patterns: PATTERNS,
   cabinsMeta: CABINS,
+  returnSchedules,
   trips,
   errors: [],
 };
