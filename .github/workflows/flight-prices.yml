@@ -4,7 +4,9 @@ on:
   schedule:
     # 매주 월요일 03:00 KST (일요일 18:00 UTC).
     # SerpApi 무료 한도(250회/월)에 맞춰 주 1회로 잡았습니다.
-    # GitHub 은 스케줄을 기본 브랜치에서만 실행합니다.
+    # GitHub 은 스케줄을 기본 브랜치에서만 실행하므로 이 파일은 기본 브랜치에도
+    # 있어야 합니다. 실행 자체는 아래 checkout 이 main 을 받아서 main 에 커밋합니다
+    # (GitHub Pages 가 main 을 서빙하므로 데이터가 항상 웹에 반영되게).
     - cron: '0 18 * * 0'
   workflow_dispatch:
     inputs:
@@ -33,6 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
