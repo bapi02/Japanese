@@ -23,6 +23,7 @@
   --accent: #7c6ef5;
   --accent2: #4ecdc4;
   --red: #ff6b6b;
+  --blue: #2f96ff;
   --orange: #ff9f43;
   --yellow: #ffe66d;
   --green: #51cf66;
@@ -139,10 +140,10 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 .cell .meta { font-size: 10px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
 .cell .dest-tag { font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: var(--card2); color: var(--text-dim); }
 .cell.empty .price { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-top: 8px; }
-.cell .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+.cell .bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
 .delta { font-size: 10px; font-weight: 800; margin-left: 5px; vertical-align: 2px; }
 .delta.up { color: var(--red); }
-.delta.down { color: var(--green); }
+.delta.down { color: var(--blue); }
 .cell .subcabin {
   font-size: 11px; font-weight: 600; color: var(--accent2); margin-top: 1px;
   display: flex; align-items: baseline; gap: 4px; white-space: nowrap;
@@ -162,11 +163,19 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 .cell .why { font-size: 9.5px; color: var(--orange); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cell.stale { opacity: .5; }
 
-.h0 { color: var(--green); }      .b0 { background: var(--green); }
-.h1 { color: #a9e34b; }           .b1 { background: #a9e34b; }
-.h2 { color: var(--yellow); }     .b2 { background: var(--yellow); }
-.h3 { color: var(--orange); }     .b3 { background: var(--orange); }
-.h4 { color: var(--red); }        .b4 { background: var(--red); }
+.h0 { color: #2f96ff; }   .b0 { background: #2f96ff; }
+.h1 { color: #a5d3ff; }   .b1 { background: #a5d3ff; }
+.h2 { color: #b9bdcf; }   .b2 { background: #7d8194; }
+.h3 { color: #ffb391; }   .b3 { background: #ffb391; }
+.h4 { color: #ff4d4d; }   .b4 { background: #ff4d4d; }
+
+/* 셀 배경 틴트 — 색약·소형 화면에서도 싸다/비싸다가 한눈에 잡히게 */
+.cell.hb0 { background: rgba(47,150,255,.10); }
+.cell.hb1 { background: rgba(47,150,255,.05); }
+.cell.hb3 { background: rgba(255,77,77,.06); }
+.cell.hb4 { background: rgba(255,77,77,.12); }
+.cell.hb0:active, .cell.hb1:active { background: rgba(47,150,255,.16); }
+.cell.hb3:active, .cell.hb4:active { background: rgba(255,77,77,.18); }
 
 /* ── 리스트 뷰 ───────────────────────── */
 .list-item {
@@ -218,8 +227,8 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 }
 .insight .ilevel { font-size: 12.5px; font-weight: 800; }
 .insight .irange { font-size: 11px; color: var(--text-dim); }
-.insight.low  { background: rgba(81,207,102,.10); border-color: rgba(81,207,102,.35); }
-.insight.low .ilevel { color: var(--green); }
+.insight.low  { background: rgba(47,150,255,.10); border-color: rgba(47,150,255,.35); }
+.insight.low .ilevel { color: var(--blue); }
 .insight.high { background: rgba(255,107,107,.10); border-color: rgba(255,107,107,.35); }
 .insight.high .ilevel { color: var(--red); }
 .insight.typical .ilevel { color: var(--text-dim); }
@@ -250,11 +259,11 @@ main { padding: 4px 14px 0; max-width: 720px; margin: 0 auto; }
 }
 .reason .dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; background: var(--text-muted); }
 .reason.up .dot { background: var(--red); }
-.reason.down .dot { background: var(--green); }
+.reason.down .dot { background: var(--blue); }
 .reason .rl { display: block; font-size: 12.5px; font-weight: 700; }
 .reason .rtext { flex: 1; min-width: 0; }
 .reason.up .rl { color: var(--orange); }
-.reason.down .rl { color: var(--green); }
+.reason.down .rl { color: var(--blue); }
 .reason .rd { display: block; font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
 
 .flight {

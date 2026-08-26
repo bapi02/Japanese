@@ -351,6 +351,7 @@ function renderGrid() {
         if (t) btn.onclick = () => openDetail(entry);
       } else {
         const h = heatOf(price, qs);
+        btn.classList.add(`hb${h}`);
         const topUp = explain(t, state.baselines, key).find(r => r.tone === 'up');
         btn.innerHTML = `
           <i class="bar b${h}"></i>
