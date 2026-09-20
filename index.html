@@ -212,6 +212,9 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .ft-restart { width: 100%; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-size: 13px; cursor: pointer; font-family: inherit; }
 .ft-restart:hover { border-color: var(--accent); color: var(--text); }
 .ft-actions { display: flex; gap: 10px; }
+.ft-speak { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--text-dim); cursor: pointer; font-family: inherit; }
+.ft-speak:hover { border-color: var(--accent2); color: var(--text); }
+.ft-speak.playing { border-color: var(--accent2); color: var(--accent2); }
 .ft-send-btn { flex: 1; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: #fff; font-weight: 700; border: none; cursor: pointer; font-size: 15px; font-family: inherit; }
 .ft-redo-btn { flex: 1; padding: 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-size: 15px; font-family: inherit; }
 .ft-redo-btn:hover { border-color: var(--accent); color: var(--text); }
@@ -328,7 +331,10 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
       <button class="ft-send-btn" onclick="ftSend()">📨 보내기</button>
       <button class="ft-redo-btn" onclick="ftReRecord()">🎤 다시 녹음</button>
     </div>
-    <button class="ft-restart" onclick="startFreeTalk()">🔄 새 대화 시작</button>
+    <div class="ft-actions">
+      <button class="ft-restart" id="ft-auto-btn" onclick="toggleFtAuto()">🔈 자동 읽기: 꺼짐</button>
+      <button class="ft-restart" onclick="startFreeTalk()">🔄 새 대화 시작</button>
+    </div>
   </div>
 
   <!-- 학습 화면 -->
@@ -1122,6 +1128,10 @@ function init() {
     document.getElementById('no-speech-notice').style.display = 'block';
   }
   document.addEventListener('keydown', handleQuizKey);
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+  }
   renderHome();
 }
 
@@ -1559,6 +1569,7 @@ function openFreeTalk() {
 
 function startFreeTalk() {
   if (ftRecording && ftRec) { try { ftRec.stop(); } catch (e) {} }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   ftHistory = [];
   document.getElementById('ft-log').innerHTML = '';
   const greet = FT_GREETINGS[Math.floor(Math.random() * FT_GREETINGS.length)];
@@ -1579,8 +1590,38 @@ function ftAddAi(jp, ko) {
   const d = document.createElement('div');
   d.className = 'ft-msg ai';
   d.innerHTML = `<div class="ft-jp">${jp}</div>${ko ? `<div class="ft-ko">${ko}</div>` : ''}`;
+  const sp = document.createElement('button');
+  sp.className = 'ft-speak';
+  sp.textContent = '🔊 읽기';
+  sp.onclick = (ev) => { ev.stopPropagation(); ftSpeak(jp, sp); };
+  d.appendChild(sp);
   log.appendChild(d);
   d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  if (ftAutoSpeak) ftSpeak(jp, sp);
+}
+
+// ── 음성 읽기 (브라우저 내장 TTS, ja-JP) ──
+let ftAutoSpeak = false;
+function ftSpeak(text, btn) {
+  if (!('speechSynthesis' in window)) { alert('이 브라우저는 음성 읽기를 지원하지 않아요. Chrome/Safari에서 열어주세요.'); return; }
+  window.speechSynthesis.cancel();
+  document.querySelectorAll('.ft-speak.playing').forEach((b) => b.classList.remove('playing'));
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP';
+  u.rate = 0.9;
+  const voices = window.speechSynthesis.getVoices();
+  const ja = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ja'));
+  if (ja) u.voice = ja;
+  if (btn) {
+    btn.classList.add('playing');
+    u.onend = () => btn.classList.remove('playing');
+    u.onerror = () => btn.classList.remove('playing');
+  }
+  window.speechSynthesis.speak(u);
+}
+function toggleFtAuto() {
+  ftAutoSpeak = !ftAutoSpeak;
+  document.getElementById('ft-auto-btn').textContent = ftAutoSpeak ? '🔊 자동 읽기: 켜짐' : '🔈 자동 읽기: 꺼짐';
 }
 function ftAddMe(text) {
   const log = document.getElementById('ft-log');
@@ -1727,6 +1768,7 @@ function backToHome() {
   if (shadowRecording && shadowRec) { try { shadowRec.stop(); } catch (e) {} }
   if (pronRecording && pronRec) { try { pronRec.stop(); } catch (e) {} }
   if (ftRecording && ftRec) { try { ftRec.stop(); } catch (e) {} }
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
   removeQuizPopup();
   document.getElementById('study-screen').style.display = 'none';
   document.getElementById('deck-screen').style.display = 'none';
