@@ -205,6 +205,9 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .ft-msg.me { align-self: flex-end; background: #1a2535; border: 1px solid var(--accent2); border-bottom-right-radius: 4px; }
 .ft-jp { font-family: var(--font-jp); font-size: 17px; line-height: 1.7; }
 .ft-ko { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+.ft-kana { font-size: 13px; color: var(--accent2); margin-top: 4px; font-family: var(--font-jp); line-height: 1.6; }
+.ft-voice-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); }
+.ft-voice-sel { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 12px; }
 .ft-fb { align-self: center; width: 100%; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--text-dim); line-height: 1.6; }
 .ft-fb .fb-line { margin-top: 4px; }
 .ft-fb .fb-corr { color: var(--green); font-family: var(--font-jp); }
@@ -330,6 +333,10 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
     <div class="ft-actions" id="ft-actions" style="display:none;">
       <button class="ft-send-btn" onclick="ftSend()">📨 보내기</button>
       <button class="ft-redo-btn" onclick="ftReRecord()">🎤 다시 녹음</button>
+    </div>
+    <div class="ft-voice-row">
+      <label for="ft-voice">🎙 음성</label>
+      <select id="ft-voice" class="ft-voice-sel" onchange="onVoiceChange(this)"></select>
     </div>
     <div class="ft-actions">
       <button class="ft-restart" id="ft-auto-btn" onclick="toggleFtAuto()">🔈 자동 읽기: 꺼짐</button>
@@ -1130,7 +1137,7 @@ function init() {
   document.addEventListener('keydown', handleQuizKey);
   if ('speechSynthesis' in window) {
     window.speechSynthesis.getVoices();
-    window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); renderVoicePicker(); };
   }
   renderHome();
 }
@@ -1533,24 +1540,24 @@ function renderQuizResult() {
 
 // ════════════ 프리토킹 ════════════
 const FT_GREETINGS = [
-  'こんにちは！きょうはいっしょににほんごではなしましょう！',
-  'やあ、こんにちは！きょうもにほんごのれんしゅう、がんばりましょう！',
-  'こんにちは！きょうはなにについてはなしましょうか。',
+  { jp: 'こんにちは！今日は一緒に日本語で話しましょう！', kana: 'こんにちは！きょうはいっしょににほんごではなしましょう！' },
+  { jp: 'やあ、こんにちは！今日も日本語の練習、がんばりましょう！', kana: 'やあ、こんにちは！きょうもにほんごのれんしゅう、がんばりましょう！' },
+  { jp: 'こんにちは！今日は何について話しましょうか。', kana: 'こんにちは！きょうはなにについてはなしましょうか。' },
 ];
 const FT_FIRST_Q = [
-  { jp: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?' },
-  { jp: 'しゅみはなんですか。', ko: '취미는 무엇인가요?' },
-  { jp: 'すきなたべものはなんですか。', ko: '좋아하는 음식은 무엇인가요?' },
-  { jp: 'しゅうまつはよくなにをしますか。', ko: '주말에는 보통 무엇을 하나요?' },
-  { jp: 'にほんにいったことがありますか。', ko: '일본에 가 본 적 있나요?' },
-  { jp: 'すきなえいがやドラマはなんですか。', ko: '좋아하는 영화나 드라마는 무엇인가요?' },
-  { jp: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?' },
-  { jp: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?' },
+  { jp: '今日は何をしましたか。', kana: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?' },
+  { jp: '趣味は何ですか。', kana: 'しゅみはなんですか。', ko: '취미는 무엇인가요?' },
+  { jp: '好きな食べ物は何ですか。', kana: 'すきなたべものはなんですか。', ko: '좋아하는 음식은 무엇인가요?' },
+  { jp: '週末はよく何をしますか。', kana: 'しゅうまつはよくなにをしますか。', ko: '주말에는 보통 무엇을 하나요?' },
+  { jp: '日本に行ったことがありますか。', kana: 'にほんにいったことがありますか。', ko: '일본에 가 본 적 있나요?' },
+  { jp: '好きな映画やドラマは何ですか。', kana: 'すきなえいがやドラマはなんですか。', ko: '좋아하는 영화나 드라마는 무엇인가요?' },
+  { jp: 'どうして日本語を勉強していますか。', kana: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?' },
+  { jp: '今日の天気はどうですか。', kana: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?' },
 ];
 const FT_SYSTEM = 'あなたはやさしい日本語の会話パートナーです。じぶんの名前は名乗らないでください。相手はGENKI1〜N4レベルの韓国人学習者です。'
-  + 'かんたんな日本語（ひらがな中心、むずかしい漢字や敬語はさける）で会話してください。'
+  + 'かんたんな日本語（むずかしい単語や敬語はさける、1〜2文）で会話してください。'
   + '毎回かならず次のJSONだけで答えてください（マークダウンなし）：'
-  + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어","reply_ko":"reply_jp의 한국어 해석"}';
+  + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어. 반드시 일반적인 한자·가나 혼용 표기로(음성 합성용)","reply_kana":"reply_jp를 전부 히라가나로 바꾼 것(가타카나 외래어는 그대로)","reply_ko":"reply_jp의 한국어 해석"}';
 
 function openFreeTalk() {
   document.getElementById('home-screen').style.display = 'none';
@@ -1564,6 +1571,7 @@ function openFreeTalk() {
   document.getElementById('header-mode').style.display = 'none';
   document.getElementById('header-ep').textContent = '💬 프리토킹';
   document.getElementById('header-title').textContent = 'AI와 자유 대화';
+  renderVoicePicker();
   startFreeTalk();
 }
 
@@ -1574,8 +1582,9 @@ function startFreeTalk() {
   document.getElementById('ft-log').innerHTML = '';
   const greet = FT_GREETINGS[Math.floor(Math.random() * FT_GREETINGS.length)];
   const q = FT_FIRST_Q[Math.floor(Math.random() * FT_FIRST_Q.length)];
-  const firstJp = greet + ' ' + q.jp;
-  ftAddAi(firstJp, '먼저 인사하고 질문할게요 — ' + q.ko);
+  const firstJp = greet.jp + ' ' + q.jp;
+  const firstKana = greet.kana + ' ' + q.kana;
+  ftAddAi(firstJp, firstKana, '먼저 인사하고 질문할게요 — ' + q.ko);
   ftHistory.push({ role: 'assistant', content: firstJp });
   ftPendingText = '';
   document.getElementById('ft-actions').style.display = 'none';
@@ -1585,11 +1594,11 @@ function startFreeTalk() {
   resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
 }
 
-function ftAddAi(jp, ko) {
+function ftAddAi(jp, kana, ko) {
   const log = document.getElementById('ft-log');
   const d = document.createElement('div');
   d.className = 'ft-msg ai';
-  d.innerHTML = `<div class="ft-jp">${jp}</div>${ko ? `<div class="ft-ko">${ko}</div>` : ''}`;
+  d.innerHTML = `<div class="ft-jp">${jp}</div>${kana && kana !== jp ? `<div class="ft-kana">${kana}</div>` : ''}${ko ? `<div class="ft-ko">${ko}</div>` : ''}`;
   const sp = document.createElement('button');
   sp.className = 'ft-speak';
   sp.textContent = '🔊 읽기';
@@ -1602,16 +1611,60 @@ function ftAddAi(jp, ko) {
 
 // ── 음성 읽기 (브라우저 내장 TTS, ja-JP) ──
 let ftAutoSpeak = false;
+const FT_VOICE_STORE = 'ft_voice_name';
+function getJaVoices() {
+  if (!('speechSynthesis' in window)) return [];
+  return window.speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith('ja'));
+}
+// 자연스러운 음성 우선순위: 신경망/온라인 > 애플 고품질(Enhanced/Premium) > Google > 기본
+function voiceScore(v) {
+  const n = (v.name || '').toLowerCase();
+  let sc = 0;
+  if (n.includes('natural') || n.includes('neural')) sc += 50;
+  if (n.includes('online')) sc += 30;
+  if (n.includes('premium') || n.includes('enhanced') || n.includes('拡張') || n.includes('プレミアム')) sc += 25;
+  if (n.includes('google')) sc += 20;
+  if (n.includes('kyoko') || n.includes('o-ren') || n.includes('otoya') || n.includes('hattori')) sc += 15;
+  if (n.includes('nanami') || n.includes('ayumi') || n.includes('keita') || n.includes('ichiro') || n.includes('haruka')) sc += 10;
+  if (n.includes('compact') || n.includes('eloquence')) sc -= 20;
+  return sc;
+}
+function pickVoice() {
+  const voices = getJaVoices();
+  if (!voices.length) return null;
+  const saved = localStorage.getItem(FT_VOICE_STORE);
+  const chosen = saved && voices.find((v) => v.name === saved);
+  return chosen || voices.slice().sort((a, b) => voiceScore(b) - voiceScore(a))[0];
+}
+function renderVoicePicker() {
+  const sel = document.getElementById('ft-voice');
+  if (!sel) return;
+  const voices = getJaVoices().slice().sort((a, b) => voiceScore(b) - voiceScore(a));
+  const cur = pickVoice();
+  sel.innerHTML = '';
+  if (!voices.length) { sel.innerHTML = '<option>일본어 음성 없음</option>'; return; }
+  voices.forEach((v) => {
+    const o = document.createElement('option');
+    o.value = v.name;
+    o.textContent = v.name + (v.localService ? '' : ' ☁');
+    if (cur && v.name === cur.name) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+function onVoiceChange(sel) {
+  localStorage.setItem(FT_VOICE_STORE, sel.value);
+  ftSpeak('こんにちは。今日はいい天気ですね。');
+}
 function ftSpeak(text, btn) {
   if (!('speechSynthesis' in window)) { alert('이 브라우저는 음성 읽기를 지원하지 않아요. Chrome/Safari에서 열어주세요.'); return; }
   window.speechSynthesis.cancel();
   document.querySelectorAll('.ft-speak.playing').forEach((b) => b.classList.remove('playing'));
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'ja-JP';
-  u.rate = 0.9;
-  const voices = window.speechSynthesis.getVoices();
-  const ja = voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('ja'));
-  if (ja) u.voice = ja;
+  const v = pickVoice();
+  if (v) u.voice = v;
+  u.rate = v && voiceScore(v) >= 30 ? 1.0 : 0.92;
+  u.pitch = 1.0;
   if (btn) {
     btn.classList.add('playing');
     u.onend = () => btn.classList.remove('playing');
@@ -1730,7 +1783,7 @@ async function sendFreeTalk(userText) {
     typing.remove();
     const r = JSON.parse(raw.replace(/```json|```/g, '').trim());
     ftAddFeedback(r.feedback, r.correction);
-    ftAddAi(r.reply_jp, r.reply_ko);
+    ftAddAi(r.reply_jp, r.reply_kana, r.reply_ko);
     ftHistory.push({ role: 'assistant', content: r.reply_jp });
   } catch (err) {
     typing.remove();
