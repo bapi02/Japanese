@@ -206,6 +206,15 @@ main { width: 100%; max-width: 560px; padding: 24px 18px 100px; display: flex; f
 .ft-jp { font-family: var(--font-jp); font-size: 17px; line-height: 1.7; }
 .ft-ko { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
 .ft-kana { font-size: 13px; color: var(--accent2); margin-top: 4px; font-family: var(--font-jp); line-height: 1.6; }
+.ft-ex { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+.ft-ex-toggle { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--yellow); cursor: pointer; font-family: inherit; }
+.ft-ex-toggle:hover { border-color: var(--yellow); }
+.ft-ex-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.ft-ex-item { background: var(--surface); border-radius: 10px; padding: 10px 44px 10px 12px; position: relative; }
+.ft-ex-jp { font-family: var(--font-jp); font-size: 15px; line-height: 1.6; }
+.ft-ex-kana { font-size: 12px; color: var(--accent2); font-family: var(--font-jp); margin-top: 2px; }
+.ft-ex-ko { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.ft-ex-item .ft-speak { position: absolute; right: 8px; top: 8px; margin-top: 0; padding: 4px 8px; }
 .ft-voice-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); }
 .ft-voice-sel { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 12px; }
 .ft-fb { align-self: center; width: 100%; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; padding: 12px 14px; font-size: 13px; color: var(--text-dim); line-height: 1.6; }
@@ -1545,19 +1554,19 @@ const FT_GREETINGS = [
   { jp: 'こんにちは！今日は何について話しましょうか。', kana: 'こんにちは！きょうはなにについてはなしましょうか。' },
 ];
 const FT_FIRST_Q = [
-  { jp: '今日は何をしましたか。', kana: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?' },
-  { jp: '趣味は何ですか。', kana: 'しゅみはなんですか。', ko: '취미는 무엇인가요?' },
-  { jp: '好きな食べ物は何ですか。', kana: 'すきなたべものはなんですか。', ko: '좋아하는 음식은 무엇인가요?' },
-  { jp: '週末はよく何をしますか。', kana: 'しゅうまつはよくなにをしますか。', ko: '주말에는 보통 무엇을 하나요?' },
-  { jp: '日本に行ったことがありますか。', kana: 'にほんにいったことがありますか。', ko: '일본에 가 본 적 있나요?' },
-  { jp: '好きな映画やドラマは何ですか。', kana: 'すきなえいがやドラマはなんですか。', ko: '좋아하는 영화나 드라마는 무엇인가요?' },
-  { jp: 'どうして日本語を勉強していますか。', kana: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?' },
-  { jp: '今日の天気はどうですか。', kana: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?' },
+  { jp: '今日は何をしましたか。', kana: 'きょうはなにをしましたか。', ko: '오늘은 무엇을 했나요?', ex: [{ jp: '今日は友達と映画を見ました。', kana: 'きょうはともだちとえいがをみました。', ko: '오늘은 친구와 영화를 봤어요.' }, { jp: '仕事をして、家でご飯を食べました。', kana: 'しごとをして、いえでごはんをたべました。', ko: '일하고, 집에서 밥을 먹었어요.' }, { jp: '何もしませんでした。家でゆっくりしました。', kana: 'なにもしませんでした。いえでゆっくりしました。', ko: '아무것도 안 했어요. 집에서 푹 쉬었어요.' }] },
+  { jp: '趣味は何ですか。', kana: 'しゅみはなんですか。', ko: '취미는 무엇인가요?', ex: [{ jp: '趣味は音楽を聞くことです。', kana: 'しゅみはおんがくをきくことです。', ko: '취미는 음악 듣기예요.' }, { jp: '週末によく運動をします。', kana: 'しゅうまつによくうんどうをします。', ko: '주말에 자주 운동을 해요.' }, { jp: '日本語の勉強が好きです。', kana: 'にほんごのべんきょうがすきです。', ko: '일본어 공부를 좋아해요.' }] },
+  { jp: '好きな食べ物は何ですか。', kana: 'すきなたべものはなんですか。', ko: '좋아하는 음식은 무엇인가요?', ex: [{ jp: 'ラーメンが大好きです。', kana: 'ラーメンがだいすきです。', ko: '라멘을 아주 좋아해요.' }, { jp: '韓国料理の中でキムチチゲが一番好きです。', kana: 'かんこくりょうりのなかでキムチチゲがいちばんすきです。', ko: '한국 요리 중에 김치찌개를 제일 좋아해요.' }, { jp: '甘い物が好きです。', kana: 'あまいものがすきです。', ko: '단 것을 좋아해요.' }] },
+  { jp: '週末はよく何をしますか。', kana: 'しゅうまつはよくなにをしますか。', ko: '주말에는 보통 무엇을 하나요?', ex: [{ jp: '週末はよく友達に会います。', kana: 'しゅうまつはよくともだちにあいます。', ko: '주말엔 자주 친구를 만나요.' }, { jp: '家で映画を見たり、本を読んだりします。', kana: 'いえでえいがをみたり、ほんをよんだりします。', ko: '집에서 영화를 보거나 책을 읽거나 해요.' }, { jp: 'カフェに行ってコーヒーを飲みます。', kana: 'カフェにいってコーヒーをのみます。', ko: '카페에 가서 커피를 마셔요.' }] },
+  { jp: '日本に行ったことがありますか。', kana: 'にほんにいったことがありますか。', ko: '일본에 가 본 적 있나요?', ex: [{ jp: 'はい、去年東京に行きました。', kana: 'はい、きょねんとうきょうにいきました。', ko: '네, 작년에 도쿄에 갔어요.' }, { jp: 'いいえ、まだありません。でも行きたいです。', kana: 'いいえ、まだありません。でもいきたいです。', ko: '아니요, 아직이요. 그래도 가고 싶어요.' }, { jp: '二回あります。大阪と福岡に行きました。', kana: 'にかいあります。おおさかとふくおかにいきました。', ko: '두 번 있어요. 오사카와 후쿠오카에 갔어요.' }] },
+  { jp: '好きな映画やドラマは何ですか。', kana: 'すきなえいがやドラマはなんですか。', ko: '좋아하는 영화나 드라마는 무엇인가요?', ex: [{ jp: '日本のアニメが好きです。', kana: 'にほんのアニメがすきです。', ko: '일본 애니메이션을 좋아해요.' }, { jp: '最近韓国のドラマをよく見ます。', kana: 'さいきんかんこくのドラマをよくみます。', ko: '요즘 한국 드라마를 자주 봐요.' }, { jp: '「となりのトトロ」が一番好きです。', kana: '「となりのトトロ」がいちばんすきです。', ko: '「이웃집 토토로」를 제일 좋아해요.' }] },
+  { jp: 'どうして日本語を勉強していますか。', kana: 'どうしてにほんごをべんきょうしていますか。', ko: '왜 일본어를 공부하고 있나요?', ex: [{ jp: '日本に旅行に行きたいからです。', kana: 'にほんにりょこうにいきたいからです。', ko: '일본에 여행 가고 싶어서요.' }, { jp: 'アニメを日本語で見たいです。', kana: 'アニメをにほんごでみたいです。', ko: '애니를 일본어로 보고 싶어요.' }, { jp: '日本の文化が好きだからです。', kana: 'にほんのぶんかがすきだからです。', ko: '일본 문화를 좋아해서요.' }] },
+  { jp: '今日の天気はどうですか。', kana: 'きょうのてんきはどうですか。', ko: '오늘 날씨는 어떤가요?', ex: [{ jp: '今日は晴れです。とても暑いです。', kana: 'きょうははれです。とてもあついです。', ko: '오늘은 맑아요. 아주 더워요.' }, { jp: '雨が降っています。少し寒いです。', kana: 'あめがふっています。すこしさむいです。', ko: '비가 와요. 조금 추워요.' }, { jp: '曇りですが、涼しくていい天気です。', kana: 'くもりですが、すずしくていいてんきです。', ko: '흐리지만 시원하고 좋은 날씨예요.' }] },
 ];
 const FT_SYSTEM = 'あなたはやさしい日本語の会話パートナーです。じぶんの名前は名乗らないでください。相手はGENKI1〜N4レベルの韓国人学習者です。'
   + 'かんたんな日本語（むずかしい単語や敬語はさける、1〜2文）で会話してください。'
   + '毎回かならず次のJSONだけで答えてください（マークダウンなし）：'
-  + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어. 반드시 일반적인 한자·가나 혼용 표기로(음성 합성용)","reply_kana":"reply_jp를 전부 히라가나로 바꾼 것(가타카나 외래어는 그대로)","reply_ko":"reply_jp의 한국어 해석"}';
+  + '{"feedback":"학생의 일본어에 대한 짧은 한국어 피드백(칭찬+1가지 교정 포인트)","correction":"학생 문장을 자연스럽게 고친 일본어(문제 없으면 빈 문자열)","reply_jp":"학생 대답에 자연스럽게 반응하고 이어지는 질문을 1개 포함한 간단한 일본어. 반드시 일반적인 한자·가나 혼용 표기로(음성 합성용)","reply_kana":"reply_jp를 전부 히라가나로 바꾼 것(가타카나 외래어는 그대로)","reply_ko":"reply_jp의 한국어 해석","examples":[{"jp":"학생이 reply_jp의 질문에 답할 때 쓸 수 있는 초급 예시 문장(한자·가나 혼용)","kana":"그 문장을 전부 히라가나로","ko":"한국어 해석"} 형식으로 서로 다른 답 2~3개]}';
 
 function openFreeTalk() {
   document.getElementById('home-screen').style.display = 'none';
@@ -1584,7 +1593,7 @@ function startFreeTalk() {
   const q = FT_FIRST_Q[Math.floor(Math.random() * FT_FIRST_Q.length)];
   const firstJp = greet.jp + ' ' + q.jp;
   const firstKana = greet.kana + ' ' + q.kana;
-  ftAddAi(firstJp, firstKana, '먼저 인사하고 질문할게요 — ' + q.ko);
+  ftAddAi(firstJp, firstKana, '먼저 인사하고 질문할게요 — ' + q.ko, q.ex);
   ftHistory.push({ role: 'assistant', content: firstJp });
   ftPendingText = '';
   document.getElementById('ft-actions').style.display = 'none';
@@ -1594,7 +1603,7 @@ function startFreeTalk() {
   resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
 }
 
-function ftAddAi(jp, kana, ko) {
+function ftAddAi(jp, kana, ko, examples) {
   const log = document.getElementById('ft-log');
   const d = document.createElement('div');
   d.className = 'ft-msg ai';
@@ -1604,6 +1613,37 @@ function ftAddAi(jp, kana, ko) {
   sp.textContent = '🔊 읽기';
   sp.onclick = (ev) => { ev.stopPropagation(); ftSpeak(jp, sp); };
   d.appendChild(sp);
+  if (Array.isArray(examples) && examples.length) {
+    const box = document.createElement('div');
+    box.className = 'ft-ex';
+    const tg = document.createElement('button');
+    tg.className = 'ft-ex-toggle';
+    tg.textContent = '💡 이렇게 말해볼까요?';
+    const list = document.createElement('div');
+    list.className = 'ft-ex-list';
+    list.style.display = 'none';
+    examples.forEach((x) => {
+      if (!x || !x.jp) return;
+      const it = document.createElement('div');
+      it.className = 'ft-ex-item';
+      it.innerHTML = `<div class="ft-ex-jp">${x.jp}</div>${x.kana && x.kana !== x.jp ? `<div class="ft-ex-kana">${x.kana}</div>` : ''}${x.ko ? `<div class="ft-ex-ko">${x.ko}</div>` : ''}`;
+      const b = document.createElement('button');
+      b.className = 'ft-speak';
+      b.textContent = '🔊';
+      b.onclick = (ev) => { ev.stopPropagation(); ftSpeak(x.jp, b); };
+      it.appendChild(b);
+      list.appendChild(it);
+    });
+    tg.onclick = (ev) => {
+      ev.stopPropagation();
+      const open = list.style.display === 'none';
+      list.style.display = open ? 'flex' : 'none';
+      tg.textContent = open ? '💡 예시 닫기' : '💡 이렇게 말해볼까요?';
+    };
+    box.appendChild(tg);
+    box.appendChild(list);
+    d.appendChild(box);
+  }
   log.appendChild(d);
   d.scrollIntoView({ behavior: 'smooth', block: 'end' });
   if (ftAutoSpeak) ftSpeak(jp, sp);
@@ -1779,11 +1819,11 @@ async function sendFreeTalk(userText) {
   log.appendChild(typing);
   typing.scrollIntoView({ behavior: 'smooth', block: 'end' });
   try {
-    const raw = await callClaude(ftHistory.slice(-12), 700, { system: FT_SYSTEM });
+    const raw = await callClaude(ftHistory.slice(-12), 1100, { system: FT_SYSTEM });
     typing.remove();
     const r = JSON.parse(raw.replace(/```json|```/g, '').trim());
     ftAddFeedback(r.feedback, r.correction);
-    ftAddAi(r.reply_jp, r.reply_kana, r.reply_ko);
+    ftAddAi(r.reply_jp, r.reply_kana, r.reply_ko, r.examples);
     ftHistory.push({ role: 'assistant', content: r.reply_jp });
   } catch (err) {
     typing.remove();
