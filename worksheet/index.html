@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>일본어 학습지 · 초급</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161820;
+  --card: #1e2130;
+  --border: #2a2d3e;
+  --text: #eceef5;
+  --text-dim: #8b8fa8;
+  --text-muted: #4a4d60;
+  --accent: #7c6ef5;
+  --accent2: #4ecdc4;
+  --red: #ff6b6b;
+  --yellow: #ffe66d;
+  --green: #51cf66;
+  --font-jp: 'Noto Sans JP', 'Noto Serif JP', sans-serif;
+  --font-ui: 'Inter', 'Noto Sans JP', sans-serif;
+  --r: 18px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-ui); min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+button { font-family: inherit; }
+
+header { width: 100%; padding: 16px 20px 14px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; gap: 10px; }
+.header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.back-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--text-dim); cursor: pointer; white-space: nowrap; }
+.back-btn:hover { border-color: var(--accent); color: var(--text); }
+.header-titles .ep { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.header-titles .title { font-size: 15px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); white-space: nowrap; }
+
+main { width: 100%; max-width: 560px; padding: 22px 18px 120px; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── 루비 ── */
+ruby { ruby-position: over; }
+rt { font-size: 0.5em; color: var(--accent2); font-weight: 400; letter-spacing: 0; }
+.jp { font-family: var(--font-jp); }
+
+/* ── 홈 ── */
+.home-intro { text-align: center; margin: 4px 0 2px; }
+.home-intro h1 { font-size: 20px; font-weight: 700; }
+.home-intro p { font-size: 13px; color: var(--text-dim); margin-top: 6px; line-height: 1.5; }
+.progress-wrap { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
+.progress-top { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+.progress-top b { color: var(--text); font-size: 14px; }
+.bar { height: 8px; border-radius: 6px; background: var(--surface); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 6px; transition: width 0.4s ease; }
+.today-card { background: linear-gradient(135deg, #241f4a, #1a2a3a); border: 1.5px solid var(--accent); border-radius: var(--r); padding: 16px 18px; }
+.today-card .t-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.today-card .t-head b { font-size: 14px; }
+.today-card .t-head span { font-size: 11px; color: var(--text-dim); }
+.today-list { display: flex; flex-direction: column; gap: 8px; }
+.today-row { display: flex; align-items: center; gap: 12px; background: rgba(13,15,20,0.45); border-radius: 12px; padding: 10px 12px; cursor: pointer; border: 1px solid transparent; }
+.today-row:hover { border-color: var(--accent2); }
+.today-row .no { font-size: 18px; font-weight: 700; color: var(--accent2); min-width: 34px; }
+.today-row .tt { flex: 1; min-width: 0; }
+.today-row .tt .jp { font-size: 15px; font-weight: 700; }
+.today-row .tt .ko { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.today-row .st { font-size: 12px; font-weight: 700; color: var(--text-dim); white-space: nowrap; }
+.today-row .st.done { color: var(--green); }
+.today-empty { font-size: 13px; color: var(--text-dim); line-height: 1.6; text-align: center; padding: 6px 0; }
+.section-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); margin: 14px 2px 0; display: flex; justify-content: space-between; }
+.section-label small { font-weight: 400; letter-spacing: 0; color: var(--text-muted); }
+.step-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.step-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 14px 12px; cursor: pointer; transition: all 0.2s; color: var(--text); position: relative; text-align: left; }
+.step-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.step-card .no { font-size: 10px; letter-spacing: 1.5px; color: var(--accent); font-weight: 700; }
+.step-card .jp { font-size: 15px; font-weight: 700; margin-top: 4px; line-height: 1.35; }
+.step-card .ko { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.step-card .st { position: absolute; top: 10px; right: 10px; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--surface); color: var(--text-muted); }
+.step-card .st.done { color: var(--green); background: #13251a; }
+.step-card .st.open { color: var(--accent2); background: #0f2a2a; }
+.step-card.locked { opacity: 0.45; cursor: not-allowed; }
+.step-card.locked:hover { transform: none; border-color: var(--border); }
+.step-card.locked .st { color: var(--text-dim); }
+.home-foot { font-size: 11px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.link-btn { background: none; border: none; color: var(--text-dim); text-decoration: underline; cursor: pointer; font-size: 11px; }
+
+/* ── 학습지 ── */
+.ws-title { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ws-title .no { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+.ws-title .jp { font-size: 22px; font-weight: 700; margin-top: 4px; }
+.ws-title .ko { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
+.ws-score { text-align: center; min-width: 70px; }
+.ws-score .big { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
+.ws-score .small { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+.grammar { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 18px 20px; }
+.grammar .g-head { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--accent2); margin-bottom: 10px; }
+.grammar .point { font-size: 14px; line-height: 1.7; }
+.grammar .point b, .grammar .tip b { color: var(--yellow); font-weight: 700; }
+.rules { margin-top: 14px; border-top: 1px solid var(--border); }
+.rule { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.rule .r-jp { flex: 1; font-size: 16px; line-height: 1.6; }
+.rule .r-ko { font-size: 12px; color: var(--text-dim); text-align: right; max-width: 45%; line-height: 1.4; }
+.spk { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); cursor: pointer; font-size: 13px; padding: 4px 7px; line-height: 1; flex-shrink: 0; }
+.spk:hover { border-color: var(--accent2); color: var(--text); }
+.tip { margin-top: 12px; background: var(--surface); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
+.tip::before { content: '💡 '; }
+
+.items-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); margin: 6px 2px 0; display: flex; justify-content: space-between; align-items: center; }
+.item { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; position: relative; transition: border-color 0.2s; }
+.item.ok { border-color: var(--green); }
+.item.ng { border-color: var(--red); }
+.item .i-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.item .i-no { font-size: 13px; font-weight: 700; color: var(--accent); min-width: 22px; }
+.item .i-type { font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--text-muted); background: var(--surface); padding: 2px 8px; border-radius: 10px; }
+.item .i-mark { margin-left: auto; font-size: 20px; font-weight: 700; line-height: 1; }
+.item.ok .i-mark { color: var(--green); }
+.item.ng .i-mark { color: var(--red); }
+.item .i-q { font-size: 19px; line-height: 1.8; }
+.item .i-q .blank { display: inline-block; min-width: 56px; border-bottom: 2px solid var(--accent2); margin: 0 2px; text-align: center; color: var(--accent2); font-size: 15px; }
+.item .i-ko { font-size: 13px; color: var(--text-dim); margin-top: 4px; line-height: 1.5; }
+.item .i-inst { display: inline-block; font-size: 12px; color: var(--yellow); margin-top: 6px; background: rgba(255,230,109,0.08); padding: 2px 8px; border-radius: 8px; }
+.item .i-model { font-size: 20px; line-height: 1.8; }
+.i-trace { position: relative; margin-top: 10px; }
+.i-trace .ghost { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 20px; color: var(--text-muted); pointer-events: none; font-family: var(--font-jp); white-space: nowrap; overflow: hidden; right: 14px; opacity: 0.55; }
+.ans { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 20px; color: var(--text); font-family: var(--font-jp); outline: none; margin-top: 10px; }
+.i-trace .ans { margin-top: 0; background: transparent; position: relative; z-index: 1; }
+.ans:focus { border-color: var(--accent); }
+.ans::placeholder { color: var(--text-muted); font-size: 14px; font-family: var(--font-ui); }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.opt { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 18px; font-size: 18px; color: var(--text); cursor: pointer; font-family: var(--font-jp); }
+.opt.sel { border-color: var(--accent); background: #1e1b3a; }
+.opt:disabled { cursor: default; }
+.i-tools { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+.tool-btn { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--text-dim); cursor: pointer; font-size: 12px; padding: 4px 9px; }
+.tool-btn:hover { border-color: var(--accent); color: var(--text); }
+.tool-btn.on { border-color: var(--accent); color: var(--text); background: #1e1b3a; }
+.pad { margin-top: 8px; display: none; }
+.pad.show { display: block; }
+.pad canvas { width: 100%; height: 130px; background: #f7f5ee; border-radius: 10px; touch-action: none; display: block; cursor: crosshair; }
+.pad .pad-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: var(--text-muted); }
+.result { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--surface); font-size: 14px; line-height: 1.7; display: none; }
+.item.ok .result, .item.ng .result { display: block; }
+.result .r-lab { font-size: 11px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; }
+.result .r-ans { font-size: 18px; }
+.result .r-note { font-size: 12px; color: var(--yellow); margin-top: 4px; }
+.result .self-ok { margin-top: 8px; background: var(--card); border: 1px solid var(--green); color: var(--green); border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+.item.ng .result .r-mine { font-size: 14px; color: var(--red); text-decoration: line-through; }
+
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); display: none; justify-content: center; z-index: 30; }
+.bottom-bar.show { display: flex; }
+.bottom-inner { width: 100%; max-width: 524px; display: flex; gap: 8px; align-items: center; }
+.btn-main { flex: 1; padding: 14px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: #fff; font-weight: 700; border: none; cursor: pointer; font-size: 15px; }
+.btn-main:disabled { opacity: 0.5; cursor: default; }
+.btn-sub { padding: 14px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.btn-sub:hover { border-color: var(--accent); color: var(--text); }
+.btn-sub:disabled { opacity: 0.4; cursor: default; }
+
+.done-card { background: linear-gradient(135deg, #241f4a, #1a2a3a); border: 1.5px solid var(--accent); border-radius: var(--r); padding: 20px; text-align: center; animation: popIn 0.25s ease; }
+.done-card .score { font-size: 42px; font-weight: 700; color: var(--accent); }
+.done-card .msg { font-size: 14px; color: var(--text-dim); margin-top: 6px; line-height: 1.6; }
+@keyframes popIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--accent); color: var(--text); padding: 10px 16px; border-radius: 12px; font-size: 13px; z-index: 40; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+/* ── 종이 테마 (구몬 학습지 느낌) ── */
+html[data-theme="paper"] {
+  --bg: #f3f1ea; --surface: #ffffff; --card: #ffffff; --border: #d9d4c7; --text: #1e2130; --text-dim: #5d6070; --text-muted: #9a9a92;
+  --accent: #4a63c8; --accent2: #1f8a7e; --red: #d63a3a; --yellow: #a36a00; --green: #2b8a3e;
+}
+html[data-theme="paper"] .step-card:hover, html[data-theme="paper"] .toggle-btn.on, html[data-theme="paper"] .opt.sel, html[data-theme="paper"] .tool-btn.on { background: #eef0fb; }
+html[data-theme="paper"] .today-card, html[data-theme="paper"] .done-card { background: linear-gradient(135deg, #e9ecfb, #e6f4f1); }
+html[data-theme="paper"] .today-row { background: rgba(255,255,255,0.7); }
+html[data-theme="paper"] .step-card .st.done { background: #e3f5e8; }
+html[data-theme="paper"] .step-card .st.open { background: #e0f2ef; }
+html[data-theme="paper"] .item.ok .result .r-lab { color: var(--green); }
+html[data-theme="paper"] .i-inst { background: #fff4d6; }
+html[data-theme="paper"] .pad canvas { border: 1px solid var(--border); }
+html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8, #3b4fa6); }
+
+/* ── 본문 ── */
+.sec-no { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; margin-right: 8px; flex-shrink: 0; }
+.sec-head { display: flex; align-items: center; font-size: 13px; font-weight: 700; margin: 6px 2px 0; line-height: 1.5; }
+.passage { background: var(--card); border: 1.5px solid var(--accent2); border-radius: var(--r); padding: 16px 18px; }
+.passage .p-line { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; }
+.passage .p-jp { flex: 1; font-size: 20px; line-height: 2; }
+.passage .p-ko { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 13px; color: var(--text-dim); line-height: 1.8; }
+.passage .p-all { margin-top: 8px; display: flex; justify-content: flex-end; }
+.item .i-ext { font-size: 16px; }
+.hint-box { display: inline-block; margin-top: 8px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 17px; }
+.hint-box small { display: block; font-size: 10px; color: var(--text-muted); letter-spacing: 1px; font-family: var(--font-ui); }
+.ws-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--text-dim); margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); align-items: center; width: 100%; }
+.ws-meta input { background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 12px; width: 70px; outline: none; font-family: inherit; }
+.ws-meta input:focus { border-color: var(--accent); }
+.ws-title { flex-wrap: wrap; }
+
+/* ── 인쇄 (종이 학습지) ── */
+@media print {
+  :root { --bg:#fff; --surface:#fff; --card:#fff; --border:#999; --text:#000; --text-dim:#444; --text-muted:#777; --accent:#333; --accent2:#333; --yellow:#000; --green:#000; --red:#000; }
+  body { background: #fff; color: #000; }
+  header, .bottom-bar, .i-tools, .pad, .spk, .toast, .no-print { display: none !important; }
+  main { max-width: 100%; padding: 0; gap: 10px; }
+  .item { break-inside: avoid; border: 1px solid #999; }
+  .ans { border: none; border-bottom: 1.5px solid #333; border-radius: 0; background: #fff; color: #000; min-height: 36px; }
+  .i-trace .ghost { opacity: 0.25; color: #000; }
+  .opt { border-color: #999; color: #000; background: #fff; }
+  .result { display: none !important; }
+  .grammar .point b, .grammar .tip b { color: #000; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <button class="back-btn" id="back-btn" onclick="goBack()">← 홈</button>
+    <div class="header-titles">
+      <div class="ep">WORKSHEET · 初級</div>
+      <div class="title" id="header-title">일본어 학습지</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;"><button class="mode-badge" id="theme-btn" onclick="toggleTheme()" style="cursor:pointer" title="테마">📄 종이</button><div class="mode-badge" id="header-badge">하루 3장</div></div>
+</header>
+
+<main>
+  <!-- 홈 -->
+  <div id="home-screen" style="display:flex;flex-direction:column;gap:14px;">
+    <div class="home-intro">
+      <h1>📝 일본어 학습지 · 초급</h1>
+      <p>구몬처럼 매일 조금씩. 써 보고, 바꿔 보고, 만들어 보기.<br>하루에 <b>3장</b>씩 새 학습지가 열려요.</p>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-top"><span>전체 진도</span><b id="prog-text">0 / 20장</b></div>
+      <div class="bar"><i id="prog-bar" style="width:0%"></i></div>
+    </div>
+    <div class="today-card">
+      <div class="t-head"><b>📅 오늘의 학습지</b><span id="today-date"></span></div>
+      <div class="today-list" id="today-list"></div>
+    </div>
+    <div id="level-sections"></div>
+    <div class="home-foot">
+      진도는 이 브라우저에 저장돼요 · <button class="link-btn" onclick="resetAll()">진도 초기화</button>
+    </div>
+  </div>
+
+  <!-- 학습지 -->
+  <div id="ws-screen" style="display:none;flex-direction:column;gap:14px;"></div>
+</main>
+
+<div class="bottom-bar" id="bottom-bar"><div class="bottom-inner" id="bottom-inner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="data.js"></script>
+<script>
+/* ───────────── 저장 ───────────── */
+const STORE = 'ws_progress_v1';
+const DAILY = 3;               // 하루에 열리는 장 수
+let state = loadState();
+let cur = null;                // 현재 학습지
+let graded = false;
+
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || { days: [], results: {}, drafts: {} }; }
+  catch (e) { return { days: [], results: {}, drafts: {} }; }
+}
+function saveState() { localStorage.setItem(STORE, JSON.stringify(state)); }
+function todayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+
+/* 오늘 처음 열었으면 방문일로 기록 → 방문한 날마다 3장씩 열림 */
+function touchDay() {
+  const k = todayKey();
+  if (!state.days.includes(k)) { state.days.push(k); saveState(); }
+}
+function unlockedCount() { return Math.min(WS_STEPS.length, state.days.length * DAILY); }
+function isUnlocked(step) { return step.id <= unlockedCount(); }
+function todaySteps() {
+  const n = unlockedCount();
+  return WS_STEPS.filter((s) => s.id > n - DAILY && s.id <= n);
+}
+
+/* ───────────── 루비 / 정규화 ───────────── */
+const RUBY_RE = /\{([^|{}]+)\|([^|{}]+)\}/g;
+function ruby(s) { return (s || '').replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>'); }
+function plainKanji(s) { return (s || '').replace(RUBY_RE, '$1'); }
+function plainKana(s) { return (s || '').replace(RUBY_RE, '$2'); }
+function esc(s) { return (s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+/* 비교용 정규화: 공백·구두점 제거, 가타카나→히라가나, 전각 영숫자→반각 */
+function norm(s) {
+  return (s || '')
+    .replace(/[\s　]/g, '')
+    .replace(/[。、．，.,!！?？「」『』・〜~\-]/g, '')
+    .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .toLowerCase();
+}
+/* {漢字|かな} 토큰의 한자/가나 조합을 모두 정답으로 */
+function expand(ans) {
+  const parts = []; let last = 0; let m;
+  const re = new RegExp(RUBY_RE.source, 'g');
+  while ((m = re.exec(ans))) { parts.push({ t: ans.slice(last, m.index) }); parts.push({ k: m[1], h: m[2] }); last = re.lastIndex; }
+  parts.push({ t: ans.slice(last) });
+  const toks = parts.filter((p) => p.k !== undefined);
+  const out = new Set();
+  if (toks.length <= 6) {
+    for (let mask = 0; mask < (1 << toks.length); mask++) {
+      let i = 0;
+      out.add(parts.map((p) => (p.t !== undefined ? p.t : ((mask >> i++) & 1) ? p.h : p.k)).join(''));
+    }
+  } else { out.add(plainKanji(ans)); out.add(plainKana(ans)); }
+  return [...out].map(norm);
+}
+function answersOf(it) {
+  if (it.type === 'trace') return expand(it.jp);
+  if (it.type === 'choice') return [norm(plainKanji(it.a)), norm(plainKana(it.a))];
+  return it.a.flatMap(expand);
+}
+function modelOf(it) {
+  if (it.type === 'trace') return it.jp;
+  if (it.type === 'choice') return it.a;
+  return it.a[0];
+}
+function typeLabel(t) { return { extract: '본문에서 찾기', trace: '따라쓰기', fill: '빈칸', choice: '고르기', transform: '바꿔쓰기', compose: '작문' }[t]; }
+
+/* ───────────── TTS ───────────── */
+function speak(text) {
+  if (!('speechSynthesis' in window)) { toast('이 브라우저는 음성 읽기를 지원하지 않아요'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(plainKanji(text).replace(/[＿_]+/g, '、'));
+  u.lang = 'ja-JP'; u.rate = 0.9;
+  const vs = window.speechSynthesis.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ja'));
+  const pref = vs.find((v) => /kyoko|o-ren|nanami|google/i.test(v.name)) || vs[0];
+  if (pref) u.voice = pref;
+  window.speechSynthesis.speak(u);
+}
+if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices(); }
+
+function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove('show'), 1800); }
+
+/* ───────────── 홈 ───────────── */
+function renderHome() {
+  touchDay();
+  document.getElementById('home-screen').style.display = 'flex';
+  document.getElementById('ws-screen').style.display = 'none';
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('header-title').textContent = '일본어 학습지';
+  document.getElementById('header-badge').textContent = `${unlockedCount()} / ${WS_STEPS.length}장 열림`;
+  document.getElementById('bottom-bar').classList.remove('show');
+
+  const done = WS_STEPS.filter((s) => state.results[s.id]).length;
+  document.getElementById('prog-text').textContent = `${done} / ${WS_STEPS.length}장 완료`;
+  document.getElementById('prog-bar').style.width = (done / WS_STEPS.length * 100) + '%';
+
+  const d = new Date();
+  document.getElementById('today-date').textContent = `${d.getMonth() + 1}월 ${d.getDate()}일 · ${state.days.length}일째`;
+  const tl = document.getElementById('today-list');
+  const ts = todaySteps();
+  if (!ts.length) tl.innerHTML = '<div class="today-empty">모든 학습지를 열었어요 🎉<br>아래에서 다시 풀고 싶은 장을 골라 보세요.</div>';
+  else tl.innerHTML = ts.map((s) => {
+    const r = state.results[s.id];
+    return `<div class="today-row" onclick="openStep(${s.id})">
+      <div class="no">${String(s.id).padStart(2, '0')}</div>
+      <div class="tt"><div class="jp">${ruby(s.title)}</div><div class="ko">${esc(s.sub)} · ${s.items.length}문제</div></div>
+      <div class="st ${r ? 'done' : ''}">${r ? `✓ ${r.score}/${r.total}` : '풀기 →'}</div>
+    </div>`;
+  }).join('') + (unlockedCount() < WS_STEPS.length ? `<div class="today-empty" style="padding-top:8px">다음 ${DAILY}장은 내일 열려요 🔒</div>` : '');
+
+  const sec = document.getElementById('level-sections');
+  sec.innerHTML = WS_LEVELS.map((lv) => {
+    const steps = WS_STEPS.filter((s) => s.level === lv.id);
+    const cards = steps.map((s) => {
+      const r = state.results[s.id];
+      const un = isUnlocked(s);
+      const st = !un ? '🔒' : r ? `✓ ${Math.round(r.score / r.total * 100)}점` : '열림';
+      return `<button class="step-card ${un ? '' : 'locked'}" ${un ? `onclick="openStep(${s.id})"` : 'onclick="toast(\'내일 열려요 🔒 하루 3장!\')"'}>
+        <div class="no">STEP ${String(s.id).padStart(2, '0')}</div>
+        <div class="jp">${ruby(s.title)}</div>
+        <div class="ko">${esc(s.sub)}</div>
+        <div class="st ${!un ? '' : r ? 'done' : 'open'}">${st}</div>
+      </button>`;
+    }).join('');
+    return `<div class="section-label"><span>${esc(lv.name)}</span><small>${esc(lv.desc)}</small></div><div class="step-grid" style="margin-top:8px">${cards}</div>`;
+  }).join('');
+}
+
+/* ───────────── 학습지 ───────────── */
+function openStep(id) {
+  const s = WS_STEPS.find((x) => x.id === id);
+  if (!s || !isUnlocked(s)) return;
+  cur = s; graded = false;
+  state.drafts[s.id] = state.drafts[s.id] || {};
+  if (!state.drafts[s.id].__graded && !state.drafts[s.id].__start) { state.drafts[s.id].__start = Date.now(); saveState(); }
+  renderStep();
+  window.scrollTo({ top: 0 });
+}
+function goBack() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); cur = null; renderHome(); window.scrollTo({ top: 0 }); }
+
+function renderStep() {
+  const s = cur;
+  document.getElementById('home-screen').style.display = 'none';
+  const ws = document.getElementById('ws-screen');
+  ws.style.display = 'flex';
+  document.getElementById('back-btn').style.display = 'block';
+  document.getElementById('header-title').textContent = `STEP ${String(s.id).padStart(2, '0')} · ${s.sub}`;
+  document.getElementById('header-badge').textContent = `${s.items.length}문제`;
+  const r = state.results[s.id];
+  const draft = state.drafts[s.id] || {};
+
+  const rules = s.grammar.rules.map(([jp, ko]) => `<div class="rule"><div class="r-jp jp">${ruby(jp)}</div><div class="r-ko">${esc(ko)}</div><button class="spk" onclick="speak(${JSON.stringify(jp)})" title="듣기">🔊</button></div>`).join('');
+
+  const exN = s.items.filter((it) => it.type === 'extract').length;
+  const items = s.items.map((it, i) => renderItem(it, i, draft[i], it.type === 'extract' ? `(${i + 1})` : `${i - exN + 1}.`)).join('');
+  const pLines = s.passage ? s.passage.jp.map((jp) => `<div class="p-line"><div class="p-jp jp">${ruby(jp)}</div><button class="spk" onclick="speak(${JSON.stringify(jp).replace(/"/g, '&quot;')})" title="듣기">🔊</button></div>`).join('') : '';
+  const passage = s.passage ? `
+    <div class="sec-head"><span class="sec-no">1</span>다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.</div>
+    <div class="passage">${pLines}<div class="p-all"><button class="tool-btn" onclick="speakAll()">🔊 전체 듣기</button></div>
+      <div class="p-ko">${s.passage.ko.map(esc).join('<br>')}</div></div>` : '';
+  const d = new Date();
+  const started = draft.__start ? new Date(draft.__start) : null;
+  const hhmm = (t) => `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+
+  ws.innerHTML = `
+    <div class="ws-title">
+      <div><div class="no">STEP ${String(s.id).padStart(2, '0')}</div><div class="jp">${ruby(s.title)}</div><div class="ko">${esc(s.sub)}</div></div>
+      <div class="ws-score"><div class="big" id="ws-score-big">${r ? r.score + '/' + r.total : '—'}</div><div class="small">${r ? '최근 점수' : '아직 안 풀었어요'}</div></div>
+      <div class="ws-meta">
+        <span>📅 ${d.getMonth() + 1}월 ${d.getDate()}일</span>
+        <span>⏱ ${started ? hhmm(started) : hhmm(d)} ~ <span id="ws-end">${r && r.elapsed != null && draft.__graded ? fmtElapsed(r.elapsed) : ''}</span></span>
+        <span>이름 <input id="ws-name" value="${esc(state.name || '')}" placeholder="____" oninput="state.name=this.value;saveState()"></span>
+      </div>
+    </div>
+    <div class="grammar">
+      <div class="g-head">📖 오늘의 포인트</div>
+      <div class="point">${ruby(s.grammar.point)}</div>
+      <div class="rules">${rules}</div>
+      ${s.grammar.tip ? `<div class="tip">${ruby(s.grammar.tip)}</div>` : ''}
+    </div>
+    ${passage}
+    ${items.replace('<!--SEC2-->', `<div class="sec-head" style="margin-top:10px"><span class="sec-no">2</span>오늘의 포인트를 참고하여, 알맞은 일본어를 쓰세요. <span style="font-weight:400;color:var(--text-muted);font-size:11px;margin-left:auto">✍️ = 손글씨 패드</span></div>`)}
+    <div id="done-area"></div>`;
+
+  renderBottom();
+  if (r && draft.__graded) grade(true);
+}
+
+function renderItem(it, i, saved, label) {
+  const no = `<div class="i-head"><div class="i-no">${label}</div><div class="i-type">${typeLabel(it.type)}</div><div class="i-mark" id="mark-${i}"></div></div>`;
+  const tools = `<div class="i-tools">
+      ${it.type !== 'choice' ? `<button class="tool-btn" onclick="speak(${JSON.stringify(it.type === 'trace' ? it.jp : modelOf(it))})" title="정답 듣기">🔊</button>` : ''}
+      <button class="tool-btn" id="padbtn-${i}" onclick="togglePad(${i})">✍️ 손글씨</button>
+    </div>
+    <div class="pad" id="pad-${i}"><canvas id="cv-${i}"></canvas><div class="pad-bar"><span>손가락이나 펜으로 써 보세요 (채점 안 됨)</span><button class="tool-btn" onclick="clearPad(${i})">지우기</button></div></div>`;
+  const result = `<div class="result" id="res-${i}"></div>`;
+  let body = '';
+  const v = esc(saved || '');
+  if (it.type === 'extract') {
+    body = `<div class="i-ext">${esc(it.ko)}</div><div class="i-ko">본문에서 찾아 일본어로 쓰세요</div>
+      <input class="ans" id="in-${i}" value="${v}" placeholder="본문에서 찾기" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="onInput(${i})" onkeydown="onKey(event,${i})">`;
+  } else if (it.type === 'trace') {
+    body = `<div class="i-model jp">${ruby(it.jp)}</div><div class="i-ko">${esc(it.ko)}</div>
+      <div class="i-trace"><div class="ghost" id="ghost-${i}">${esc(plainKanji(it.jp))}</div>
+      <input class="ans" id="in-${i}" value="${v}" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="onInput(${i})" onkeydown="onKey(event,${i})"></div>`;
+  } else if (it.type === 'fill') {
+    const q = ruby(esc(it.q)).replace(/_{2,}/g, '<span class="blank">?</span>');
+    body = `<div class="i-q jp">${q}</div><div class="i-ko">${esc(it.ko)}</div>
+      <input class="ans" id="in-${i}" value="${v}" placeholder="빈칸에 들어갈 말" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="onInput(${i})" onkeydown="onKey(event,${i})">`;
+  } else if (it.type === 'choice') {
+    const q = ruby(esc(it.q)).replace(/＿/g, '<span class="blank">?</span>');
+    body = `<div class="i-q jp">${q}</div><div class="i-ko">${esc(it.ko)}</div>
+      <div class="opts" id="opts-${i}">${it.opts.map((o) => `<button class="opt ${saved === o ? 'sel' : ''}" data-v="${esc(o)}" onclick="pick(${i},this)">${ruby(esc(o))}</button>`).join('')}</div>`;
+  } else if (it.type === 'transform') {
+    body = `<div class="i-q jp">${ruby(esc(it.q))}</div><div class="i-inst">→ ${esc(it.inst)}</div>
+      <input class="ans" id="in-${i}" value="${v}" placeholder="바꿔서 써 보세요" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="onInput(${i})" onkeydown="onKey(event,${i})">`;
+  } else if (it.type === 'compose') {
+    body = `<div class="i-q" style="font-size:16px">${esc(it.ko)}</div><div class="i-ko">일본어로 써 보세요</div>${it.hint ? `<div class="hint-box jp"><small>힌트</small>${ruby(esc(it.hint))}</div>` : ''}
+      <input class="ans" id="in-${i}" value="${v}" placeholder="일본어 문장" autocomplete="off" autocapitalize="off" spellcheck="false" oninput="onInput(${i})" onkeydown="onKey(event,${i})">`;
+  }
+  const sec2 = (it.type !== 'extract' && (i === 0 || cur.items[i - 1].type === 'extract')) ? '<!--SEC2-->' : '';
+  return `${sec2}<div class="item" id="item-${i}">${no}${body}${tools}${result}</div>`;
+}
+
+function getVal(i) {
+  const it = cur.items[i];
+  if (it.type === 'choice') { const b = document.querySelector(`#opts-${i} .opt.sel`); return b ? b.dataset.v : ''; }
+  const el = document.getElementById(`in-${i}`); return el ? el.value : '';
+}
+function saveDraft(i, v) {
+  state.drafts[cur.id] = state.drafts[cur.id] || {};
+  state.drafts[cur.id][i] = v;
+  saveState();
+}
+function onInput(i) {
+  const v = getVal(i); saveDraft(i, v);
+  const g = document.getElementById(`ghost-${i}`);
+  if (g) g.style.opacity = v ? '0' : '0.55';
+  if (graded) ungrade();
+}
+function onKey(e, i) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const next = cur.items.findIndex((it, j) => j > i && it.type !== 'choice');
+  if (next >= 0) document.getElementById(`in-${next}`).focus();
+  else document.getElementById(`in-${i}`).blur();
+}
+function pick(i, btn) {
+  document.querySelectorAll(`#opts-${i} .opt`).forEach((b) => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  saveDraft(i, btn.dataset.v);
+  if (graded) ungrade();
+}
+
+/* ───────────── 채점 ───────────── */
+function renderBottom() {
+  const bar = document.getElementById('bottom-bar'); bar.classList.add('show');
+  const next = WS_STEPS.find((s) => s.id === cur.id + 1);
+  const nextOk = next && isUnlocked(next);
+  document.getElementById('bottom-inner').innerHTML = graded
+    ? `<button class="btn-sub" onclick="retry()">↻ 다시 풀기</button>
+       <button class="btn-sub no-print" onclick="window.print()">🖨</button>
+       <button class="btn-main" ${next ? '' : 'disabled'} onclick="${nextOk ? `openStep(${next.id})` : 'goBack()'}">${!next ? '마지막 장이에요' : nextOk ? '다음 학습지 →' : '홈으로 (다음 장은 내일 🔒)'}</button>`
+    : `<button class="btn-sub no-print" onclick="window.print()" title="종이로 인쇄">🖨</button>
+       <button class="btn-main" onclick="grade()">✔ 채점하기</button>`;
+}
+function grade(silent) {
+  const s = cur; let score = 0; const total = s.items.length;
+  const selfOk = (state.drafts[s.id] && state.drafts[s.id].__self) || {};
+  s.items.forEach((it, i) => {
+    const mine = getVal(i);
+    const ok = answersOf(it).includes(norm(mine)) || !!selfOk[i];
+    if (ok) score++;
+    const el = document.getElementById(`item-${i}`);
+    el.classList.remove('ok', 'ng'); el.classList.add(ok ? 'ok' : 'ng');
+    document.getElementById(`mark-${i}`).textContent = ok ? '○' : '✕';
+    const model = modelOf(it);
+    const res = document.getElementById(`res-${i}`);
+    res.innerHTML = ok
+      ? `<div class="r-lab">정답 ○</div><div class="r-ans jp">${ruby(model)}${it.type === 'trace' ? '' : ' <button class="spk" onclick="speak(' + JSON.stringify(model).replace(/"/g, '&quot;') + ')">🔊</button>'}</div>${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}`
+      : `<div class="r-lab">정답은 이렇게</div>${mine ? `<div class="r-mine">${esc(mine)}</div>` : ''}<div class="r-ans jp">${ruby(model)} <button class="spk" onclick="speak(${JSON.stringify(model).replace(/"/g, '&quot;')})">🔊</button></div>
+         ${Array.isArray(it.a) && it.a.length > 1 ? `<div style="font-size:12px;color:var(--text-muted)">다른 표현: ${it.a.slice(1).map((x) => plainKanji(x)).join(' / ')}</div>` : ''}
+         ${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}
+         ${it.type === 'compose' && mine ? `<button class="self-ok" onclick="selfMark(${i})">뜻이 같게 썼어요 → ○ 로 바꾸기</button>` : ''}`;
+    if (it.type === 'choice') document.querySelectorAll(`#opts-${i} .opt`).forEach((b) => { b.disabled = true; });
+  });
+  graded = true;
+  const prev = state.results[s.id] || {};
+  const st = state.drafts[s.id] && state.drafts[s.id].__start;
+  const elapsed = silent ? prev.elapsed : (st ? Math.round((Date.now() - st) / 1000) : null);
+  state.results[s.id] = { score, total, date: todayKey(), elapsed: elapsed == null ? prev.elapsed : elapsed };
+  state.drafts[s.id] = state.drafts[s.id] || {}; state.drafts[s.id].__graded = true;
+  saveState();
+  document.getElementById('ws-score-big').textContent = `${score}/${total}`;
+  const pct = Math.round(score / total * 100);
+  const msg = pct === 100 ? '완벽해요! 🎉 다음 장으로 넘어가요.' : pct >= 80 ? '잘했어요! ✕ 표시만 한 번 더 보고 가요.' : pct >= 50 ? '좋아요. 틀린 문제를 다시 써 보면 금방 늘어요.' : '괜찮아요. 포인트를 다시 읽고 한 번 더 풀어 봐요.';
+  const el2 = state.results[s.id].elapsed;
+  const endEl = document.getElementById('ws-end'); if (endEl && el2 != null) endEl.textContent = fmtElapsed(el2);
+  document.getElementById('done-area').innerHTML = `<div class="done-card"><div class="score">${pct}점</div><div class="msg">${score} / ${total} 정답${el2 != null ? ` · ⏱ ${fmtElapsed(el2)}` : ''}<br>${msg}</div></div>`;
+  renderBottom();
+  if (!silent) document.getElementById('done-area').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function selfMark(i) {
+  state.drafts[cur.id] = state.drafts[cur.id] || {};
+  state.drafts[cur.id].__self = state.drafts[cur.id].__self || {};
+  state.drafts[cur.id].__self[i] = true;
+  saveState();
+  grade(true);
+}
+function ungrade() {
+  graded = false;
+  cur.items.forEach((it, i) => {
+    const el = document.getElementById(`item-${i}`); el.classList.remove('ok', 'ng');
+    document.getElementById(`mark-${i}`).textContent = '';
+    document.querySelectorAll(`#opts-${i} .opt`).forEach((b) => { b.disabled = false; });
+  });
+  if (state.drafts[cur.id]) { delete state.drafts[cur.id].__graded; delete state.drafts[cur.id].__self; saveState(); }
+  document.getElementById('done-area').innerHTML = '';
+  renderBottom();
+}
+function retry() {
+  state.drafts[cur.id] = { __start: Date.now() }; saveState();
+  graded = false; renderStep(); window.scrollTo({ top: 0 });
+  const first = document.querySelector('#ws-screen .ans'); if (first) first.focus();
+}
+
+/* ───────────── 손글씨 패드 ───────────── */
+function togglePad(i) {
+  const pad = document.getElementById(`pad-${i}`); const on = pad.classList.toggle('show');
+  document.getElementById(`padbtn-${i}`).classList.toggle('on', on);
+  if (on) initPad(i);
+}
+function initPad(i) {
+  const cv = document.getElementById(`cv-${i}`);
+  if (cv._ready) return; cv._ready = true;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = cv.getBoundingClientRect();
+  cv.width = rect.width * dpr; cv.height = rect.height * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = '#1b1b2f';
+  drawGuide(i);
+  let drawing = false, last = null;
+  const pos = (e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+  cv.addEventListener('pointerdown', (e) => { drawing = true; last = pos(e); cv.setPointerCapture(e.pointerId); e.preventDefault(); });
+  cv.addEventListener('pointermove', (e) => { if (!drawing) return; const p = pos(e); ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke(); last = p; e.preventDefault(); });
+  const up = () => { drawing = false; };
+  cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up); cv.addEventListener('pointerleave', up);
+}
+function drawGuide(i) {
+  const it = cur.items[i]; const cv = document.getElementById(`cv-${i}`); const ctx = cv.getContext('2d');
+  const w = cv.getBoundingClientRect().width, h = cv.getBoundingClientRect().height;
+  ctx.save();
+  ctx.strokeStyle = '#d9d4c3'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+  ctx.setLineDash([]);
+  if (it.type === 'trace') {
+    const txt = plainKanji(it.jp); let fs = 44;
+    ctx.font = `${fs}px "Noto Sans JP", sans-serif`;
+    while (ctx.measureText(txt).width > w - 24 && fs > 16) { fs -= 2; ctx.font = `${fs}px "Noto Sans JP", sans-serif`; }
+    ctx.fillStyle = 'rgba(60,60,90,0.18)'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, 12, h / 2);
+  }
+  ctx.restore();
+}
+function clearPad(i) {
+  const cv = document.getElementById(`cv-${i}`); const ctx = cv.getContext('2d');
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.restore();
+  drawGuide(i);
+}
+
+/* ───────────── 기타 ───────────── */
+function fmtElapsed(sec) { const m = Math.floor(sec / 60), s = sec % 60; return m ? `${m}분 ${s}초` : `${s}초`; }
+function speakAll() {
+  if (!cur || !cur.passage || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  cur.passage.jp.forEach((line) => {
+    const u = new SpeechSynthesisUtterance(plainKanji(line).replace(/^[^：]+：/, ''));
+    u.lang = 'ja-JP'; u.rate = 0.85;
+    const vs = window.speechSynthesis.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ja'));
+    const pref = vs.find((v) => /kyoko|o-ren|nanami|google/i.test(v.name)) || vs[0];
+    if (pref) u.voice = pref;
+    window.speechSynthesis.speak(u);
+  });
+}
+const THEME_KEY = 'ws_theme';
+function applyTheme() {
+  const t = localStorage.getItem(THEME_KEY) || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const b = document.getElementById('theme-btn'); if (b) b.textContent = t === 'paper' ? '🌙 다크' : '📄 종이';
+}
+function toggleTheme() { localStorage.setItem(THEME_KEY, (localStorage.getItem(THEME_KEY) || 'dark') === 'paper' ? 'dark' : 'paper'); applyTheme(); }
+
+function resetAll() {
+  if (!confirm('진도와 답안을 모두 지울까요? (오늘부터 1일째로 다시 시작)')) return;
+  localStorage.removeItem(STORE); state = loadState(); renderHome(); toast('초기화했어요');
+}
+
+applyTheme();
+renderHome();
+</script>
+</body>
+</html>
