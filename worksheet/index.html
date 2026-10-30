@@ -240,7 +240,7 @@ html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8
     </div>
     <div id="level-sections"></div>
     <div class="home-foot">
-      진도는 이 브라우저에 저장돼요 · <button class="link-btn" onclick="resetAll()">진도 초기화</button>
+      <span id="sync-dot">진도는 이 브라우저에 저장돼요</span> · <button class="link-btn" onclick="unlockMore()">🔓 3장 더 열기</button> · <button class="link-btn" onclick="resetAll()">진도 초기화</button>
     </div>
   </div>
 
@@ -260,11 +260,53 @@ let state = loadState();
 let cur = null;                // 현재 학습지
 let graded = false;
 
+function emptyState() { return { days: [], results: {}, drafts: {} }; }
 function loadState() {
-  try { return JSON.parse(localStorage.getItem(STORE)) || { days: [], results: {}, drafts: {} }; }
-  catch (e) { return { days: [], results: {}, drafts: {} }; }
+  try { return Object.assign(emptyState(), JSON.parse(localStorage.getItem(STORE)) || {}); }
+  catch (e) { return emptyState(); }
 }
-function saveState() { localStorage.setItem(STORE, JSON.stringify(state)); }
+/* 저장: 브라우저(localStorage) + 계정 저장소(claude.ai 미리보기에서 열었을 때, 폰/PC 공유) */
+let remoteDoc = null, remoteTimer = null, remoteBusy = false, remoteDirty = false;
+function saveState() {
+  try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {}
+  if (remoteDoc) { clearTimeout(remoteTimer); remoteTimer = setTimeout(flushRemote, 700); }
+}
+async function flushRemote() {
+  if (!remoteDoc) return;
+  if (remoteBusy) { remoteDirty = true; return; }
+  remoteBusy = true;
+  try { await remoteDoc.set(JSON.parse(JSON.stringify(state))); }
+  catch (e) { console.warn('remote save failed', e); }
+  remoteBusy = false;
+  if (remoteDirty) { remoteDirty = false; flushRemote(); }
+}
+function mergeState(a, b) {
+  const out = emptyState();
+  out.days = [...new Set([...(a.days || []), ...(b.days || [])])].sort();
+  out.results = Object.assign({}, a.results, b.results);
+  for (const k of Object.keys(a.results || {})) if (b.results && b.results[k] && (b.results[k].date || '') < (a.results[k].date || '')) out.results[k] = a.results[k];
+  out.drafts = Object.assign({}, a.drafts, b.drafts);
+  out.name = b.name || a.name || '';
+  return out;
+}
+async function connectRemote() {
+  if (!window.claude || typeof window.claude.use !== 'function') return;
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    remoteDoc = db.doc('data/users/' + id + '/progress');
+    const snap = await remoteDoc.get();
+    if (snap.exists && snap.data) {
+      state = mergeState(state, snap.data);
+      try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {}
+      if (cur) renderStep(); else renderHome();
+    }
+    document.getElementById('sync-dot').textContent = '☁️ 계정에 저장됨';
+    flushRemote();
+  } catch (e) { console.warn('remote storage unavailable', e); }
+}
 function todayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 
 /* 오늘 처음 열었으면 방문일로 기록 → 방문한 날마다 3장씩 열림 */
@@ -649,11 +691,22 @@ function toggleTheme() { localStorage.setItem(THEME_KEY, (localStorage.getItem(T
 
 function resetAll() {
   if (!confirm('진도와 답안을 모두 지울까요? (오늘부터 1일째로 다시 시작)')) return;
-  localStorage.removeItem(STORE); state = loadState(); renderHome(); toast('초기화했어요');
+  try { localStorage.removeItem(STORE); } catch (e) {}
+  state = emptyState();
+  if (remoteDoc) remoteDoc.delete().catch(() => {});
+  renderHome(); toast('초기화했어요');
+}
+/* 진도가 날아갔거나 더 풀고 싶을 때: 방문일을 하나 추가해서 3장을 더 열어요 */
+function unlockMore() {
+  if (unlockedCount() >= WS_STEPS.length) { toast('이미 모두 열려 있어요'); return; }
+  if (!confirm('학습지 3장을 지금 더 열까요?')) return;
+  let i = 1, k; do { k = 'extra-' + String(i++).padStart(3, '0'); } while (state.days.includes(k));
+  state.days.push(k); saveState(); renderHome(); toast('3장 더 열었어요 🔓');
 }
 
 applyTheme();
 renderHome();
+connectRemote();
 </script>
 </body>
 </html>
