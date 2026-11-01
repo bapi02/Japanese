@@ -298,8 +298,9 @@ async function connectRemote() {
     if (!id) return;
     remoteDoc = db.doc('data/users/' + id + '/progress');
     const snap = await remoteDoc.get();
-    if (snap.exists && snap.data) {
-      state = mergeState(state, snap.data);
+    const remote = snap.exists ? (typeof snap.data === 'function' ? snap.data() : snap.data) : null;
+    if (remote && typeof remote === 'object') {
+      state = mergeState(state, remote);
       try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {}
       if (cur) renderStep(); else renderHome();
     }
@@ -468,7 +469,7 @@ function renderStep() {
       <div class="ws-meta">
         <span>📅 ${d.getMonth() + 1}월 ${d.getDate()}일</span>
         <span>⏱ ${started ? hhmm(started) : hhmm(d)} ~ <span id="ws-end">${r && r.elapsed != null && draft.__graded ? fmtElapsed(r.elapsed) : ''}</span></span>
-        <span>이름 <input id="ws-name" value="${esc(state.name || '')}" placeholder="____" oninput="state.name=this.value;saveState()"></span>
+        <span>이름 <input id="ws-name" value="${esc(state.name || '')}" placeholder="____" autocomplete="off" oninput="state.name=this.value;saveState()"></span>
       </div>
     </div>
     <div class="grammar">
