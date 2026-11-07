@@ -126,27 +126,11 @@ canvas { display:none; }
 
   <button class="big-btn" id="go-btn" onclick="toggleLive()" disabled>🎙 중계 시작</button>
 
-  <div class="field" id="focus-box">
-    <label>📌 중계 포커스 (중계 중에 눌러도 바로 반영)</label>
-    <div class="presets">
-      <button class="chip" onclick="setFocus('プレーごとに、誰が何をしてどうなったかを具体的に。サーブ・レシーブ・トス・スパイク・ブロックの質（短い・長い・乱れた・鋭い）まで言う。')">🎯 플레이 하나하나 자세히</button>
-      <button class="chip" onclick="setFocus('サーブとサーブレシーブの質に注目して実況して。サーブが浮いた・短い・ネットにかかった、レシーブが乱れた・セッターに返った、など。')">🏐 서브·리시브 품질</button>
-      <button class="chip" onclick="setFocus('セッターのトス回しと、どのアタッカーを使ったかに注目して。')">🙌 세터·공격 선택</button>
-      <button class="chip" onclick="setFocus('得点が動いたときは、どちらが何で点を取ったか（スパイク・ブロック・サーブ・相手ミス）を必ず言う。')">🔢 득점 원인</button>
-      <button class="chip" onclick="setFocus('いまの流れを短く解説して。どちらが押していて、理由は何か。')">📝 흐름 해설</button>
-      <button class="chip" onclick="setFocus('もっと感情を込めて、テンポを速く。')">🔥 더 흥분</button>
-    </div>
-    <div class="mic-row" style="margin-top:4px;">
-      <input class="ask" id="focus-input" placeholder="직접 지시: 예) 青の7番を追って / 選手名で呼んで：1番＝佐藤" onkeydown="if(event.key==='Enter')focusUI()">
-      <button class="send" onclick="focusUI()">지시</button>
-    </div>
-  </div>
-
   <div class="log" id="log"></div>
 
   <div class="mic-row">
     <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled>🎤</button>
-    <input class="ask" id="ask" placeholder="중계 중 질문/지시 (예: 今のは何のファウル？ / もっと興奮して)" onkeydown="if(event.key==='Enter')sendTextUI()">
+    <input class="ask" id="ask" placeholder="질문·지시 (예: 今のは何のファウル？ / 青の7番を追って / 1番＝佐藤)" onkeydown="if(event.key==='Enter')sendTextUI()">
     <button class="send" onclick="sendTextUI()">보내기</button>
   </div>
   <div class="sub">🎤 를 켜면 마이크 소리도 같이 보내서 말로 질문할 수 있어요 (TV 소리가 섞이면 끄는 게 나아요). 중계 수준: <button class="chip on" id="lv-easy" onclick="setLevel('easy')">쉬운 일본어</button> <button class="chip" id="lv-real" onclick="setLevel('real')">진짜 실황 스타일</button></div>
@@ -293,8 +277,6 @@ function systemPrompt() {
     + (ctxText ? '【試合情報】\n' + ctxText + '\n' : '')
     + '最初の合図が来たら、ごく短く開始の挨拶をして、すぐ目の前のプレーの実況に入ってください。';
 }
-function setFocus(t) { if (!live) return addLine('먼저 중계를 시작해주세요.', 'sys'); addLine('📌 ' + t, 'me'); sendText('（指示：' + t + '）'); }
-function focusUI() { const el = $('focus-input'); const t = el.value.trim(); if (!t) return; el.value = ''; setFocus(t); }
 
 // 컨텍스트 압축 크기: Live API는 매 턴 컨텍스트 전체를 다시 과금하므로, 작을수록 싸고 기억은 짧아짐
 function ctxSize() {
