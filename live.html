@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>ライブ · 画面を見て話す</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --surface: #161820;
+  --card: #1e2130;
+  --border: #2a2d3e;
+  --text: #eceef5;
+  --text-dim: #8b8fa8;
+  --text-muted: #4a4d60;
+  --accent: #7c6ef5;
+  --accent2: #4ecdc4;
+  --red: #ff6b6b;
+  --yellow: #ffe66d;
+  --green: #51cf66;
+  --font-jp: 'Noto Serif JP', serif;
+  --font-ui: 'Inter', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font-ui); min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+header { width: 100%; padding: 16px 20px 12px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; gap: 10px; }
+.header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.back-btn { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 13px; color: var(--text-dim); cursor: pointer; font-family: inherit; text-decoration: none; white-space: nowrap; }
+.back-btn:hover { border-color: var(--accent); color: var(--text); }
+.header-titles .ep { font-size: 10px; letter-spacing: 2px; color: var(--accent); font-weight: 700; text-transform: uppercase; }
+.header-titles .title { font-size: 15px; font-weight: 700; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-badge { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+main { width: 100%; max-width: 640px; padding: 16px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+
+/* 영상 영역 */
+.stage { position: relative; background: #000; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; aspect-ratio: 4 / 3; display: flex; align-items: center; justify-content: center; }
+.stage video { width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
+.stage video.on { display: block; }
+.stage .placeholder { color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; line-height: 1.7; }
+.stage .live-dot { position: absolute; top: 10px; left: 12px; display: none; align-items: center; gap: 6px; background: rgba(0,0,0,.55); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #fff; }
+.stage .live-dot.on { display: flex; }
+.stage .live-dot i { width: 8px; height: 8px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
+.stage .thinking { position: absolute; top: 10px; right: 12px; display: none; background: rgba(124,110,245,.85); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #fff; }
+.stage .thinking.on { display: block; }
+.stage .flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.stage .flash.go { animation: flash .35s ease; }
+@keyframes blink { 50% { opacity: .3; } }
+@keyframes flash { 0% { opacity: .5; } 100% { opacity: 0; } }
+
+.src-row { display: flex; gap: 8px; }
+.src-btn { flex: 1; padding: 12px 8px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-size: 13px; cursor: pointer; font-family: inherit; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.src-btn .ic { font-size: 20px; }
+.src-btn:hover { border-color: var(--accent); color: var(--text); }
+.src-btn.active { border-color: var(--accent2); color: var(--accent2); background: #15252a; }
+.src-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.ctrl-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.chip { padding: 8px 12px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); color: var(--text-dim); font-size: 12px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.chip:hover { border-color: var(--accent); color: var(--text); }
+.chip.on { border-color: var(--green); color: var(--green); background: #14241a; }
+.chip:disabled { opacity: .4; cursor: not-allowed; }
+.chip select { background: transparent; border: none; color: inherit; font-family: inherit; font-size: 12px; outline: none; }
+.chip select option { background: var(--card); color: var(--text); }
+
+/* 대화 로그 */
+.log { display: flex; flex-direction: column; gap: 12px; min-height: 120px; }
+.msg { max-width: 92%; padding: 12px 14px; border-radius: 14px; font-size: 15px; line-height: 1.6; animation: fadeUp .25s ease; }
+.msg.ai { align-self: flex-start; background: var(--card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.msg.me { align-self: flex-end; background: #1a2535; border: 1px solid var(--accent2); border-bottom-right-radius: 4px; }
+.msg.sys { align-self: center; width: 100%; background: var(--surface); border: 1px dashed var(--border); border-radius: 12px; font-size: 13px; color: var(--text-dim); }
+.msg.sys.err { border-color: var(--red); color: #ffb3b3; }
+.msg.me img { display: block; max-width: 120px; border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border); }
+.jp { font-family: var(--font-jp); font-size: 17px; line-height: 1.7; white-space: pre-wrap; }
+.kana { font-size: 13px; color: var(--accent2); margin-top: 4px; font-family: var(--font-jp); line-height: 1.6; }
+.ko { font-size: 12px; color: var(--text-dim); margin-top: 5px; line-height: 1.6; }
+.words { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.word { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-family: var(--font-jp); cursor: pointer; }
+.word:hover { border-color: var(--yellow); }
+.word b { color: var(--yellow); font-weight: 700; }
+.word i { color: var(--accent2); font-style: normal; }
+.word s { text-decoration: none; color: var(--text-dim); }
+.speak { margin-top: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--text-dim); cursor: pointer; font-family: inherit; }
+.speak:hover { border-color: var(--accent2); color: var(--text); }
+.speak.playing { border-color: var(--accent2); color: var(--accent2); }
+.raw { font-size: 13px; color: var(--text-dim); white-space: pre-wrap; font-family: var(--font-jp); }
+.cursor::after { content: '▍'; color: var(--accent); animation: blink 1s infinite; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* 입력 */
+.ask-row { display: flex; gap: 8px; align-items: stretch; }
+.ask-input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; color: var(--text); font-family: var(--font-jp); font-size: 15px; outline: none; }
+.ask-input:focus { border-color: var(--accent); }
+.ask-send { padding: 0 16px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), #5a4fd4); color: #fff; font-weight: 700; border: none; cursor: pointer; font-family: inherit; font-size: 14px; }
+.ask-send:disabled { opacity: .5; cursor: not-allowed; }
+.mic-row { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mic-btn { width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--card); transition: all .2s; }
+.mic-btn:hover { border-color: var(--red); }
+.mic-btn.recording { background: #2a0e0e; border-color: var(--red); animation: pulse 1s infinite; }
+.mic-btn:disabled { opacity: .4; cursor: not-allowed; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,107,107,.5); } 50% { box-shadow: 0 0 0 12px rgba(255,107,107,0); } }
+.hint { font-size: 12px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.hint.active { color: var(--red); }
+.sub { font-size: 11px; color: var(--text-muted); line-height: 1.6; }
+.sub b { color: var(--text-dim); }
+.voice-row { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); }
+.voice-sel { flex: 1; min-width: 0; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 12px; }
+.notice { background: #2a1a10; border: 1px solid #6b3a20; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #e8a87c; line-height: 1.6; display: none; }
+details.adv { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 12px; color: var(--text-dim); }
+details.adv summary { cursor: pointer; font-weight: 600; color: var(--text-dim); }
+details.adv .ctrl-row { margin-top: 10px; }
+canvas { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="./index.html">← 목록</a>
+    <div class="header-titles">
+      <div class="ep">👁 LIVE</div>
+      <div class="title">화면 보고 바로 반응하는 일본어</div>
+    </div>
+  </div>
+  <button class="mode-badge" id="key-btn" onclick="openKeySettings()">🔑 API 키</button>
+</header>
+
+<main>
+  <div class="notice" id="notice"></div>
+
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="placeholder" id="placeholder">아래에서 📷 카메라 또는 🖥 화면 공유를 켜면<br>AI가 보이는 것을 일본어로 설명하고, 질문에 바로 대답해요.</div>
+    <div class="live-dot" id="live-dot"><i></i>LIVE</div>
+    <div class="thinking" id="thinking">생각 중…</div>
+    <div class="flash" id="flash"></div>
+  </div>
+
+  <div class="src-row">
+    <button class="src-btn" id="src-cam" onclick="startCamera()"><span class="ic">📷</span>카메라</button>
+    <button class="src-btn" id="src-scr" onclick="startScreen()"><span class="ic">🖥</span>화면 공유</button>
+    <button class="src-btn" id="src-flip" onclick="flipCamera()" disabled><span class="ic">🔄</span>전/후면</button>
+    <button class="src-btn" id="src-stop" onclick="stopSource()" disabled><span class="ic">⏹</span>끄기</button>
+  </div>
+
+  <div class="ctrl-row">
+    <button class="chip" id="auto-chip" onclick="toggleAuto()" disabled>👀 자동 반응: 꺼짐</button>
+    <button class="chip" id="snap-chip" onclick="describeNow()" disabled>📸 지금 설명해줘</button>
+    <button class="chip" id="tts-chip" onclick="toggleTts()">🔊 읽어주기: 켜짐</button>
+  </div>
+
+  <div class="log" id="log"></div>
+
+  <div class="ask-row">
+    <input class="ask-input" id="ask" placeholder="질문 입력 (일본어/한국어 모두 OK) — 예: これは何？" onkeydown="if(event.key==='Enter')askText()">
+    <button class="ask-send" id="ask-btn" onclick="askText()">보내기</button>
+  </div>
+
+  <div class="mic-row">
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()">🎤</button>
+    <div class="hint" id="mic-hint">마이크를 누르고 화면에 대해 물어보세요 (일본어로 말하면 발음 피드백도 받아요)</div>
+    <div class="ctrl-row" style="justify-content:center;">
+      <button class="chip on" id="lang-ja" onclick="setMicLang('ja-JP')">🇯🇵 일본어로 말하기</button>
+      <button class="chip" id="lang-ko" onclick="setMicLang('ko-KR')">🇰🇷 한국어로 말하기</button>
+    </div>
+  </div>
+
+  <details class="adv">
+    <summary>⚙️ 설정 · 사용량</summary>
+    <div class="ctrl-row">
+      <label class="chip">모델 <select id="model-sel" onchange="saveModel()">
+        <option value="claude-opus-5-5">Opus 5.5 (똑똑함)</option>
+        <option value="claude-sonnet-5-5">Sonnet 5.5 (균형)</option>
+        <option value="claude-haiku-5-5">Haiku 5.5 (빠름·저렴)</option>
+      </select></label>
+      <label class="chip">자동 반응 간격 <select id="interval-sel" onchange="saveInterval()">
+        <option value="3">3초</option>
+        <option value="5" selected>5초</option>
+        <option value="8">8초</option>
+        <option value="15">15초</option>
+      </select></label>
+      <label class="chip">민감도 <select id="sens-sel">
+        <option value="6">높음</option>
+        <option value="12" selected>보통</option>
+        <option value="22">낮음</option>
+      </select></label>
+    </div>
+    <div class="voice-row" style="margin-top:10px;">
+      <label for="voice-sel">🎙 음성</label>
+      <select id="voice-sel" class="voice-sel" onchange="onVoiceChange(this)"></select>
+    </div>
+    <div class="sub" style="margin-top:10px;" id="usage">이번 세션: 호출 0회</div>
+    <div class="sub" style="margin-top:6px;">자동 반응은 화면이 <b>충분히 바뀌었을 때만</b> 사진을 보내요 (비용 절약). 이미지는 긴 변 768px로 줄여서 전송합니다. 키는 이 브라우저에만 저장되고 Anthropic 서버로만 전송돼요.</div>
+  </details>
+</main>
+
+<canvas id="cap"></canvas>
+<canvas id="tiny" width="32" height="24"></canvas>
+
+<script>
+// ── API 키 (index.html과 같은 저장소 키를 공유) ──
+const API_KEY_STORE = 'anthropic_api_key';
+function getApiKey() { return localStorage.getItem(API_KEY_STORE) || ''; }
+function updateKeyBtn() { document.getElementById('key-btn').textContent = getApiKey() ? '🔑 키 설정됨' : '🔑 API 키 필요'; }
+function openKeySettings() {
+  const cur = getApiKey();
+  const masked = cur ? cur.slice(0, 10) + '…' + cur.slice(-4) : '(없음)';
+  const input = window.prompt(
+    'Anthropic API 키를 입력하세요 (sk-ant-... 로 시작).\n' +
+    '이 키는 이 브라우저에만 저장되고, 분석할 때 Anthropic 서버로만 전송됩니다.\n' +
+    '비우고 확인하면 삭제됩니다.\n\n현재: ' + masked, cur);
+  if (input === null) return;
+  const v = input.trim();
+  if (v === '') localStorage.removeItem(API_KEY_STORE); else localStorage.setItem(API_KEY_STORE, v);
+  updateKeyBtn();
+}
+
+// ── 설정 ──
+const MODEL_STORE = 'live_model', INTERVAL_STORE = 'live_interval';
+function getModel() { return localStorage.getItem(MODEL_STORE) || 'claude-opus-5-5'; }
+function saveModel() { localStorage.setItem(MODEL_STORE, document.getElementById('model-sel').value); }
+function saveInterval() { localStorage.setItem(INTERVAL_STORE, document.getElementById('interval-sel').value); }
+function getIntervalMs() { return Number(document.getElementById('interval-sel').value) * 1000; }
+function getSens() { return Number(document.getElementById('sens-sel').value); }
+
+// ── 상태 ──
+let stream = null, sourceKind = null, facing = 'environment';
+let autoOn = false, autoTimer = null, lastSentAt = 0, lastTiny = null, busy = false;
+let ttsOn = true, micOn = false, micLang = 'ja-JP', rec = null;
+let history = [];   // Anthropic messages (이미지는 최근 것만 유지)
+let calls = 0, inTok = 0, outTok = 0;
+
+const $ = (id) => document.getElementById(id);
+function notice(msg, isErr) { const n = $('notice'); n.style.display = msg ? 'block' : 'none'; n.textContent = msg || ''; n.style.borderColor = isErr ? 'var(--red)' : '#6b3a20'; }
+function setBusy(b) { busy = b; $('thinking').classList.toggle('on', b); $('ask-btn').disabled = b; $('snap-chip').disabled = b || !stream; }
+
+// ── 영상 소스 ──
+async function startCamera() {
+  stopSource(true);
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
+  } catch (e) {
+    if (facing === 'environment') { // 후면 카메라 없는 PC 등
+      try { facing = 'user'; stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
+      catch (e2) { return notice('카메라를 열 수 없어요: ' + e2.message + ' (HTTPS·권한 확인)', true); }
+    } else return notice('카메라를 열 수 없어요: ' + e.message, true);
+  }
+  attach('camera');
+  $('src-flip').disabled = false;
+}
+async function startScreen() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return notice('이 브라우저는 화면 공유를 지원하지 않아요 (iOS Safari 등). PC Chrome/Edge/Safari에서 열어주세요.', true);
+  stopSource(true);
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false });
+  } catch (e) { return notice('화면 공유가 취소됐거나 실패했어요: ' + e.message, true); }
+  attach('screen');
+  stream.getVideoTracks()[0].addEventListener('ended', () => stopSource());
+}
+function attach(kind) {
+  sourceKind = kind;
+  const v = $('video');
+  v.srcObject = stream;
+  v.classList.add('on');
+  v.play().catch(() => {});
+  $('placeholder').style.display = 'none';
+  $('live-dot').classList.add('on');
+  $('src-cam').classList.toggle('active', kind === 'camera');
+  $('src-scr').classList.toggle('active', kind === 'screen');
+  $('src-stop').disabled = false;
+  $('auto-chip').disabled = false;
+  $('snap-chip').disabled = false;
+  notice('');
+  lastTiny = null;
+  if (!history.length) addSys(kind === 'camera' ? '카메라가 켜졌어요. 📸 버튼을 누르거나 👀 자동 반응을 켜보세요. 물건을 비추고 "これは何？" 라고 물어봐도 좋아요.' : '화면 공유가 켜졌어요. 일본어 영상·자막·기사를 띄워놓고 "이거 무슨 뜻이야?" 라고 물어보세요.');
+}
+function stopSource(silent) {
+  if (autoOn) toggleAuto();
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  sourceKind = null;
+  const v = $('video'); v.srcObject = null; v.classList.remove('on');
+  $('placeholder').style.display = '';
+  $('live-dot').classList.remove('on');
+  $('src-cam').classList.remove('active'); $('src-scr').classList.remove('active');
+  $('src-stop').disabled = true; $('src-flip').disabled = true;
+  $('auto-chip').disabled = true; $('snap-chip').disabled = true;
+  if (!silent) addSys('영상을 껐어요.');
+}
+function flipCamera() { facing = facing === 'environment' ? 'user' : 'environment'; startCamera(); }
+
+// ── 프레임 캡처 ──
+function captureFrame() {
+  const v = $('video');
+  if (!stream || !v.videoWidth) return null;
+  const MAX = 768;
+  const scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
+  const c = $('cap');
+  c.width = Math.round(v.videoWidth * scale); c.height = Math.round(v.videoHeight * scale);
+  const ctx = c.getContext('2d');
+  if (sourceKind === 'camera' && facing === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(v, 0, 0, c.width, c.height);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const dataUrl = c.toDataURL('image/jpeg', 0.72);
+  return { b64: dataUrl.split(',')[1], dataUrl };
+}
+// 32x24 흑백 축소판으로 "화면이 바뀌었나" 판정 (API 호출 전에 로컬에서)
+function tinyFrame() {
+  const v = $('video');
+  if (!stream || !v.videoWidth) return null;
+  const t = $('tiny'); const ctx = t.getContext('2d');
+  ctx.drawImage(v, 0, 0, 32, 24);
+  const d = ctx.getImageData(0, 0, 32, 24).data;
+  const g = new Float32Array(32 * 24);
+  for (let i = 0; i < g.length; i++) g[i] = (d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11);
+  return g;
+}
+function frameDiff(a, b) {
+  if (!a || !b) return 255;
+  let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]);
+  return s / a.length;
+}
+
+// ── 자동 반응 루프 ──
+function toggleAuto() {
+  autoOn = !autoOn;
+  $('auto-chip').textContent = autoOn ? '👀 자동 반응: 켜짐' : '👀 자동 반응: 꺼짐';
+  $('auto-chip').classList.toggle('on', autoOn);
+  if (autoOn) {
+    if (!getApiKey()) { addSys('오른쪽 위 🔑 버튼에서 Anthropic API 키를 먼저 입력해주세요.', true); return toggleAuto(); }
+    lastTiny = null; lastSentAt = 0;
+    autoTimer = setInterval(autoTick, 700);
+  } else { clearInterval(autoTimer); autoTimer = null; }
+}
+function autoTick() {
+  if (!autoOn || !stream || busy || micOn) return;
+  if (window.speechSynthesis && window.speechSynthesis.speaking) return;
+  const now = Date.now();
+  if (now - lastSentAt < getIntervalMs()) return;
+  const t = tinyFrame(); if (!t) return;
+  const diff = frameDiff(lastTiny, t);
+  if (lastTiny && diff < getSens()) return;   // 화면이 거의 그대로면 보내지 않음
+  lastTiny = t; lastSentAt = now;
+  send(null, { auto: true });
+}
+function describeNow() { lastTiny = tinyFrame(); lastSentAt = Date.now(); send(null, { auto: false }); }
+
+// ── 입력 ──
+function askText() {
+  const el = $('ask'); const q = el.value.trim();
+  if (!q || busy) return;
+  el.value = '';
+  send(q, {});
+}
+function setMicLang(l) { micLang = l; $('lang-ja').classList.toggle('on', l === 'ja-JP'); $('lang-ko').classList.toggle('on', l === 'ko-KR'); }
+function toggleMic() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return notice('이 브라우저는 음성 인식을 지원하지 않아요. Chrome/Safari에서 열어주세요. 아래 입력창으로 질문할 수 있어요.', true);
+  if (micOn) { try { rec.stop(); } catch (e) {} return; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  micOn = true;
+  const btn = $('mic-btn'), hint = $('mic-hint');
+  btn.className = 'mic-btn recording'; btn.textContent = '⏹';
+  hint.className = 'hint active'; hint.textContent = '🔴 듣는 중 — 다 말한 뒤 버튼을 다시 누르세요';
+  let finalText = '', interim = '';
+  rec = new SR(); rec.lang = micLang; rec.interimResults = true; rec.continuous = true;
+  rec.onresult = (e) => { finalText = ''; interim = ''; for (const r of e.results) { if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; } hint.textContent = '🔴 ' + (finalText || interim || '…'); };
+  rec.onerror = (e) => { if (e.error !== 'no-speech') notice('음성 인식 오류: ' + e.error, true); };
+  rec.onend = () => {
+    micOn = false;
+    btn.className = 'mic-btn'; btn.textContent = '🎤';
+    hint.className = 'hint'; hint.textContent = '마이크를 누르고 화면에 대해 물어보세요 (일본어로 말하면 발음 피드백도 받아요)';
+    const text = (finalText || interim).trim();
+    if (text) send(text, { spoken: true, lang: micLang }); else hint.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
+  };
+  try { rec.start(); } catch (e) { micOn = false; btn.className = 'mic-btn'; btn.textContent = '🎤'; }
+}
+
+// ── 로그 UI ──
+function addSys(text, isErr) { const d = document.createElement('div'); d.className = 'msg sys' + (isErr ? ' err' : ''); d.textContent = text; $('log').appendChild(d); d.scrollIntoView({ behavior: 'smooth', block: 'end' }); return d; }
+function addMe(text, thumb) {
+  const d = document.createElement('div'); d.className = 'msg me';
+  if (thumb) { const im = document.createElement('img'); im.src = thumb; d.appendChild(im); }
+  const t = document.createElement('div'); t.className = 'jp'; t.textContent = text; d.appendChild(t);
+  $('log').appendChild(d); d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+function addAiStreaming() {
+  const d = document.createElement('div'); d.className = 'msg ai';
+  const r = document.createElement('div'); r.className = 'raw cursor'; r.textContent = '';
+  d.appendChild(r); $('log').appendChild(d); d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return { box: d, raw: r };
+}
+// 응답 형식: JP: / KANA: / KO: / FB: / WORDS: 줄 단위
+function parseReply(text) {
+  const out = { jp: '', kana: '', ko: '', fb: '', words: [] };
+  let cur = null;
+  text.split('\n').forEach((line) => {
+    const m = line.match(/^\s*(JP|KANA|KO|FB|WORDS)\s*[:：]\s*(.*)$/i);
+    if (m) { cur = m[1].toUpperCase(); line = m[2]; }
+    if (!cur) { out.jp += (out.jp ? '\n' : '') + line; return; }
+    if (cur === 'WORDS') {
+      line.split(/[|｜]/).map((s) => s.trim()).filter(Boolean).forEach((w) => {
+        const wm = w.match(/^(.+?)\s*[（(]\s*(.+?)\s*[)）]\s*[=＝]\s*(.+)$/) || w.match(/^(.+?)\s*[=＝]\s*(.+)$/);
+        if (!wm) return;
+        if (wm.length === 4) out.words.push({ jp: wm[1].trim(), kana: wm[2].trim(), ko: wm[3].trim() });
+        else out.words.push({ jp: wm[1].trim(), kana: '', ko: wm[2].trim() });
+      });
+    } else { const k = cur.toLowerCase(); out[k] += (out[k] && line ? '\n' : '') + line; }
+  });
+  return out;
+}
+function renderAi(box, text) {
+  const r = parseReply(text);
+  box.innerHTML = '';
+  const jp = r.jp.trim() || text.trim();
+  const jpEl = document.createElement('div'); jpEl.className = 'jp'; jpEl.textContent = jp; box.appendChild(jpEl);
+  if (r.kana.trim() && r.kana.trim() !== jp) { const k = document.createElement('div'); k.className = 'kana'; k.textContent = r.kana.trim(); box.appendChild(k); }
+  if (r.ko.trim()) { const k = document.createElement('div'); k.className = 'ko'; k.textContent = r.ko.trim(); box.appendChild(k); }
+  if (r.fb.trim()) { const k = document.createElement('div'); k.className = 'ko'; k.style.color = 'var(--green)'; k.textContent = '✎ ' + r.fb.trim(); box.appendChild(k); }
+  if (r.words.length) {
+    const w = document.createElement('div'); w.className = 'words';
+    r.words.forEach((x) => {
+      const s = document.createElement('span'); s.className = 'word';
+      s.innerHTML = `<b>${esc(x.jp)}</b>${x.kana ? ` <i>${esc(x.kana)}</i>` : ''} <s>${esc(x.ko)}</s>`;
+      s.onclick = () => speak(x.jp, s);
+      w.appendChild(s);
+    });
+    box.appendChild(w);
+  }
+  const sp = document.createElement('button'); sp.className = 'speak'; sp.textContent = '🔊 읽기'; sp.onclick = () => speak(jp, sp); box.appendChild(sp);
+  box.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  if (ttsOn && jp) speak(jp, sp);
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// ── Claude 호출 (스트리밍) ──
+const SYSTEM = 'あなたは韓国人の日本語学習者（GENKI1〜N4レベル）のための「目で見て話す」日本語の先生です。'
+  + 'ユーザーのカメラまたは画面のスクリーンショットが送られてきます。見えるものについて、やさしい日本語で短く（1〜3文）話してください。むずかしい単語や敬語はさけます。\n'
+  + '- 画像だけが送られた（質問なし）場合：いま見えているものを説明するか、それについて学習者にかんたんな質問を1つしてください。前に説明したものは、変わっていなければくり返さないで、新しく見えたものや変わった点だけ話してください。本当に何も変わっていなければ JP に「（変化なし）」とだけ書いてください。\n'
+  + '- 質問があった場合：画像を見ながらその質問に答えてください。韓国語で聞かれても、答えは日本語で（KOに韓国語訳をつける）。画面に日本語の文字（字幕・記事・メニューなど）があれば、それを読んで意味を説明してください。\n'
+  + '- 学習者が日本語で話した場合（音声認識テキスト）：FB に短い韓国語フィードバック（よかった点＋直すなら1つ）を書いてください。それ以外は FB を空にします。\n'
+  + '必ず次の形式だけで答えてください（マークダウンなし、各行1回ずつ、この順番）：\n'
+  + 'JP: 日本語の返事（一般的な漢字かな交じり表記、音声合成用）\n'
+  + 'KANA: JPを全部ひらがなに（カタカナ語はそのまま）\n'
+  + 'KO: JPの韓国語訳\n'
+  + 'FB: （学習者の日本語へのフィードバック。なければ空）\n'
+  + 'WORDS: 画像や返事に出てきた役に立つ単語を1〜4個、「単語(よみ)=한국어 뜻」の形で「|」区切り';
+
+async function send(userText, opts) {
+  if (busy) return;
+  if (!getApiKey()) return addSys('오른쪽 위 🔑 버튼에서 Anthropic API 키를 먼저 입력해주세요.', true);
+  const frame = captureFrame();
+  if (!frame && !userText) return;
+  if (frame) { const f = $('flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+  // 사용자 턴 구성
+  const content = [];
+  if (frame) content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: frame.b64 } });
+  let prompt;
+  if (userText) {
+    prompt = (opts.spoken ? '（音声認識・' + (opts.lang === 'ja-JP' ? '日本語で話した' : '韓国語で話した') + '）' : '') + userText;
+    addMe(userText, opts.spoken ? null : (frame ? frame.dataUrl : null));
+  } else {
+    prompt = opts.auto ? '（自動：画面が変わりました。いま見えているものについて話してください）' : '（いま見えているものを説明してください）';
+    if (!opts.auto) addMe('📸 지금 보이는 것 설명해줘', frame ? frame.dataUrl : null);
+  }
+  content.push({ type: 'text', text: prompt });
+
+  // 이전 턴의 이미지는 텍스트로 치환 (최근 1장만 유지) — 비용 절약
+  let kept = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const m = history[i];
+    if (m.role !== 'user' || !Array.isArray(m.content)) continue;
+    if (kept < 1) { if (m.content.some((b) => b.type === 'image')) kept++; continue; }
+    m.content = m.content.map((b) => b.type === 'image' ? { type: 'text', text: '[前の画面]' } : b);
+  }
+  history.push({ role: 'user', content });
+  if (history.length > 16) history = history.slice(-16);
+
+  setBusy(true);
+  const ui = addAiStreaming();
+  let full = '';
+  try {
+    const model = getModel();
+    const body = {
+      model, max_tokens: 700, stream: true,
+      system: SYSTEM,
+      messages: history,
+      output_config: { effort: 'low' }   // 빠른 반응용
+    };
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-api-key': getApiKey(),
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    };
+    if (model === 'claude-opus-5-5' || model === 'claude-sonnet-5-5') {
+      // 안전 분류기 거절 시 서버가 다른 모델로 자동 대체 (Haiku는 미지원)
+      body.fallbacks = 'default';
+      headers['anthropic-beta'] = 'server-side-fallback-2026-07-01';
+    }
+    const res = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers, body: JSON.stringify(body) });
+    if (!res.ok) { const t = await res.text(); throw new Error('api-' + res.status + ': ' + t.slice(0, 300)); }
+
+    const reader = res.body.getReader(); const dec = new TextDecoder();
+    let buf = '', stopReason = null;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n'); buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch (e) { continue; }
+        if (ev.type === 'message_start' && ev.message && ev.message.usage) inTok += ev.message.usage.input_tokens || 0;
+        else if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
+          full += ev.delta.text;
+          const r = parseReply(full);
+          ui.raw.textContent = (r.jp || full).trim();
+        } else if (ev.type === 'message_delta') {
+          if (ev.delta && ev.delta.stop_reason) stopReason = ev.delta.stop_reason;
+          if (ev.usage) outTok += ev.usage.output_tokens || 0;
+        } else if (ev.type === 'error') throw new Error(ev.error && ev.error.message || 'stream error');
+      }
+    }
+    calls++;
+    $('usage').textContent = `이번 세션: 호출 ${calls}회 · 입력 ${inTok.toLocaleString()} · 출력 ${outTok.toLocaleString()} 토큰`;
+    if (stopReason === 'refusal') { ui.box.remove(); addSys('이 화면에 대해서는 답변이 거절됐어요. 다른 장면을 비춰보세요.', true); history.pop(); }
+    else if (!full.trim()) { ui.box.remove(); history.pop(); }
+    else {
+      history.push({ role: 'assistant', content: full });
+      const r = parseReply(full);
+      if (opts.auto && /（?変化なし）?/.test(r.jp)) { ui.box.remove(); history.pop(); history.pop(); }   // 변화 없음 → 로그에 안 남김
+      else renderAi(ui.box, full);
+    }
+  } catch (err) {
+    ui.box.remove(); history.pop();
+    const m = String(err.message);
+    if (m.includes('api-401')) addSys('API 키가 올바르지 않아요. 🔑 버튼에서 다시 입력해주세요.', true);
+    else if (m.includes('api-429')) addSys('요청이 너무 잦아요 (rate limit). 자동 반응 간격을 늘려보세요.', true);
+    else addSys('오류: ' + m, true);
+  }
+  setBusy(false);
+}
+
+// ── TTS ──
+const VOICE_STORE = 'ft_voice_name';   // index.html 프리토킹과 같은 음성 설정 공유
+function getJaVoices() { if (!('speechSynthesis' in window)) return []; return window.speechSynthesis.getVoices().filter((v) => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith('ja')); }
+function voiceScore(v) {
+  const n = (v.name || '').toLowerCase(); let sc = 0;
+  if (n.includes('natural') || n.includes('neural')) sc += 50;
+  if (n.includes('online')) sc += 30;
+  if (n.includes('premium') || n.includes('enhanced') || n.includes('拡張') || n.includes('プレミアム')) sc += 25;
+  if (n.includes('google')) sc += 20;
+  if (n.includes('kyoko') || n.includes('o-ren') || n.includes('otoya') || n.includes('hattori')) sc += 15;
+  if (n.includes('nanami') || n.includes('ayumi') || n.includes('keita') || n.includes('ichiro') || n.includes('haruka')) sc += 10;
+  if (n.includes('compact') || n.includes('eloquence')) sc -= 20;
+  return sc;
+}
+function pickVoice() { const vs = getJaVoices(); if (!vs.length) return null; const saved = localStorage.getItem(VOICE_STORE); return (saved && vs.find((v) => v.name === saved)) || vs.slice().sort((a, b) => voiceScore(b) - voiceScore(a))[0]; }
+function renderVoicePicker() {
+  const sel = $('voice-sel'); const vs = getJaVoices().slice().sort((a, b) => voiceScore(b) - voiceScore(a)); const cur = pickVoice();
+  sel.innerHTML = '';
+  if (!vs.length) { sel.innerHTML = '<option>일본어 음성 없음</option>'; return; }
+  vs.forEach((v) => { const o = document.createElement('option'); o.value = v.name; o.textContent = v.name + (v.localService ? '' : ' ☁'); if (cur && v.name === cur.name) o.selected = true; sel.appendChild(o); });
+}
+function onVoiceChange(sel) { localStorage.setItem(VOICE_STORE, sel.value); speak('こんにちは。これは何ですか。'); }
+function speak(text, btn) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  document.querySelectorAll('.speak.playing,.word.playing').forEach((b) => b.classList.remove('playing'));
+  const u = new SpeechSynthesisUtterance(text.replace(/（.*?）/g, ''));
+  u.lang = 'ja-JP'; const v = pickVoice(); if (v) u.voice = v;
+  u.rate = v && voiceScore(v) >= 30 ? 1.0 : 0.92;
+  if (btn) { btn.classList.add('playing'); u.onend = () => btn.classList.remove('playing'); u.onerror = () => btn.classList.remove('playing'); }
+  window.speechSynthesis.speak(u);
+}
+function toggleTts() { ttsOn = !ttsOn; $('tts-chip').textContent = ttsOn ? '🔊 읽어주기: 켜짐' : '🔈 읽어주기: 꺼짐'; if (!ttsOn && window.speechSynthesis) window.speechSynthesis.cancel(); }
+
+// ── 초기화 ──
+(function init() {
+  updateKeyBtn();
+  $('model-sel').value = getModel();
+  const iv = localStorage.getItem(INTERVAL_STORE); if (iv) $('interval-sel').value = iv;
+  if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = renderVoicePicker; renderVoicePicker(); }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) notice('이 브라우저는 카메라 접근을 지원하지 않아요. HTTPS 주소에서 Chrome/Safari로 열어주세요.', true);
+  if (!(window.SpeechRecognition || window.webkitSpeechRecognition)) $('mic-hint').textContent = '이 브라우저는 음성 인식이 안 돼요. 위 입력창으로 질문해주세요.';
+  document.addEventListener('visibilitychange', () => { if (document.hidden && autoOn) toggleAuto(); });
+})();
+</script>
+</body>
+</html>
