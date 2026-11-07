@@ -95,7 +95,7 @@ canvas { display:none; }
 
   <div class="stage">
     <video id="video" playsinline muted autoplay></video>
-    <div class="placeholder" id="placeholder">TV로 경기를 틀어놓고 📷 카메라로 화면을 비추세요.<br>(PC라면 🖥 화면 공유로 다시보기 탭을 공유해도 돼요)<br>AI가 매초 장면을 보면서 일본어로 실황 중계를 해요.</div>
+    <div class="placeholder" id="placeholder">TV로 경기를 틀어놓고 📷 카메라로 화면을 비추세요.<br>TV가 화면에 <b>꽉 차게, 가까이, 흔들리지 않게(거치)</b> 할수록 선수 동작을 잘 봐요.<br>(PC라면 🖥 화면 공유로 다시보기 탭을 공유해도 돼요)</div>
     <div class="badge" id="st-live"><i></i>LIVE</div>
     <div class="badge" id="st-ai">🎙 중계 대기</div>
     <div class="caption" id="caption"></div>
@@ -111,18 +111,36 @@ canvas { display:none; }
   <div class="field">
     <label>경기 정보 (종목·팀·선수 등. 중계 정확도가 확 올라가요)</label>
     <div class="presets">
-      <button class="chip" onclick="preset('インターハイ バスケットボール男子決勝。チームは白のユニフォームと青のユニフォーム。')">🏀 농구</button>
-      <button class="chip" onclick="preset('インターハイ バレーボール女子。')">🏐 배구</button>
-      <button class="chip" onclick="preset('インターハイ サッカー男子。')">⚽ 축구</button>
-      <button class="chip" onclick="preset('インターハイ 陸上競技。')">🏃 육상</button>
-      <button class="chip" onclick="preset('インターハイ 卓球。')">🏓 탁구</button>
-      <button class="chip" onclick="preset('インターハイ 柔道。')">🥋 유도</button>
-      <button class="chip" onclick="preset('インターハイ 水泳。')">🏊 수영</button>
+      <button class="chip" onclick="preset('バレーボール')">🏐 배구</button>
+      <button class="chip" onclick="preset('バスケットボール')">🏀 농구</button>
+      <button class="chip" onclick="preset('サッカー')">⚽ 축구</button>
+      <button class="chip" onclick="preset('卓球')">🏓 탁구</button>
+      <button class="chip" onclick="preset('バドミントン')">🏸 배드민턴</button>
+      <button class="chip" onclick="preset('テニス')">🎾 테니스</button>
+      <button class="chip" onclick="preset('陸上競技')">🏃 육상</button>
+      <button class="chip" onclick="preset('柔道')">🥋 유도</button>
+      <button class="chip" onclick="preset('水泳')">🏊 수영</button>
     </div>
-    <textarea id="ctx" placeholder="예: インターハイ バスケ男子決勝、福岡第一（白）vs 開志国際（青）。第4Q。"></textarea>
+    <textarea id="ctx" placeholder="예: 女子決勝 東九州龍谷（赤）vs 就実（青）。背番号1はセッター。第3セット。"></textarea>
   </div>
 
   <button class="big-btn" id="go-btn" onclick="toggleLive()" disabled>🎙 중계 시작</button>
+
+  <div class="field" id="focus-box">
+    <label>📌 중계 포커스 (중계 중에 눌러도 바로 반영)</label>
+    <div class="presets">
+      <button class="chip" onclick="setFocus('プレーごとに、誰が何をしてどうなったかを具体的に。サーブ・レシーブ・トス・スパイク・ブロックの質（短い・長い・乱れた・鋭い）まで言う。')">🎯 플레이 하나하나 자세히</button>
+      <button class="chip" onclick="setFocus('サーブとサーブレシーブの質に注目して実況して。サーブが浮いた・短い・ネットにかかった、レシーブが乱れた・セッターに返った、など。')">🏐 서브·리시브 품질</button>
+      <button class="chip" onclick="setFocus('セッターのトス回しと、どのアタッカーを使ったかに注目して。')">🙌 세터·공격 선택</button>
+      <button class="chip" onclick="setFocus('得点が動いたときは、どちらが何で点を取ったか（スパイク・ブロック・サーブ・相手ミス）を必ず言う。')">🔢 득점 원인</button>
+      <button class="chip" onclick="setFocus('いまの流れを短く解説して。どちらが押していて、理由は何か。')">📝 흐름 해설</button>
+      <button class="chip" onclick="setFocus('もっと感情を込めて、テンポを速く。')">🔥 더 흥분</button>
+    </div>
+    <div class="mic-row" style="margin-top:4px;">
+      <input class="ask" id="focus-input" placeholder="직접 지시: 예) 青の7番を追って / 選手名で呼んで：1番＝佐藤" onkeydown="if(event.key==='Enter')focusUI()">
+      <button class="send" onclick="focusUI()">지시</button>
+    </div>
+  </div>
 
   <div class="log" id="log"></div>
 
@@ -191,7 +209,7 @@ function notice(msg, isErr) { const n = $('notice'); n.style.display = msg ? 'bl
 function addLine(text, cls) { const d = document.createElement('div'); d.className = 'line' + (cls ? ' ' + cls : ''); d.textContent = text; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; return d; }
 function setAiBadge(text, talking) { const b = $('st-ai'); b.textContent = text; b.classList.toggle('talking', !!talking); }
 function setLevel(l) { level = l; $('lv-easy').classList.toggle('on', l === 'easy'); $('lv-real').classList.toggle('on', l === 'real'); if (live) sendText('（設定変更：' + (l === 'easy' ? 'これからは やさしい日本語で' : 'これからは 本物の実況アナウンサーのように') + '）'); }
-function preset(t) { const el = $('ctx'); el.value = (el.value.trim() ? el.value.trim() + '\n' : '') + t; el.focus(); }
+function preset(t) { const el = $('ctx'); const cur = el.value.trim(); if (!cur.includes(t)) el.value = 'インターハイ ' + t + '。' + (cur ? '\n' + cur : '\n'); el.focus(); saveSetting('jk_ctx', el.value); }
 
 // ── 영상 소스 ──
 async function startCamera() {
@@ -228,33 +246,55 @@ function flipCamera() { facing = facing === 'environment' ? 'user' : 'environmen
 
 function captureFrame() {
   const v = $('video'); if (!stream || !v.videoWidth) return null;
-  const MAX = 768, scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
+  const MAX = 1024, scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
   const c = $('cap'); c.width = Math.round(v.videoWidth * scale); c.height = Math.round(v.videoHeight * scale);
   const ctx = c.getContext('2d');
   if (sourceKind === 'camera' && facing === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
   ctx.drawImage(v, 0, 0, c.width, c.height); ctx.setTransform(1, 0, 0, 1, 0, 0);
-  return c.toDataURL('image/jpeg', 0.7).split(',')[1];
+  return c.toDataURL('image/jpeg', 0.75).split(',')[1];
 }
 
 // ── 시스템 프롬프트 ──
+const SPORT_GUIDE = {
+  'バレーボール': 'ポジション：セッター、アウトサイド（レフト）、ミドル（センター）、オポジット、リベロ。プレー：サーブ（ジャンプサーブ／フローター）、サーブレシーブ（レセプション）、トス、スパイク（クロス／ストレート／フェイント／プッシュ）、ブロック（ワンタッチ／シャットアウト）、ディグ、二段トス、ラリー。質の言い方：サーブが浮いた・短い・強い・ネットにかかった／レシーブが乱れた・セッターにぴたり／トスが低い・ネットから離れた／スパイクが決まった・ブロックに当たった・アウト。',
+  'バスケットボール': 'ポジション：PG、SG、SF、PF、C。プレー：ドライブ、ピック＆ロール、スリーポイント、ミドルシュート、レイアップ、ダンク、リバウンド（オフェンス／ディフェンス）、スティール、ブロック、ターンオーバー、ファウル、フリースロー、速攻、ゾーンディフェンス。質の言い方：シュートが短い・長い・リングに嫌われた／パスが通った・カットされた／ディフェンスが遅れた。',
+  'サッカー': 'ポジション：GK、CB、SB、ボランチ、サイドハーフ、トップ下、FW。プレー：パス、ドリブル、クロス、スルーパス、シュート、セーブ、クリア、タックル、オフサイド、コーナーキック、フリーキック、プレス、カウンター。質の言い方：シュートが枠を外れた・枠内・ポスト／クロスが合わなかった／プレスがはまった。',
+  '卓球': 'プレー：サーブ（下回転／横回転／ロング）、レシーブ（ツッツキ／チキータ／フリック）、ドライブ、スマッシュ、ブロック、カウンター、ラリー、台上プレー。質の言い方：サーブミス、レシーブが浮いた、ドライブが鋭い、ネットイン、エッジ。',
+  'バドミントン': 'プレー：サーブ（ショート／ロング）、クリア、ドロップ、スマッシュ、ヘアピン、ロブ、プッシュ、ドライブ、ラリー。質の言い方：スマッシュが決まった・ネットにかかった、ヘアピンが浮いた、クリアが短い、ラインぎりぎり。',
+  'テニス': 'プレー：サーブ（ファースト／セカンド）、リターン、フォア、バック、ボレー、スマッシュ、ドロップショット、ロブ、ラリー。質の言い方：エース、ダブルフォルト、ネット、アウト、ウィナー、アンフォーストエラー、ブレークポイント。',
+  '陸上競技': '種目に応じて：スタート反応、加速、中間走、ラストスパート、バトンパス、踏み切り、助走、クリアランス、ペース配分、ラップ。順位・レーン・ゼッケン番号で選手を区別する。',
+  '柔道': '技：背負い投げ、内股、大外刈り、払い腰、小内刈り、寝技（固め技・絞め技・関節技）。判定：一本、技あり、指導、組み手争い、ゴールデンスコア。白と青の柔道着で区別する。',
+  '水泳': '種目：自由形、背泳ぎ、平泳ぎ、バタフライ、個人メドレー、リレー。スタート反応、ターン、ストローク数、ラップ、コース番号で選手を区別する。'
+};
+function sportFromCtx(ctxText) { for (const k of Object.keys(SPORT_GUIDE)) if (ctxText.includes(k)) return k; return null; }
 function systemPrompt() {
   const ctxText = $('ctx').value.trim();
+  const sport = sportFromCtx(ctxText);
   const style = level === 'easy'
-    ? '相手は日本語を勉強中の韓国人（GENKI1〜N4レベル）です。やさしい日本語・短い文で、でも実況らしいテンポと熱量で話してください。むずかしい専門用語は使わないか、使ったらすぐ言いかえてください。'
-    : '本物のスポーツ実況アナウンサーのように、テンポよく、臨場感たっぷりに話してください。選手の動き、点数、状況を的確に伝えてください。';
+    ? '相手は日本語を勉強中の韓国人（GENKI1〜N4レベル）なので、文はやさしく短く。ただし「やさしい」は「内容がうすい」という意味ではありません。専門用語はそのまま使ってよいので（それが学習になる）、動きは具体的に言ってください。'
+    : '本物のテレビのスポーツ実況アナウンサーのように、テンポよく、臨場感たっぷりに。';
   return 'あなたは日本の高校スポーツ大会「インターハイ」のテレビ中継の実況アナウンサーです。'
-    + 'ユーザーのカメラ（または画面）から、音声のない試合映像が1秒に1枚の静止画として送られてきます。その映像を見て、日本語で生中継の実況をしてください。\n'
+    + 'ユーザーのカメラ（または画面）から、音声のない試合映像が1秒に1枚の静止画として送られてきます。連続した画像を「動き」として読み取り、日本語で生中継の実況をしてください。\n'
     + style + '\n'
-    + '【ルール】\n'
-    + '- 必ず日本語だけで話す。英語や韓国語は使わない。\n'
-    + '- 一度に話すのは1〜2文（約3〜6秒）。だらだら説明しない。試合の動きがあるときは短く速く、止まっているときは状況・選手・展開のひとこと解説。\n'
-    + '- 画面に見えるもの（スコア、時間、ユニフォームの色、選手の動き）を根拠にする。見えないことは断定しない。わからない選手名は「白のチーム」「背番号7」のように言う。\n'
-    + '- 「（続けて）」というテキストは、ユーザーからの発言ではなく「最新の映像で実況を続けて」という合図です。合図に返事をせず、そのまま実況を続けてください。本当に何も変わっていないときは、ごく短いつなぎ（「さあ、どうなるか」など）か、何も言わなくてかまいません。\n'
-    + '- 直前に言ったことをくり返さない。\n'
-    + '- ユーザーが声やテキストで質問したら、実況を一度止めて短く答え、また実況に戻る。\n'
+    + '【いちばん大事なこと：具体的に】\n'
+    + '毎回のコメントは、できるだけ「誰が（ユニフォームの色＋背番号、またはポジション）→ 何をして（具体的なプレー名）→ どうなった（結果）＋ 質の評価」の形にしてください。\n'
+    + '例（良い）：「青の7番、ジャンプサーブ！　…これは浮いた、レシーブは乱れてセッターに返らない。二段トスからレフトへ、ブロックに当たってアウト！」\n'
+    + '例（悪い）：「青チーム、勢いがいいですね」「いい流れです」「点数は25対20です」← 点数だけ、雰囲気だけのコメントは禁止。\n'
+    + '- 「勢いがある」「流れがいい」「頑張っています」「盛り上がっています」のようなぼんやりした言葉は使わない。\n'
+    + '- スコアは、点が動いたときだけ「どちらが何で取ったか」と一緒に言う。スコアボードを読み上げるだけの実況はしない。\n'
+    + '- 画像から選手の体勢・ボールの位置・コート上の位置を読み取り、いま何のプレーの最中かを判断する。はっきり見えないときは「〜のように見えます」と言ってよいが、黙って一般論に逃げない。\n'
+    + '- 選手名がわからないときは「白の10番」「青のセッター」のように呼ぶ。ユーザーが名前を教えたらその名前を使う。\n'
+    + '- 動きがあるときは1〜3文でテンポよく。プレーが止まっている（タイムアウト、サーブ前、リプレイ）ときは、直前のプレーの振り返りや、次に注目すべき点を一言。\n'
+    + '- 直前に言った内容はくり返さない。\n'
+    + '【合図】「（続けて）」というテキストはユーザーの発言ではなく「最新の数秒の映像について実況を続けて」という合図です。合図に返事をせず、そのまま実況してください。\n'
+    + '【質問・指示】ユーザーが声やテキストで質問・指示したら、実況を止めて短く答え、指示（例：この選手を追って）はそれ以降ずっと守って、また実況に戻る。\n'
+    + '【言語】日本語だけで話す。英語・韓国語は使わない。\n'
+    + (sport ? '【' + sport + 'の用語と見るポイント】\n' + SPORT_GUIDE[sport] + '\n' : '')
     + (ctxText ? '【試合情報】\n' + ctxText + '\n' : '')
-    + '最初の合図が来たら、短く開始の挨拶をして実況を始めてください。';
+    + '最初の合図が来たら、ごく短く開始の挨拶をして、すぐ目の前のプレーの実況に入ってください。';
 }
+function setFocus(t) { if (!live) return addLine('먼저 중계를 시작해주세요.', 'sys'); addLine('📌 ' + t, 'me'); sendText('（指示：' + t + '）'); }
+function focusUI() { const el = $('focus-input'); const t = el.value.trim(); if (!t) return; el.value = ''; setFocus(t); }
 
 // 컨텍스트 압축 크기: Live API는 매 턴 컨텍스트 전체를 다시 과금하므로, 작을수록 싸고 기억은 짧아짐
 function ctxSize() {
@@ -286,7 +326,7 @@ function connect() {
       generationConfig: {
         responseModalities: ['AUDIO'],
         speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: getSetting('jk_voice', 'Fenrir') } } },
-        mediaResolution: 'MEDIA_RESOLUTION_MEDIUM'
+        mediaResolution: 'MEDIA_RESOLUTION_HIGH'
       },
       systemInstruction: { parts: [{ text: systemPrompt() }] },
       realtimeInputConfig: { turnCoverage: 'TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO' },
@@ -458,6 +498,7 @@ function updateUsage() {
   const vs = $('voice-sel'); VOICES.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; vs.appendChild(o); }); vs.value = getSetting('jk_voice', 'Fenrir');
   $('fps-sel').value = getSetting('jk_fps', '1000'); $('ctxsize-sel').value = getSetting('jk_ctxsize', 'normal'); $('ko-sel').value = getSetting('jk_ko', '1'); $('gap-sel').value = getSetting('jk_gap', '1500');
   $('ctx').value = getSetting('jk_ctx', ''); $('ctx').addEventListener('input', () => saveSetting('jk_ctx', $('ctx').value));
+  $('ctx').addEventListener('change', () => { if (live) sendText('（試合情報の更新：' + $('ctx').value.trim() + '）'); });
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) notice('이 브라우저는 카메라 접근을 지원하지 않아요. HTTPS 주소에서 Chrome/Safari로 열어주세요.', true);
   document.addEventListener('visibilitychange', () => { if (document.hidden && live) { manualStop = true; stopLive(); addLine('화면이 꺼져서 중계를 멈췄어요. 다시 시작 버튼을 눌러주세요.', 'sys'); } });
 })();
