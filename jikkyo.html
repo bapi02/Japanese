@@ -142,7 +142,7 @@ canvas { display:none; }
     <div class="field"><label>프레임 전송 간격</label><select id="fps-sel" onchange="saveSetting('jk_fps', this.value)">
       <option value="1000">1초 (1fps · API 최대)</option><option value="2000">2초</option><option value="3000">3초 (비용 절약)</option></select></div>
     <div class="field"><label>중계 사이 쉬는 시간</label><select id="gap-sel" onchange="saveSetting('jk_gap', this.value)">
-      <option value="500">거의 없음 (쉴 새 없이)</option><option value="1500">1.5초</option><option value="3000">3초 (기본)</option><option value="6000">6초 (차분하게)</option></select></div>
+      <option value="500">거의 없음 (기본)</option><option value="1500">1.5초</option><option value="3000">3초</option><option value="6000">6초 (차분하게)</option></select></div>
     <div class="field"><label>기억 범위 (컨텍스트 · 유료일 때 비용 좌우)</label><select id="ctxsize-sel" onchange="saveSetting('jk_ctxsize', this.value)">
       <option value="small">작게 — 직전 1~2분만 (가장 저렴)</option><option value="normal" selected>보통 — 몇 분 (기본)</option><option value="large">크게 — 흐름 잘 기억 (비쌈)</option></select></div>
     <div class="field"><label>한국어 자막</label><select id="ko-sel" onchange="saveSetting('jk_ko', this.value)"><option value="1">켜기 (중계가 조금 느려짐)</option><option value="0">끄기</option></select></div>
@@ -260,15 +260,17 @@ function systemPrompt() {
   return 'あなたは日本の高校スポーツ大会「インターハイ」のテレビ中継の実況アナウンサーです。'
     + 'ユーザーのカメラ（または画面）から、音声のない試合映像が1秒に1枚の静止画として送られてきます。あなたの仕事は「いま画像に写っていること」を日本語で実況することです。\n'
     + style + '\n'
+    + '【映像の見方：合図ごとに「前回の合図からいままで」の画像を全部見る】\n'
+    + '- 画像は1秒に1枚、途切れずに届いています。合図が来たら、最新の1枚だけでなく、前回あなたが話してから届いた画像を全部、時間順に見てください。ラリーはその数枚の中に写っています。最新の1枚はたいてい「ラリーが終わった後のサーブ前」なので、それだけ見ると「静止しています」になってしまいます。それは実況ではありません。\n'
+    + '- 言うべきことは「その数秒間に何が起きたか」。例：「鎮西のサーブ、清風のレシーブが崩れた、返球を鎮西がそのまま打ち込んで得点、18対24」。\n'
     + '【絶対のルール：見えたことだけを言う】\n'
-    + '- 実況は「観察の報告」です。画像で確認できたことだけを言ってください。確認できていないプレーや結果を、それらしく作って話すのは禁止です。\n'
-    + '- 予測・先読みは禁止。「〜するでしょう」「〜しそうです」「〜に違いない」は使わない。まだ起きていないことは言わない。\n'
-    + '- 結果（決まった／アウト／ブロックされた／得点）は、画像でその結果が見えたとき、またはスコアが動いたのを確認したときだけ言う。見えなければ「結果は…」と待つか、次の画像で言う。\n'
-    + '- はっきり見えないときは「〜のように見えます」「〜でしょうか」と言う。見えないものを見えたことにしない。等番号や選手が読み取れなければ「白の選手」「後ろの選手」でよい。\n'
-    + '- 1枚の画像から長いストーリーを作らない。1枚につき言えることは本来1〜2つ（誰がどこで何の体勢か、ボールがどこにあるか、スコアがどうか）です。\n'
-    + '- 競技の「典型的な流れ」を知識で埋めて語るのは禁止。たとえばバレーボールで、画像にサーブしか写っていないのに「レシーブ、トス、スパイク、ブロック」と続けて語ってはいけない。サーブが写っていればサーブだけ。次の画像でスコアが動いていて、その間のプレーが写っていなければ「サービスエースか、レシーブミスのようです」と、見えなかったことを見えなかったとして言う。\n'
-    + '- 自分が今言おうとしている文について、「これは画像のどこに写っているか？」を毎回確認する。写っていなければ言わない。\n'
-    + '- 何も新しいことが見えないときは、無理に話さない。短い一言（「サーブ前、間が空きます」など）か、沈黙でよい。しゃべり続けることより、間違わないことのほうが大事です。\n'
+    + '- 画像で確認できたことだけを言う。確認できていないプレーや結果を、それらしく作って話すのは禁止。\n'
+    + '- 競技の「典型的な流れ」を知識で埋めるのも禁止。サーブの次の画像でスコアが動いていて、間のプレーが写っていなければ「サービスエースか、レシーブミスのようです」と、見えなかったことは見えなかったとして言う。\n'
+    + '- 予測・先読みは禁止（「〜するでしょう」「〜しそう」）。結果（決まった／アウト／得点）は、画像でその結果が見えたか、スコアが動いたのを確認したときだけ。\n'
+    + '- はっきり見えないときは「〜のように見えます」。番号が読めなければ「鎮西の後衛」「清風のレフト」のようにポジションで。\n'
+    + '【言ってはいけない定型文】\n'
+    + '- 「スコアは変わらず◯対◯」「選手たちはコート上で静止しています」「次のプレーの準備をしています」「サーブの構えに入ります」のような、何も起きていないことの報告はしない。何も起きていなければ、何も言わない（沈黙でよい）。\n'
+    + '- スコアは、動いた瞬間に「どちらに1点、何対何」で一度だけ言う。毎回読み上げない。\n'
     + '【チーム名】\n'
     + '- チームは「黄色のチーム」「青のチーム」ではなく、必ず学校名で呼ぶ。学校名はスコアボード（画面のスコア表示）に書いてあるので、まずそれを読み取る。たとえばスコア表示に「東九州龍谷 18 - 15 就実」とあれば、「東九州龍谷」「就実」と呼ぶ。\n'
     + '- 最初の合図が来たら、まずスコアボードから両校の名前と、それぞれのユニフォームの色を確認して一度言う（例：「東九州龍谷が赤、就実が青ですね」）。以降はその対応をずっと使う。\n'
@@ -277,8 +279,8 @@ function systemPrompt() {
     + '- 「誰が（学校名＋番号・ポジション）→ 何をしている（見えている動作）→ 見えた結果」の順。\n'
     + '- 例：「就実の後衛、サーブの構え。…打った、ボールは東九州龍谷コート左へ。レシーブは…上がったように見えます。」「スコアが動きました、東九州龍谷に1点、18対15。」\n'
     + '- 「勢いがいい」「流れがいい」のような雰囲気だけの言葉は使わない。スコアは、変わったときに言う。\n'
-    + '- 動きがあるときは1〜2文で短く。止まっているときは一言。直前に言ったことはくり返さない。\n'
-    + '【合図】「（続けて）」というテキストはユーザーの発言ではなく「最新の画像に写っていることを報告して」という合図です。合図に返事をせず、写っていることだけを話してください。\n'
+    + '- 1回の合図につき、基本は1文、長くても2文。短く言ってすぐ次の画像に備える。直前に言ったことはくり返さない。\n'
+    + '【合図】「（続けて）」というテキストはユーザーの発言ではなく「前回話してから届いた画像を全部見て、その間に起きたことを実況して」という合図です。合図に返事をしない。\n'
     + '【質問・指示】ユーザーが声やテキストで質問・指示したら、実況を止めて短く答え、指示はそれ以降ずっと守って、また実況に戻る。\n'
     + '【言語】日本語だけで話す。英語・韓国語は使わない。\n'
     + (sport ? '【' + sport + 'の用語と見るポイント】\n' + SPORT_GUIDE[sport] + '\n' : '')
@@ -400,10 +402,10 @@ function cueTick() {
   if (generating && now - cueSentAt < 12000) return;          // 말하는 중 (12초 넘게 응답이 없으면 멈춘 걸로 봄)
   const audioLeft = audioCtx ? Math.max(0, playHead - audioCtx.currentTime) : 0;
   if (audioLeft > 0.6) return;                                 // 재생이 거의 끝날 때까지 기다림
-  const gap = Number(getSetting('jk_gap', '3000'));
-  if (now - lastCueAt < 2500 || now - lastTurnEndAt < gap) return;
+  const gap = Number(getSetting('jk_gap', '500'));
+  if (now - lastCueAt < 1500 || now - lastTurnEndAt < gap) return;
   lastCueAt = now; cueSentAt = now; generating = true;
-  sendText('（続けて：いまの画像に写っていることだけ。写っていないプレーは言わない）');
+  sendText('（続けて：前回話してから届いた画像を全部見て、その間に起きたプレーを1文で。写っていないことは言わない。何も起きていなければ沈黙）');
 }
 function sendText(t) { if (ws && ws.readyState === 1 && setupDone) ws.send(JSON.stringify({ realtimeInput: { text: t } })); }
 function sendTextUI() {
@@ -486,7 +488,7 @@ function updateUsage() {
   updateKeyBtn();
   const ms = $('model-sel'); MODELS.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; ms.appendChild(o); }); ms.value = getSetting('jk_model', MODELS[0][0]);
   const vs = $('voice-sel'); VOICES.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; vs.appendChild(o); }); vs.value = getSetting('jk_voice', 'Fenrir');
-  $('fps-sel').value = getSetting('jk_fps', '1000'); $('ctxsize-sel').value = getSetting('jk_ctxsize', 'normal'); $('ko-sel').value = getSetting('jk_ko', '1'); $('gap-sel').value = getSetting('jk_gap', '3000');
+  $('fps-sel').value = getSetting('jk_fps', '1000'); $('ctxsize-sel').value = getSetting('jk_ctxsize', 'normal'); $('ko-sel').value = getSetting('jk_ko', '1'); $('gap-sel').value = getSetting('jk_gap', '500');
   $('ctx').value = getSetting('jk_ctx', ''); $('ctx').addEventListener('input', () => saveSetting('jk_ctx', $('ctx').value));
   $('ctx').addEventListener('change', () => { if (live) sendText('（試合情報の更新：' + $('ctx').value.trim() + '）'); });
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) notice('이 브라우저는 카메라 접근을 지원하지 않아요. HTTPS 주소에서 Chrome/Safari로 열어주세요.', true);
