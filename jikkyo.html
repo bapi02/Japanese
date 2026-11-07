@@ -141,8 +141,11 @@ canvas { display:none; }
       <option value="1000">1초 (1fps · API 최대)</option><option value="2000">2초</option><option value="3000">3초 (비용 절약)</option></select></div>
     <div class="field"><label>중계 사이 쉬는 시간</label><select id="gap-sel" onchange="saveSetting('jk_gap', this.value)">
       <option value="500">거의 없음 (쉴 새 없이)</option><option value="1500">1.5초 (기본)</option><option value="3000">3초</option><option value="6000">6초 (차분하게)</option></select></div>
+    <div class="field"><label>기억 범위 (컨텍스트 · 유료일 때 비용 좌우)</label><select id="ctxsize-sel" onchange="saveSetting('jk_ctxsize', this.value)">
+      <option value="small">작게 — 직전 1~2분만 (가장 저렴)</option><option value="normal" selected>보통 — 몇 분 (기본)</option><option value="large">크게 — 흐름 잘 기억 (비쌈)</option></select></div>
     <div class="field"><label>한국어 자막</label><select id="ko-sel" onchange="saveSetting('jk_ko', this.value)"><option value="1">켜기 (중계가 조금 느려짐)</option><option value="0">끄기</option></select></div>
     <div class="sub" id="usage">연결 안 됨</div>
+    <div class="sub">💰 <b>비용</b>: 결제를 안 건 무료 티어 키면 0원 (데이터가 Google 학습에 쓰임). 유료 키는 매 턴마다 기억 범위만큼 다시 과금되니 "작게"로 두면 시간당 몇 달러, "크게"면 수십 달러까지 나올 수 있어요.</div>
     <div class="sub">Gemini Live API에 웹소켓으로 직접 연결해요. 키는 이 브라우저에만 저장되고 Google 서버로만 전송돼요. 세션은 길이 제한이 있어서 끊기면 자동으로 다시 연결해요.</div>
   </details>
 </main>
@@ -253,6 +256,14 @@ function systemPrompt() {
     + '最初の合図が来たら、短く開始の挨拶をして実況を始めてください。';
 }
 
+// 컨텍스트 압축 크기: Live API는 매 턴 컨텍스트 전체를 다시 과금하므로, 작을수록 싸고 기억은 짧아짐
+function ctxSize() {
+  const v = getSetting('jk_ctxsize', 'normal');
+  if (v === 'small') return { slidingWindow: { targetTokens: 3000 }, triggerTokens: 7000 };
+  if (v === 'large') return { slidingWindow: { targetTokens: 24000 }, triggerTokens: 56000 };
+  return { slidingWindow: { targetTokens: 8000 }, triggerTokens: 18000 };
+}
+
 // ── Live 세션 ──
 function toggleLive() { if (live) { manualStop = true; stopLive(); addLine('중계를 멈췄어요.', 'sys'); } else startLive(); }
 function startLive() {
@@ -281,7 +292,7 @@ function connect() {
       realtimeInputConfig: { turnCoverage: 'TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO' },
       outputAudioTranscription: {},
       inputAudioTranscription: {},
-      contextWindowCompression: { slidingWindow: { targetTokens: 12000 }, triggerTokens: 28000 },
+      contextWindowCompression: ctxSize(),
       sessionResumption: resumeHandle ? { handle: resumeHandle } : {}
     };
     ws.send(JSON.stringify({ setup }));
@@ -445,7 +456,7 @@ function updateUsage() {
   updateKeyBtn();
   const ms = $('model-sel'); MODELS.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; ms.appendChild(o); }); ms.value = getSetting('jk_model', MODELS[0][0]);
   const vs = $('voice-sel'); VOICES.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; vs.appendChild(o); }); vs.value = getSetting('jk_voice', 'Fenrir');
-  $('fps-sel').value = getSetting('jk_fps', '1000'); $('ko-sel').value = getSetting('jk_ko', '1'); $('gap-sel').value = getSetting('jk_gap', '1500');
+  $('fps-sel').value = getSetting('jk_fps', '1000'); $('ctxsize-sel').value = getSetting('jk_ctxsize', 'normal'); $('ko-sel').value = getSetting('jk_ko', '1'); $('gap-sel').value = getSetting('jk_gap', '1500');
   $('ctx').value = getSetting('jk_ctx', ''); $('ctx').addEventListener('input', () => saveSetting('jk_ctx', $('ctx').value));
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) notice('이 브라우저는 카메라 접근을 지원하지 않아요. HTTPS 주소에서 Chrome/Safari로 열어주세요.', true);
   document.addEventListener('visibilitychange', () => { if (document.hidden && live) { manualStop = true; stopLive(); addLine('화면이 꺼져서 중계를 멈췄어요. 다시 시작 버튼을 눌러주세요.', 'sys'); } });
