@@ -408,6 +408,7 @@ function handleServer(msg) {
 }
 // 라이브에는 1초 1장(점수판·질문용), 눈에는 0.5초 간격 고해상도 프레임 묶음
 let eyesBuf = [], eyesTimer = null, eyesInFlight = false, eyesLastSentAt = 0, eyesRecent = [], eyesScorePending = false, eyesBackoff = 0, lastNoteAt = 0, eyesCalls = 0;
+let eyesNoThinkingCfg = false, eyes429Noted = false, eyesErrNoted = false, eyesHealthy = false;
 function startStreams() {
   stopStreams();
   const fpsMs = Math.max(1000, Number(getSetting('jk_fps', '1000')));   // Live API 상한: 초당 1프레임
@@ -416,7 +417,7 @@ function startStreams() {
     const b64 = captureFrame(512, 0.6); if (!b64) return;
     ws.send(JSON.stringify({ realtimeInput: { video: { mimeType: 'image/jpeg', data: b64 } } }));
   }, fpsMs);
-  eyesBuf = []; eyesRecent = []; eyesInFlight = false; pendingMemo = null; eyesScorePending = false; eyesLastSentAt = Date.now(); lastNoteAt = Date.now();
+  eyesBuf = []; eyesRecent = []; eyesInFlight = false; pendingMemo = null; eyes429Noted = false; eyesErrNoted = false; eyesHealthy = false; eyesBackoff = 0; eyesScorePending = false; eyesLastSentAt = Date.now(); lastNoteAt = Date.now();
   eyesTimer = setInterval(eyesCapture, 500);
   cueTimer = setInterval(cueTick, 500);
   setTimeout(() => sendText('（開始）'), 2500);
@@ -442,7 +443,7 @@ function cueTick() {
   const interval = Number(getSetting('jk_eyes', '2500')) + eyesBackoff;
   if (!eyesInFlight && (eyesScorePending || now - eyesLastSentAt >= interval)) runEyes(eyesScorePending);
   // 오래 조용하면 한마디 (메모가 20초 넘게 없을 때)
-  if (!generating && now - lastNoteAt > 20000 && now - lastCueAt > 20000) { lastCueAt = now; lastNoteAt = now; sendText('（間：解説者として、いまの試合状況について一言。描写ではなく、状況整理か注目点を）'); }
+  if (eyesHealthy && !generating && now - lastNoteAt > 25000 && now - lastCueAt > 25000) { lastCueAt = now; lastNoteAt = now; sendText('（間：解説者として、いまの試合状況について一言。描写ではなく、状況整理か注目点を）'); }
 }
 async function runEyes(scoreJustChanged) {
   const frames = scoreJustChanged ? eyesBuf.slice(-7) : eyesBuf.filter((f) => f.t > eyesLastSentAt - 400).slice(-6);
@@ -456,14 +457,25 @@ async function runEyes(scoreJustChanged) {
     const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + getSetting('jk_eyes_model', 'gemini-3.8-flash') + ':generateContent', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getKey() }, signal: ctrl.signal,
       body: JSON.stringify({ systemInstruction: { parts: [{ text: eyesPrompt(scoreJustChanged) }] }, contents: [{ role: 'user', parts }],
-        generationConfig: { maxOutputTokens: 120, thinkingConfig: { thinkingLevel: 'MINIMAL' } } })
+        generationConfig: Object.assign({ maxOutputTokens: 120 }, eyesNoThinkingCfg ? {} : { thinkingConfig: { thinkingLevel: 'LOW' } }) })
     });
     clearTimeout(to);
-    if (res.status === 429) { eyesBackoff = Math.min(6000, eyesBackoff + 1500); addLine('눈 모델 호출 한도에 걸려서 분석 간격을 늘렸어요 (+' + (eyesBackoff / 1000) + '초).', 'sys'); return; }
-    if (!res.ok) { const t = await res.text(); addLine('눈 모델 오류 ' + res.status + ': ' + t.slice(0, 120), 'sys err'); return; }
+    if (res.status === 429) {
+      eyesBackoff = Math.min(8000, eyesBackoff + 1500); eyesScorePending = false;
+      if (!eyes429Noted) { eyes429Noted = true; addLine('눈 모델이 분당 호출 한도(무료 티어)에 걸렸어요. 분석 간격을 자동으로 늘릴게요. 더 촘촘한 중계를 원하면 설정에서 눈 모델을 Flash-Lite로 바꾸거나, Google 쪽에 결제를 연결해야 해요.', 'sys'); }
+      return;
+    }
+    if (!res.ok) {
+      const t = await res.text();
+      if (res.status === 400 && /thinking/i.test(t) && !eyesNoThinkingCfg) { eyesNoThinkingCfg = true; eyesScorePending = scoreJustChanged; eyesLastSentAt = 0; return; }   // 사고 설정 미지원 → 빼고 재시도
+      if (!eyesErrNoted) { eyesErrNoted = true; addLine('눈 모델 오류 ' + res.status + ': ' + t.slice(0, 160), 'sys err'); }
+      return;
+    }
+    eyesHealthy = true;
     const d = await res.json();
     const txt = ((((d.candidates || [])[0] || {}).content || {}).parts || []).map((x) => x.text || '').join('').trim();
     if (!txt || /^「?なし」?[。.]?$/.test(txt)) return;
+    if (eyesBackoff > 0) eyesBackoff = Math.max(0, eyesBackoff - 250);
     eyesRecent.push(txt); if (eyesRecent.length > 3) eyesRecent.shift();
     lastNoteAt = Date.now();
     if (!ws || ws.readyState !== 1 || !setupDone) return;
