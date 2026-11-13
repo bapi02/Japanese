@@ -86,8 +86,8 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox { border: 2px solid var(--mint-d); border-radius: 10px; padding: 10px 16px 8px; position: relative; margin-bottom: 10px; }
 .pbox .ptag { position: absolute; top: -9px; right: 14px; background: #fff; padding: 0 5px; font-size: 8pt; color: #555; display: flex; align-items: center; gap: 4px; }
 .pbox .ptag span { border: 1px solid #888; border-radius: 2px; padding: 0 4px; }
-.pbox .pl { font-size: 15.5pt; line-height: 2.05; letter-spacing: 1.5px; }
-.pbox .pimg { float: right; width: 158px; height: 158px; object-fit: cover; border-radius: 8px; margin: 2px 0 6px 12px; }
+.pbox .pl { font-size: 16pt; line-height: 2.05; letter-spacing: 2px; }
+.pbox .pimg { display: block; width: 340px; height: 230px; object-fit: cover; border-radius: 10px; margin: 4px auto 10px; }
 .pbox .pk { clear: none; }
 .pbox .pk { margin-top: 6px; font-size: 9.5pt; color: #333; line-height: 1.6; }
 .pbox .pk div { white-space: nowrap; }
