@@ -19,6 +19,7 @@ const ruby = (s) => esc(s).replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>');
 const rubyHtml = (s) => String(s ?? '').replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>');
 const kanji = (s) => String(s ?? '').replace(RUBY_RE, '$1');
 const fontUrl = (f) => 'file://' + path.join(FONTS, f);
+const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64'); // about:blank 에서는 file:// 이미지가 막혀서 인라인
 const LETTER = { intro: 'A', basic: 'B', use: 'C' };
 const codeOf = (s) => { const n = WS_STEPS.filter((x) => x.level === s.level && x.id <= s.id).length; return { letter: LETTER[s.level], n }; };
 
@@ -71,7 +72,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pt b { color: #2a4a44; }
 .pt .rules { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 14px; margin: 2px 0 1px; }
 .pt .rules div { color: #666; }
-.pt .rules .jp { font-size: 10pt; color: #222; margin-right: 4px; }
+.pt .rules .jp { font-size: 9.5pt; color: #222; margin-right: 4px; }
 .pt .tip { color: #666; }
 
 /* ── 섹션 ── */
@@ -85,7 +86,9 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox { border: 2px solid var(--mint-d); border-radius: 10px; padding: 10px 16px 8px; position: relative; margin-bottom: 10px; }
 .pbox .ptag { position: absolute; top: -9px; right: 14px; background: #fff; padding: 0 5px; font-size: 8pt; color: #555; display: flex; align-items: center; gap: 4px; }
 .pbox .ptag span { border: 1px solid #888; border-radius: 2px; padding: 0 4px; }
-.pbox .pl { font-size: 16pt; line-height: 2.1; letter-spacing: 2px; }
+.pbox .pl { font-size: 15.5pt; line-height: 2.05; letter-spacing: 1.5px; }
+.pbox .pimg { float: right; width: 158px; height: 158px; object-fit: cover; border-radius: 8px; margin: 2px 0 6px 12px; }
+.pbox .pk { clear: none; }
 .pbox .pk { margin-top: 6px; font-size: 9.5pt; color: #333; line-height: 1.6; }
 .pbox .pk div { white-space: nowrap; }
 
@@ -124,7 +127,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .tr .inst { font-size: 8.5pt; color: #555; border: 1px solid #aaa; border-radius: 2px; padding: 0 5px; }
 
 /* ── 표지 / 정답 ── */
-.cover { padding-top: 120px; text-align: center; }
+.cover { padding-top: 70px; text-align: center; }
 .cover .lg { display: inline-flex; flex-direction: column; align-items: center; border: 2px solid #999; border-radius: 6px; width: 90px; height: 90px; justify-content: center; color: #666; margin-bottom: 20px; }
 .cover .lg .m1 { font-size: 40px; font-family: 'Klee'; line-height: 1; }
 .cover .lg .m2 { font-size: 10px; letter-spacing: 3px; margin-top: 4px; }
@@ -177,7 +180,9 @@ function blocksOf(s) {
   // 1. 본문
   if (s.passage) {
     sec(`${FACE}<span class="tag">1-${ex.length}</span> 다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.`);
+    const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
+      ${fs.existsSync(img) ? `<img class="pimg" src="${dataUri(img)}">` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
     for (let i = 0; i < ex.length; i += 2) {
@@ -232,7 +237,7 @@ function header(s, side) {
 function renderCover() {
   const toc = WS_LEVELS.map((lv) => `<div class="lv">${esc(lv.name)} · ${esc(lv.desc)}</div>` +
     WS_STEPS.filter((s) => s.level === lv.id).map((s) => { const c = codeOf(s); return `<div><span class="cd">${c.letter} ${c.n}</span><span class="jp">${ruby(s.title)}</span> · ${esc(s.sub)}</div>`; }).join('')).join('');
-  return `<div class="page"><div class="cover"><div class="lg"><div class="m1">日</div><div class="m2">NIHONGO</div></div><h1>일본어 학습지 · 초급</h1><div class="s">A 입문 · B 기초 · C 활용 — 20장 (앞면 a · 뒷면 b) + 정답</div>
+  return `<div class="page"><div class="cover"><img src="${dataUri(path.join(ROOT, 'img', 'step_09.jpg'))}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;margin-bottom:14px"><h1>일본어 학습지 · 초급</h1><div class="s">A 입문 · B 기초 · C 활용 — 20장 (앞면 a · 뒷면 b) + 정답</div>
     <div class="toc">${toc}</div>
     <div class="how">하루 3장. 시작·끝 시각과 이름을 적고 풀어요.<br>연한 글씨는 따라 쓰고, 그 아래 줄에는 보지 않고 한 번 더 써요.<br>다 풀면 맨 뒤 정답으로 채점하고, 틀린 문제는 한 번 더 써 보세요.</div></div></div>`;
 }
