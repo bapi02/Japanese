@@ -127,7 +127,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .tr .inst { font-size: 8.5pt; color: #555; border: 1px solid #aaa; border-radius: 2px; padding: 0 5px; }
 
 /* ── 표지 / 정답 ── */
-.cover { padding-top: 70px; text-align: center; }
+.cover { padding-top: 120px; text-align: center; }
 .cover .lg { display: inline-flex; flex-direction: column; align-items: center; border: 2px solid #999; border-radius: 6px; width: 90px; height: 90px; justify-content: center; color: #666; margin-bottom: 20px; }
 .cover .lg .m1 { font-size: 40px; font-family: 'Klee'; line-height: 1; }
 .cover .lg .m2 { font-size: 10px; letter-spacing: 3px; margin-top: 4px; }
@@ -237,7 +237,7 @@ function header(s, side) {
 function renderCover() {
   const toc = WS_LEVELS.map((lv) => `<div class="lv">${esc(lv.name)} · ${esc(lv.desc)}</div>` +
     WS_STEPS.filter((s) => s.level === lv.id).map((s) => { const c = codeOf(s); return `<div><span class="cd">${c.letter} ${c.n}</span><span class="jp">${ruby(s.title)}</span> · ${esc(s.sub)}</div>`; }).join('')).join('');
-  return `<div class="page"><div class="cover"><img src="${dataUri(path.join(ROOT, 'img', 'step_09.jpg'))}" style="width:150px;height:150px;object-fit:cover;border-radius:10px;margin-bottom:14px"><h1>일본어 학습지 · 초급</h1><div class="s">A 입문 · B 기초 · C 활용 — 20장 (앞면 a · 뒷면 b) + 정답</div>
+  return `<div class="page"><div class="cover"><h1>목차</h1><div class="s">A 입문 · B 기초 · C 활용 — 20장 (앞면 a · 뒷면 b) + 정답</div>
     <div class="toc">${toc}</div>
     <div class="how">하루 3장. 시작·끝 시각과 이름을 적고 풀어요.<br>연한 글씨는 따라 쓰고, 그 아래 줄에는 보지 않고 한 번 더 써요.<br>다 풀면 맨 뒤 정답으로 채점하고, 틀린 문제는 한 번 더 써 보세요.</div></div></div>`;
 }
@@ -280,16 +280,28 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
     out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, pi === 0 ? 'a' : 'b')}${idx.map((i) => `<div class="blk">${blocks[i].html}</div>`).join('')}</div>`));
   }
 
-  // 2) 최종 렌더
+  // 2) 본문 렌더
   const keyPages = `<div class="page" style="height:auto;overflow:visible">${renderKey()}</div>`;
   await pg.setContent(doc(renderCover() + pages.join('') + keyPages), { waitUntil: 'load' });
   await pg.evaluate(() => document.fonts.ready);
-  const file = path.join(OUT, '일본어학습지_초급.pdf');
+  const body = path.join(OUT, 'body.pdf');
   await pg.pdf({
-    path: file, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true,
+    path: body, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true,
     margin: { top: `${M_TOP}mm`, bottom: `${M_BOT}mm`, left: `${M_SIDE}mm`, right: `${M_SIDE}mm` },
     displayHeaderFooter: false,
   });
+
+  // 3) 표지 (여백 없이 꽉 차게) → 합치기
+  const { coverHtml } = require('./compose-cover.js');
+  const coverImg = path.join(ROOT, 'cover', 'cover.jpg');
+  const cover = path.join(OUT, 'cover.pdf');
+  await pg.setViewportSize({ width: 688, height: 971 });
+  await pg.setContent(coverHtml('data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64'), { initials: '', theme: '20 SHEETS' }), { waitUntil: 'load' });
+  await pg.evaluate(() => document.fonts.ready);
+  await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
   await browser.close();
+  const file = path.join(OUT, '일본어학습지_초급.pdf');
+  require('child_process').execFileSync('pdfunite', [cover, body, file]);
+  fs.unlinkSync(cover); fs.unlinkSync(body);
   console.log('done:', file, 'sheet pages:', pages.length);
 })();

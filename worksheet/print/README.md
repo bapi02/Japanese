@@ -27,3 +27,7 @@ cp worksheet/print/out/일본어학습지_초급.pdf worksheet/print/worksheet.p
 NODE_USE_ENV_PROXY=1 node worksheet/print/gen-illust.js        # 없는 것만 생성 → img/step_XX.png
 python3 -c "from PIL import Image; import glob; [Image.open(f).convert('RGB').resize((600,600)).save(f[:-4]+'.jpg', quality=88) for f in glob.glob('worksheet/print/img/step_*.png')]"
 ```
+
+## 표지
+
+`cover/cover.jpg` — 스튜디오 제품사진 톤(노트 한 권), 타이포는 `compose-cover.js`가 얹음. 시안을 다시 뽑으려면 `gen-cover2.js`(사진 생성) → `node compose-cover.js <이름>`(미리보기 PNG).
