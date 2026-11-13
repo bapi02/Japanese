@@ -20,15 +20,16 @@ function coverHtml(img, { initials = 'MK', sub = 'NIHONGO WORKSHEET', vol = 'VOL
   .yr { position: absolute; right: 48px; bottom: 40px; color: ${dark}; font-family: 'Inter'; font-weight: 900; font-size: 12px; letter-spacing: 2.5px; }
   .rule { position: absolute; left: 48px; right: 48px; bottom: 86px; height: 1px; background: ${dark}; opacity: 0.35; }
   </style></head><body><div class="cv"><img src="${img}">
-  <div class="mast">${initials}</div><div class="sub">${sub}</div>
+  ${initials ? `<div class="mast">${initials}</div>` : ''}<div class="sub" ${initials ? '' : 'style="top:44px"'}>${sub}</div>
   <div class="rule"></div>
   <div class="vol">${vol}<br><span class="t">${theme}</span></div><div class="yr">${year}</div></div></body></html>`;
 }
 module.exports = { coverHtml };
 if (require.main === module) (async () => {
   const b = await chromium.launch(); const pg = await b.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 });
-  for (const n of ['c1_pencil', 'c2_eraser', 'c3_book']) {
-    await pg.setContent(coverHtml(dataUri(path.join(ROOT, 'cover', n + '.png'))), { waitUntil: 'load' });
+  const names = process.argv.slice(2).length ? process.argv.slice(2) : ['c1_pencil', 'c2_eraser', 'c3_book'];
+  for (const n of names) {
+    await pg.setContent(coverHtml(dataUri(path.join(ROOT, 'cover', n + '.png')), { initials: '', theme: '20 SHEETS' }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     await pg.screenshot({ path: path.join(ROOT, 'cover', `preview_${n}.png`) }); console.log('preview', n);
   }
