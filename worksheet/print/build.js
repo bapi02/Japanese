@@ -108,7 +108,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .sec .hb { display: inline-block; width: 26px; height: 13px; background: #d9d9d9; border-radius: 2px; vertical-align: middle; }
 
 /* ── 본문 박스 ── */
-.pbox { border: 2px solid var(--mint-d); border-radius: 10px; padding: 10px 16px 8px; position: relative; margin-bottom: 10px; }
+.pbox { border: 2px solid var(--mint-d); border-radius: 10px; padding: 8px 16px 6px; position: relative; margin-bottom: 6px; }
 .pbox .ptag { position: absolute; top: -9px; right: 14px; background: #fff; padding: 0 5px; font-size: 8pt; color: #555; display: flex; align-items: center; gap: 4px; }
 .pbox .ptag span { border: 1px solid #888; border-radius: 2px; padding: 0 4px; }
 .pbox .pl { font-size: 16pt; line-height: 2.05; letter-spacing: 2px; }
@@ -116,14 +116,17 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pbox .pimg::after { content: ''; position: absolute; inset: -2px; box-shadow: inset 0 0 26px 24px #fff; pointer-events: none; }
 .pbox .pk { clear: none; }
-.pbox .pk { margin-top: 6px; font-size: 9.5pt; color: #333; line-height: 1.6; }
+.pbox .pk { margin-top: 4px; font-size: 8.8pt; color: #444; line-height: 1.5; }
 .pbox .pk div { white-space: nowrap; }
 
 /* ── 답 쓰는 줄 ── */
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; row-gap: 4px; }
-.grid2.exrow { column-gap: 34px; margin: 0 4px 16px; }
-.grid2.exrow .q { font-size: 11pt; }
-.grid2.exrow .ln { height: 46px; }
+.grid2.exrow { column-gap: 34px; margin: 0 4px 8px; }
+.grid2.exrow .q { font-size: 10.5pt; }
+.grid2.exrow .ln { height: 38px; }
+.grid2.exrow.roomy { margin-bottom: 16px; }
+.grid2.exrow.roomy .ln { height: 46px; }
+.sec.tight { margin: 8px 0 6px; }
 .q { font-size: 10.5pt; line-height: 1.5; }
 .ln { border-bottom: 1.3px solid var(--line); height: 38px; }
 .ln.s { height: 30px; }
@@ -189,7 +192,7 @@ const measure = (pg) => pg.evaluate(() => ({
 }));
 
 /* ── 블록 생성 (한 장 = 블록 목록, 나중에 페이지에 나눠 담음) ── */
-function blocksOf(s, imgH = 380, pFont = 16) {
+function blocksOf(s, imgH = 380, pFont = 16, exAfter = false) {
   const g = s.grammar;
   const ex = s.items.filter((it) => it.type === 'extract');
   const trace = s.items.filter((it) => it.type === 'trace');
@@ -217,20 +220,26 @@ function blocksOf(s, imgH = 380, pFont = 16) {
     sec(`${FACE} 그림을 보면서, 다음 글을 소리 내어 읽으세요.`);
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
-      ${fs.existsSync(img) ? `<div class="pimg" style="height:${imgH}px"><img src="${dataUri(img)}"></div>` : ''}
+      ${fs.existsSync(img) ? `<div class="pimg" style="height:${imgH}px;width:${Math.min(556, Math.round(imgH * 1.75))}px"><img src="${dataUri(img)}"></div>` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp" style="font-size:${pFont}pt">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
-    if (ex.length) sec(`<span class="tag">1-${ex.length}</span> 위의 글에서 찾아, 알맞은 일본어를 쓰세요.`);
+  }
+  const pushExtracts = () => {
+    if (!ex.length) return;
+    sec(`<span class="tag">1-${ex.length}</span> ${exAfter ? '앞의' : '위의'} 글에서 찾아, 알맞은 일본어를 쓰세요.`);
+    if (!exAfter) B[B.length - 1].html = B[B.length - 1].html.replace('class="sec"', 'class="sec tight"');
     for (let i = 0; i < ex.length; i += 2) {
       const pair = ex.slice(i, i + 2);
-      B.push({ html: `<div class="grid2 exrow">${pair.map((it, j) => `<div><div class="q">(${i + j + 1}) ${esc(it.ko)}</div><div class="ln"></div></div>`).join('')}</div>` });
+      B.push({ html: `<div class="grid2 exrow${exAfter ? ' roomy' : ''}">${pair.map((it, j) => `<div><div class="q">(${i + j + 1}) ${esc(it.ko)}</div><div class="ln"></div></div>`).join('')}</div>` });
     }
-  }
+  };
+  if (!exAfter) pushExtracts();
 
-  // 오늘의 포인트 + 단어 (본문 다음)
-    B.push({ html: `<div class="pbx"><div class="ph">📖 오늘의 포인트</div>
+  // 오늘의 포인트 + 단어: 항상 뒷면(b) 맨 위에 고정
+    B.push({ point: true, breakBefore: true, html: `<div class="pbx"><div class="ph">📖 오늘의 포인트</div>
     <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>
     ${s.vocab ? `<div class="vocab"><div class="vh">오늘의 단어</div>${s.vocab.map(([w, k]) => `<div class="vw"><span class="jp">${ruby(w)}</span>${esc(k)}</div>`).join('')}</div>` : ''}</div>` });
+  if (exAfter) pushExtracts();
 
   // 2. 따라쓰기
   if (trace.length) {
@@ -309,25 +318,32 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   const pg = await browser.newPage();
 
   // 1) 측정: 각 장의 블록 높이를 재서 a/b 면에 나눠 담기
-  const pages = [];
+  const pages = []; const STATS = [];
   for (const s of WS_STEPS) {
-    // 본문(그림+글)이 앞면에 들어가도록 그림 높이를 단계적으로 줄여 가며 측정
-    let blocks, m;
-    for (const [imgH, pFont] of [[380, 16], [350, 16], [320, 16], [290, 16], [260, 15.5], [230, 15], [200, 14.5]]) {
-      blocks = blocksOf(s, imgH, pFont);
+    // 앞면(a) = 삽화 + 본문 + 찾아쓰기, 뒷면(b) 맨 위 = 포인트 박스.
+    // 앞면에 다 들어가는 가장 큰 그림 높이를 고르고, 최소 높이로도 안 되면 찾아쓰기를 포인트 뒤로 보냄
+    let blocks, m, chosen = null;
+    const cap = CONTENT_H - 8;
+    const tryFit = async (imgH, pFont, exAfter) => {
+      blocks = blocksOf(s, imgH, pFont, exAfter);
       const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${[...blocks, ...blocks.fillers].map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
       await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
       await pg.evaluate(() => document.fonts.ready);
       m = await measure(pg);
-      const pIdx = blocks.findIndex((b) => b.html.includes('class="pbox"'));
-      if (pIdx < 0 || m.ha + m.h.slice(0, pIdx + 1).reduce((a, b) => a + b, 0) <= CONTENT_H - 8) break;
-    }
+      const pt = blocks.findIndex((b) => b.point);
+      return m.ha + m.h.slice(0, pt).reduce((a, b) => a + b, 0) <= cap;
+    };
+    const SIZES = [[380, 16], [350, 16], [320, 16], [300, 16], [280, 16], [260, 16], [240, 15.5], [220, 15.5], [200, 15], [180, 14.5], [165, 14.5], [150, 14], [135, 14]];
+    for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, false)) { chosen = { imgH, exAfter: false }; break; } }
+    if (!chosen) for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, true)) { chosen = { imgH, exAfter: true }; break; } }
+    if (!chosen) chosen = { imgH: 220, exAfter: true };
+    STATS.push({ id: s.id, code: `${codeOf(s).letter} ${codeOf(s).n}`, ...chosen });
     // 배분
-    const out = [[]]; let used = m.ha; let cap = CONTENT_H - 8;
+    const out = [[]]; let used = m.ha;
     for (let i = 0; i < blocks.length; i++) {
       let need = m.h[i];
       if (blocks[i].head && i + 1 < blocks.length) need += m.h[i + 1]; // 섹션 제목은 다음 블록과 함께
-      if (used + need > cap && out[out.length - 1].length) { out.push([]); used = m.hb; }
+      if ((blocks[i].breakBefore || used + need > cap) && out[out.length - 1].length) { out.push([]); used = m.hb; }
       out[out.length - 1].push(i); used += m.h[i];
     }
     const fill = [];
@@ -341,6 +357,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
     out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, 'abcdef'[pi] || 'z')}${idx.map((i) => `<div class="blk">${typeof i === 'number' ? blocks[i].html : i.html}</div>`).join('')}</div>`));
   }
 
+  if (process.env.WS_STATS) console.log('STATS ' + JSON.stringify(STATS));
   // 2) 본문 렌더
   const keyPages = `<div class="page key" style="height:auto;overflow:visible">${renderKey()}</div>`;
   const inner = [renderCover(), ...pages].map((h, i) => (i % 2 === 0 ? h.replace('<div class="page">', '<div class="page recto">') : h));
