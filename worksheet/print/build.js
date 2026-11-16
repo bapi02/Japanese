@@ -23,7 +23,10 @@ const ruby = (s) => esc(s).replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>');
 const rubyHtml = (s) => String(s ?? '').replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>');
 const kanji = (s) => String(s ?? '').replace(RUBY_RE, '$1');
 const fontUrl = (f) => 'file://' + path.join(FONTS, f);
-const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64'); // about:blank 에서는 file:// 이미지가 막혀서 인라인
+const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64');
+const FOOTER = () => `<style>@font-face{font-family:'Inter';src:url(data:font/ttf;base64,${fs.readFileSync(path.join(FONTS, 'Inter-900.ttf')).toString('base64')});font-weight:900}</style>
+  <div style="width:100%;box-sizing:border-box;padding:0 ${M_SIDE}mm ${BLEED + 5}mm;display:flex;justify-content:space-between;align-items:flex-end;font-family:'Inter',sans-serif;font-weight:900;color:#8a8a8a;">
+    <span style="font-size:10px;letter-spacing:-0.3px">BaPi</span><span class="pageNumber" style="font-size:7px;font-family:sans-serif;font-weight:400;color:#9a9a9a"></span></div>`; // about:blank 에서는 file:// 이미지가 막혀서 인라인
 const LETTER = { intro: 'A', basic: 'B', use: 'C', ext: 'D', plain: 'E', adv: 'F' };
 const codeOf = (s) => { const n = WS_STEPS.filter((x) => x.level === s.level && x.id <= s.id).length; return { letter: LETTER[s.level], n }; };
 
@@ -67,7 +70,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .hdr .code { font-size: 24px; color: #8a8a8a; letter-spacing: 1px; line-height: 1; padding-bottom: 2px; font-family: 'NSKR'; }
 .hdr .code b { font-weight: 400; font-size: 26px; margin-right: 6px; }
 .hdr .ser { font-size: 10pt; color: #666; padding-top: 4px; letter-spacing: 0.5px; }
-.hdr.sub .mark, .hdr.sub .ser { visibility: hidden; }
+.hdr .code { padding-bottom: 0; }
 
 /* ── 제목 박스 + 날짜/이름 ── */
 .tbar { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 8px; }
@@ -164,7 +167,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 
 const CAT = `<svg viewBox="0 0 24 24" fill="none" stroke="#2a4a44" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M4 10 L4 4 L8.5 7.5 M20 10 L20 4 L15.5 7.5"/><path d="M4 10 C4 17 7 20 12 20 C17 20 20 17 20 10 C20 7 17 6 12 6 C7 6 4 7 4 10 Z"/><circle cx="9" cy="12" r="0.9" fill="#2a4a44"/><circle cx="15" cy="12" r="0.9" fill="#2a4a44"/><path d="M11 15 L12 16 L13 15 M2 12 L6 13 M2 15 L6 14.5 M22 12 L18 13 M22 15 L18 14.5"/></svg>`;
 const FACE = `<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="#4aaa9a" stroke-width="1.2"><circle cx="8" cy="8" r="6.5"/><circle cx="6" cy="7" r="0.7" fill="#4aaa9a"/><circle cx="10" cy="7" r="0.7" fill="#4aaa9a"/><path d="M5.5 10 Q8 12 10.5 10"/></svg>`;
-const MARK = `<div class="mark"><div class="m1">BaPi</div><div class="m2">日本語 学習紙</div></div>`;
+
 
 const measure = (pg) => pg.evaluate(() => ({
   ha: document.getElementById('ha').offsetHeight, hb: document.getElementById('hb').offsetHeight,
@@ -258,7 +261,7 @@ function blocksOf(s, imgH = 230, pFont = 16) {
 
 function header(s, side) {
   const { letter, n } = codeOf(s);
-  return `<div class="hdr ${side === 'a' ? 'a' : 'sub'}"><div class="lg">${MARK}<div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${VOL} · ${letter} ${n}</div></div>`;
+  return `<div class="hdr"><div class="lg"><div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${VOL} · ${letter} ${n}</div></div>`;
 }
 
 function renderCover() {
@@ -327,7 +330,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   await pg.pdf({
     path: body, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true,
     margin: { top: `${M_TOP}mm`, bottom: `${M_BOT}mm`, left: `${M_SIDE}mm`, right: `${M_SIDE}mm` },
-    displayHeaderFooter: false,
+    displayHeaderFooter: true, headerTemplate: '<div></div>', footerTemplate: FOOTER(),
   });
 
   // 3) 표지
