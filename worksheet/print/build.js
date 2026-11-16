@@ -85,11 +85,14 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .meta .r .lab { color: #777; font-size: 9.5pt; letter-spacing: 1px; margin-right: 2px; }
 
 /* ── 포인트 (작게) ── */
-.pt { font-size: 8.8pt; color: #555; line-height: 1.55; margin: 0 0 10px 2px; padding-left: 8px; border-left: 2px solid var(--mint-d); }
+.pbx { border: 1.5px solid var(--mint-d); border-radius: 8px; padding: 8px 12px 6px; margin: 6px 0 10px; background: #fbfdfc; }
+.pbx .ph { font-size: 9pt; font-weight: 700; color: var(--teal); letter-spacing: 1px; margin-bottom: 4px; }
+.pbx .vocab { margin: 6px 0 2px; border: none; border-top: 1px dashed #cfd8d5; border-radius: 0; padding: 6px 0 0; }
+.pt { font-size: 9.2pt; color: #444; line-height: 1.6; margin: 0; }
 .pt b { color: #2a4a44; }
 .pt .rules { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 14px; margin: 2px 0 1px; }
 .pt .rules div { color: #666; }
-.pt .rules .jp { font-size: 9.5pt; color: #222; margin-right: 4px; }
+.pt .rules .jp { font-size: 10.5pt; color: #222; margin-right: 4px; }
 .pt .tip { color: #666; }
 .vocab { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px 8px; border: 1px solid #ddd; border-radius: 4px; padding: 5px 10px 4px; margin: -4px 0 10px; font-size: 8.3pt; color: #444; }
 .vocab .vh { grid-column: 1 / -1; font-size: 7.5pt; color: var(--teal); letter-spacing: 1px; font-weight: 700; margin-bottom: 1px; }
@@ -108,7 +111,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox .ptag { position: absolute; top: -9px; right: 14px; background: #fff; padding: 0 5px; font-size: 8pt; color: #555; display: flex; align-items: center; gap: 4px; }
 .pbox .ptag span { border: 1px solid #888; border-radius: 2px; padding: 0 4px; }
 .pbox .pl { font-size: 16pt; line-height: 2.05; letter-spacing: 2px; }
-.pbox .pimg { display: block; width: 340px; height: 230px; object-fit: cover; border-radius: 10px; margin: 4px auto 10px; }
+.pbox .pimg { display: block; width: 100%; height: 300px; object-fit: cover; border-radius: 10px; margin: 2px auto 12px; }
 .pbox .pk { clear: none; }
 .pbox .pk { margin-top: 6px; font-size: 9.5pt; color: #333; line-height: 1.6; }
 .pbox .pk div { white-space: nowrap; }
@@ -180,7 +183,7 @@ const measure = (pg) => pg.evaluate(() => ({
 }));
 
 /* ── 블록 생성 (한 장 = 블록 목록, 나중에 페이지에 나눠 담음) ── */
-function blocksOf(s, imgH = 230, pFont = 16) {
+function blocksOf(s, imgH = 380, pFont = 16) {
   const g = s.grammar;
   const ex = s.items.filter((it) => it.type === 'extract');
   const trace = s.items.filter((it) => it.type === 'trace');
@@ -192,7 +195,7 @@ function blocksOf(s, imgH = 230, pFont = 16) {
   let secNo = 0;
   const sec = (html) => B.push({ head: true, html: `<div class="sec"><span class="n">${++secNo}</span>${html}</div>` });
 
-  // 제목 박스 + 날짜/이름 + 포인트
+  // 제목 박스 + 날짜/이름 (포인트·단어는 본문 뒤로 → 앞면은 큰 삽화 + 본문)
   B.push({ html: `
     <div class="tbar">
       <div class="tbox"><div class="t1"><span>${rubyHtml(s.title)} · ${esc(s.sub)}</span>${CAT}</div><div class="t2 jp">${ruby(g.rules[0][0])}</div></div>
@@ -201,15 +204,14 @@ function blocksOf(s, imgH = 230, pFont = 16) {
         <div class="r nm"><span class="lab">이름</span></div>
       </div>
     </div>
-    <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>
-    ${s.vocab ? `<div class="vocab"><div class="vh">오늘의 단어</div>${s.vocab.map(([w, k]) => `<div class="vw"><span class="jp">${ruby(w)}</span>${esc(k)}</div>`).join('')}</div>` : ''}` });
+` });
 
   // 1. 본문
   if (s.passage) {
     sec(`${FACE}<span class="tag">1-${ex.length}</span> 다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.`);
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
-      ${fs.existsSync(img) ? `<img class="pimg" style="height:${imgH}px;width:${Math.round(imgH * 340 / 230)}px" src="${dataUri(img)}">` : ''}
+      ${fs.existsSync(img) ? `<img class="pimg" style="height:${imgH}px" src="${dataUri(img)}">` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp" style="font-size:${pFont}pt">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
     for (let i = 0; i < ex.length; i += 2) {
@@ -217,6 +219,11 @@ function blocksOf(s, imgH = 230, pFont = 16) {
       B.push({ html: `<div class="grid2">${pair.map((it, j) => `<div><div class="q">(${i + j + 1}) ${esc(it.ko)}</div><div class="ln"></div></div>`).join('')}</div>` });
     }
   }
+
+  // 오늘의 포인트 + 단어 (본문 다음)
+    B.push({ html: `<div class="pbx"><div class="ph">📖 오늘의 포인트</div>
+    <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>
+    ${s.vocab ? `<div class="vocab"><div class="vh">오늘의 단어</div>${s.vocab.map(([w, k]) => `<div class="vw"><span class="jp">${ruby(w)}</span>${esc(k)}</div>`).join('')}</div>` : ''}</div>` });
 
   // 2. 따라쓰기
   if (trace.length) {
@@ -299,7 +306,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   for (const s of WS_STEPS) {
     // 본문(그림+글)이 앞면에 들어가도록 그림 높이를 단계적으로 줄여 가며 측정
     let blocks, m;
-    for (const [imgH, pFont] of [[230, 16], [200, 16], [170, 15.5], [140, 15], [120, 14.5], [100, 14], [90, 13.5]]) {
+    for (const [imgH, pFont] of [[380, 16], [350, 16], [320, 16], [290, 16], [260, 15.5], [230, 15], [200, 14.5]]) {
       blocks = blocksOf(s, imgH, pFont);
       const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${[...blocks, ...blocks.fillers].map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
       await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
