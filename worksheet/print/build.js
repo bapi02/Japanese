@@ -10,7 +10,11 @@ const { chromium } = require('playwright');
 const ROOT = __dirname, OUT = path.join(ROOT, 'out'), FONTS = path.join(ROOT, 'fonts');
 fs.mkdirSync(OUT, { recursive: true });
 const src = fs.readFileSync(path.join(ROOT, '..', 'data.js'), 'utf8');
-const { WS_STEPS, WS_LEVELS } = new Function(src + ';return {WS_STEPS, WS_LEVELS};')();
+const src2 = fs.readFileSync(path.join(ROOT, '..', 'data2.js'), 'utf8');
+const VOL = Number(process.argv[2] || 1); // 권 (1 또는 2)
+const ALL = new Function(src + src2 + ';return {WS_STEPS, WS_LEVELS};')();
+const WS_STEPS = ALL.WS_STEPS.filter((s) => (s.vol || 1) === VOL);
+const WS_LEVELS = ALL.WS_LEVELS.filter((l) => (l.vol || 1) === VOL);
 
 /* ── 유틸 ── */
 const RUBY_RE = /\{([^|{}]+)\|([^|{}]+)\}/g;
@@ -20,7 +24,7 @@ const rubyHtml = (s) => String(s ?? '').replace(RUBY_RE, '<ruby>$1<rt>$2</rt></r
 const kanji = (s) => String(s ?? '').replace(RUBY_RE, '$1');
 const fontUrl = (f) => 'file://' + path.join(FONTS, f);
 const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64'); // about:blank 에서는 file:// 이미지가 막혀서 인라인
-const LETTER = { intro: 'A', basic: 'B', use: 'C' };
+const LETTER = { intro: 'A', basic: 'B', use: 'C', ext: 'D', plain: 'E', adv: 'F' };
 const codeOf = (s) => { const n = WS_STEPS.filter((x) => x.level === s.level && x.id <= s.id).length; return { letter: LETTER[s.level], n }; };
 
 /* 페이지 치수 (px, 96dpi) */
@@ -153,8 +157,13 @@ const CAT = `<svg viewBox="0 0 24 24" fill="none" stroke="#2a4a44" stroke-width=
 const FACE = `<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="#4aaa9a" stroke-width="1.2"><circle cx="8" cy="8" r="6.5"/><circle cx="6" cy="7" r="0.7" fill="#4aaa9a"/><circle cx="10" cy="7" r="0.7" fill="#4aaa9a"/><path d="M5.5 10 Q8 12 10.5 10"/></svg>`;
 const MARK = `<div class="mark"><div class="m1">日</div><div class="m2">NIHONGO</div></div>`;
 
+const measure = (pg) => pg.evaluate(() => ({
+  ha: document.getElementById('ha').offsetHeight, hb: document.getElementById('hb').offsetHeight,
+  h: (() => { const b = [...document.querySelectorAll('.blk')]; const pg = document.querySelector('.page'); return b.map((e, i) => (i + 1 < b.length ? b[i + 1].offsetTop : pg.scrollHeight) - e.offsetTop + 2); })(),
+}));
+
 /* ── 블록 생성 (한 장 = 블록 목록, 나중에 페이지에 나눠 담음) ── */
-function blocksOf(s) {
+function blocksOf(s, imgH = 230) {
   const g = s.grammar;
   const ex = s.items.filter((it) => it.type === 'extract');
   const trace = s.items.filter((it) => it.type === 'trace');
@@ -182,7 +191,7 @@ function blocksOf(s) {
     sec(`${FACE}<span class="tag">1-${ex.length}</span> 다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.`);
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
-      ${fs.existsSync(img) ? `<img class="pimg" src="${dataUri(img)}">` : ''}
+      ${fs.existsSync(img) ? `<img class="pimg" style="height:${imgH}px;width:${Math.round(imgH * 340 / 230)}px" src="${dataUri(img)}">` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
     for (let i = 0; i < ex.length; i += 2) {
@@ -231,13 +240,13 @@ function blocksOf(s) {
 
 function header(s, side) {
   const { letter, n } = codeOf(s);
-  return `<div class="hdr ${side}"><div class="lg">${MARK}<div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${letter} ${n}</div></div>`;
+  return `<div class="hdr ${side}"><div class="lg">${MARK}<div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${VOL} · ${letter} ${n}</div></div>`;
 }
 
 function renderCover() {
   const toc = WS_LEVELS.map((lv) => `<div class="lv">${esc(lv.name)} · ${esc(lv.desc)}</div>` +
     WS_STEPS.filter((s) => s.level === lv.id).map((s) => { const c = codeOf(s); return `<div><span class="cd">${c.letter} ${c.n}</span><span class="jp">${ruby(s.title)}</span> · ${esc(s.sub)}</div>`; }).join('')).join('');
-  return `<div class="page"><div class="cover"><h1>목차</h1><div class="s">A 입문 · B 기초 · C 활용 — 20장 (앞면 a · 뒷면 b) + 정답</div>
+  return `<div class="page"><div class="cover"><h1>목차</h1><div class="s">${VOL === 1 ? 'A 입문 · B 기초 · C 활용' : 'D 확장 · E 보통형 · F 응용'} — 20장 (앞면 a · 뒷면 b) + 정답</div>
     <div class="toc">${toc}</div>
     <div class="how">하루 3장. 시작·끝 시각과 이름을 적고 풀어요.<br>연한 글씨는 따라 쓰고, 그 아래 줄에는 보지 않고 한 번 더 써요.<br>다 풀면 맨 뒤 정답으로 채점하고, 틀린 문제는 한 번 더 써 보세요.</div></div></div>`;
 }
@@ -261,14 +270,17 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   // 1) 측정: 각 장의 블록 높이를 재서 a/b 면에 나눠 담기
   const pages = [];
   for (const s of WS_STEPS) {
-    const blocks = blocksOf(s);
-    const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${blocks.map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
-    await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
-    await pg.evaluate(() => document.fonts.ready);
-    const m = await pg.evaluate(() => ({
-      ha: document.getElementById('ha').offsetHeight, hb: document.getElementById('hb').offsetHeight,
-      h: (() => { const b = [...document.querySelectorAll('.blk')]; const pg = document.querySelector('.page'); return b.map((e, i) => (i + 1 < b.length ? b[i + 1].offsetTop : pg.scrollHeight) - e.offsetTop + 2); })(),
-    }));
+    // 본문(그림+글)이 앞면에 들어가도록 그림 높이를 단계적으로 줄여 가며 측정
+    let blocks, m;
+    for (const imgH of [230, 200, 170, 140]) {
+      blocks = blocksOf(s, imgH);
+      const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${blocks.map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
+      await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
+      await pg.evaluate(() => document.fonts.ready);
+      m = await measure(pg);
+      const pIdx = blocks.findIndex((b) => b.html.includes('class="pbox"'));
+      if (pIdx < 0 || m.ha + m.h.slice(0, pIdx + 1).reduce((a, b) => a + b, 0) <= CONTENT_H - 8) break;
+    }
     // 배분
     const out = [[]]; let used = m.ha; let cap = CONTENT_H - 8;
     for (let i = 0; i < blocks.length; i++) {
@@ -293,14 +305,14 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
 
   // 3) 표지 (여백 없이 꽉 차게) → 합치기
   const { coverHtml } = require('./compose-cover.js');
-  const coverImg = path.join(ROOT, 'cover', 'cover.jpg');
+  const coverImg = path.join(ROOT, 'cover', VOL > 1 ? `cover${VOL}.jpg` : 'cover.jpg');
   const cover = path.join(OUT, 'cover.pdf');
   await pg.setViewportSize({ width: 688, height: 971 });
-  await pg.setContent(coverHtml('data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64'), { initials: '', theme: '20 SHEETS' }), { waitUntil: 'load' });
+  await pg.setContent(coverHtml('data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64'), { initials: '', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
   await pg.evaluate(() => document.fonts.ready);
   await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
   await browser.close();
-  const file = path.join(OUT, '일본어학습지_초급.pdf');
+  const file = path.join(OUT, `일본어학습지_초급${VOL > 1 ? VOL : ''}.pdf`);
   require('child_process').execFileSync('pdfunite', [cover, body, file]);
   fs.unlinkSync(cover); fs.unlinkSync(body);
   console.log('done:', file, 'sheet pages:', pages.length);

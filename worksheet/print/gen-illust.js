@@ -24,6 +24,27 @@ const SCENES = {
   18: 'A night study desk with a lamp and textbooks, a bed with a pillow, a television switched off and a game controller put away in a box.',
   19: 'A person wearing headphones listening to music with eyes closed, a karaoke microphone on the table, a Japanese textbook open.',
   20: 'A comparison scene: Tokyo skyline on the left, Osaka castle on the right, a Kyoto temple with red autumn leaves in the middle, and a shiny red apple in front.',
+  // ── 2권 ──
+  21: 'A small shop counter: a shopkeeper handing over a tote bag, two folded handkerchiefs on the counter, a price tag with no digits.',
+  22: 'A wall calendar with one day circled, a small birthday cake with candles, two friends chatting at a table.',
+  23: 'A cold winter day: two friends in coats holding warm coffee cups outside a cozy cafe near a train station, breath visible in the air.',
+  24: 'Early morning: two people jogging on a riverside path, a swimming pool in the background, sunrise sky.',
+  25: 'Travel memories: Mount Fuji in the distance, a cup of green matcha tea on a tray, a temple in Kyoto, a small suitcase with stickers (no text).',
+  26: 'A relaxing weekend collage: a person reading on a sofa, a movie screen, a cafe table with two cups, a kitchen with pots.',
+  27: 'A tired student with a headache at a desk, a friend offering a glass of water and medicine, a blanket on a bed nearby.',
+  28: 'Two friends at the beach with a beach umbrella and towels, a small weather icon of a sun over the sea, an alarm clock showing eight.',
+  29: 'Two friends walking out of a cinema at night talking happily, a tall movie poster with no text behind them.',
+  30: 'A youth soccer team huddled together on a field, a coach with a whistle, a scoreboard with no numbers.',
+  31: 'A picnic basket and blanket under a tree, half the sky sunny and half cloudy with light rain, a folded umbrella.',
+  32: 'A peaceful evening walk in a park, a person strolling under trees, a warm bath tub with steam in a small inset corner.',
+  33: 'Mountain hiking trail on a sunny day on one side, a cinema seat with popcorn on the other, a train station platform with a phone.',
+  34: 'A street map view: a straight road leading to a big intersection, a post office building with a red mailbox, a person asking directions.',
+  35: 'A person slumped at a table with a mug, a television glowing in a dim living room, a clock showing late night.',
+  36: 'Gift giving: a wrapped present with a ribbon, a cute tote bag, a wristwatch in a box, a handwritten letter envelope with no text.',
+  37: 'Moving day: friends carrying cardboard boxes into a small apartment, a car with its trunk open full of boxes, a home-cooked meal on a table.',
+  38: 'A karaoke room with a microphone and colorful lights, a person playing an acoustic guitar, a songbook with no text.',
+  39: 'A tired office worker leaving work early with a bag, a window showing evening light, a calm weekend scene with a hammock in the corner.',
+  40: 'Graduation day: a student in a cap and gown holding a diploma, an airplane in the sky, a small office building, a suitcase.',
 };
 async function gen(id) {
   const out = path.join('img', `step_${String(id).padStart(2, '0')}.png`);
