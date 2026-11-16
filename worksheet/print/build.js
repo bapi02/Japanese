@@ -94,9 +94,9 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pt .rules div { color: #666; }
 .pt .rules .jp { font-size: 10.5pt; color: #222; margin-right: 4px; }
 .pt .tip { color: #666; }
-.vocab { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px 8px; border: 1px solid #ddd; border-radius: 4px; padding: 5px 10px 4px; margin: -4px 0 10px; font-size: 8.3pt; color: #444; }
-.vocab .vh { grid-column: 1 / -1; font-size: 7.5pt; color: var(--teal); letter-spacing: 1px; font-weight: 700; margin-bottom: 1px; }
-.vocab .vw { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vocab { display: flex; flex-wrap: wrap; gap: 3px 18px; border: 1px solid #ddd; border-radius: 4px; padding: 5px 10px 4px; margin: -4px 0 10px; font-size: 8.3pt; color: #444; }
+.vocab .vh { flex-basis: 100%; font-size: 7.5pt; color: var(--teal); letter-spacing: 1px; font-weight: 700; margin-bottom: 1px; }
+.vocab .vw { white-space: nowrap; }
 .vocab .vw .jp { font-size: 10pt; color: #222; margin-right: 4px; }
 
 /* ── 섹션 ── */
@@ -114,7 +114,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox .pl { font-size: 16pt; line-height: 2.05; letter-spacing: 2px; }
 .pbox .pimg { position: relative; width: 100%; height: 300px; margin: 0 auto 8px; overflow: hidden; }
 .pbox .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pbox .pimg::after { content: ''; position: absolute; inset: -2px; box-shadow: inset 0 0 26px 24px #fff; pointer-events: none; }
+.pbox .pimg::after { content: ''; position: absolute; inset: -2px; box-shadow: inset 0 0 var(--fade, 20px) var(--fade, 20px) #fff; pointer-events: none; }
 .pbox .pk { clear: none; }
 .pbox .pk { margin-top: 4px; font-size: 8.8pt; color: #444; line-height: 1.5; }
 .pbox .pk div { white-space: nowrap; }
@@ -220,7 +220,7 @@ function blocksOf(s, imgH = 380, pFont = 16, exAfter = false) {
     sec(`${FACE} 그림을 보면서, 다음 글을 소리 내어 읽으세요.`);
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
-      ${fs.existsSync(img) ? `<div class="pimg" style="height:${imgH}px;width:${Math.min(556, Math.round(imgH * 1.75))}px"><img src="${dataUri(img)}"></div>` : ''}
+      ${fs.existsSync(img) ? `<div class="pimg" style="height:${imgH}px;width:${Math.min(556, Math.round(imgH * 1.75))}px;--fade:${Math.round(Math.min(24, imgH * 0.055))}px"><img src="${dataUri(img)}"></div>` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp" style="font-size:${pFont}pt">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
   }
@@ -333,9 +333,11 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
       const pt = blocks.findIndex((b) => b.point);
       return m.ha + m.h.slice(0, pt).reduce((a, b) => a + b, 0) <= cap;
     };
+    const READ_ONLY_A = VOL >= 3; // 3권: 앞면은 큰 삽화 + 본문만, 문제는 뒷면부터
+    const BIG = Array.from({ length: 27 }, (_, i) => [470 - i * 10, 16]).filter(([h]) => h > 380 || h % 30 !== 20); // 470→210, 촘촘하게 맞춤
     const SIZES = [[380, 16], [350, 16], [320, 16], [300, 16], [280, 16], [260, 16], [240, 15.5], [220, 15.5], [200, 15], [180, 14.5], [165, 14.5], [150, 14], [135, 14]];
-    for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, false)) { chosen = { imgH, exAfter: false }; break; } }
-    if (!chosen) for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, true)) { chosen = { imgH, exAfter: true }; break; } }
+    if (!READ_ONLY_A) for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, false)) { chosen = { imgH, exAfter: false }; break; } }
+    if (!chosen) for (const [imgH, pFont] of (READ_ONLY_A ? [...BIG, [200, 15], [180, 14.5]] : SIZES)) { if (await tryFit(imgH, pFont, true)) { chosen = { imgH, exAfter: true }; break; } }
     if (!chosen) chosen = { imgH: 220, exAfter: true };
     STATS.push({ id: s.id, code: `${codeOf(s).letter} ${codeOf(s).n}`, ...chosen });
     // 배분
