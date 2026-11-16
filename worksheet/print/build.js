@@ -29,7 +29,13 @@ const codeOf = (s) => { const n = WS_STEPS.filter((x) => x.level === s.level && 
 
 /* 페이지 치수 (px, 96dpi) */
 const MM = 96 / 25.4;
-const PAGE_W = 182, PAGE_H = 257, M_TOP = 11, M_BOT = 11, M_SIDE = 13;
+/* 출력 모드: screen(화면·집 인쇄용, 기본) | wireless(무선제본 인쇄소용) | spring(스프링제본 인쇄소용)
+   인쇄소용은 재단 여백(BLEED 3mm) + 제본 쪽 여백(GUTTER)을 홀짝 페이지에 번갈아 넣고, 표지·내지를 따로 냄 */
+const MODE = process.argv[3] || 'screen';
+const BLEED = MODE === 'screen' ? 0 : 3;
+const GUTTER = MODE === 'wireless' ? 6 : MODE === 'spring' ? 10 : 0;
+const SPINE = Number(process.argv[4] || (VOL > 1 ? 4.5 : 4)); // 책등 두께 mm (무선제본)
+const PAGE_W = 182 + 2 * BLEED, PAGE_H = 257 + 2 * BLEED, M_TOP = 11 + BLEED, M_BOT = 11 + BLEED, M_SIDE = 13 + BLEED;
 const CONTENT_H = Math.floor((PAGE_H - M_TOP - M_BOT) * MM);
 
 const CSS = `
@@ -45,7 +51,9 @@ html, body { background: #fff; color: var(--ink); font-family: 'NSKR', 'NSJP', s
 .jp { font-family: 'Klee', 'NSJP', serif; }
 ruby { ruby-position: over; }
 rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NSJP'; font-weight: 400; line-height: 1; }
-.page { width: ${(PAGE_W - 2 * M_SIDE) * MM}px; height: ${CONTENT_H}px; overflow: hidden; break-after: page; position: relative; }
+.page { width: ${(PAGE_W - 2 * M_SIDE - GUTTER) * MM}px; height: ${CONTENT_H}px; overflow: hidden; break-after: page; position: relative; }
+.page.recto { margin-left: ${GUTTER * MM}px; }
+.page.key { margin-left: ${GUTTER / 2 * MM}px; }
 .page:last-child { break-after: auto; }
 .measure .page { height: auto; overflow: visible; break-after: auto; }
 
@@ -289,12 +297,13 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
       if (used + need > cap && out[out.length - 1].length) { out.push([]); used = m.hb; }
       out[out.length - 1].push(i); used += m.h[i];
     }
-    out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, pi === 0 ? 'a' : 'b')}${idx.map((i) => `<div class="blk">${blocks[i].html}</div>`).join('')}</div>`));
+    out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, 'abcdef'[pi] || 'z')}${idx.map((i) => `<div class="blk">${blocks[i].html}</div>`).join('')}</div>`));
   }
 
   // 2) 본문 렌더
-  const keyPages = `<div class="page" style="height:auto;overflow:visible">${renderKey()}</div>`;
-  await pg.setContent(doc(renderCover() + pages.join('') + keyPages), { waitUntil: 'load' });
+  const keyPages = `<div class="page key" style="height:auto;overflow:visible">${renderKey()}</div>`;
+  const inner = [renderCover(), ...pages].map((h, i) => (i % 2 === 0 ? h.replace('<div class="page">', '<div class="page recto">') : h));
+  await pg.setContent(doc(inner.join('') + keyPages), { waitUntil: 'load' });
   await pg.evaluate(() => document.fonts.ready);
   const body = path.join(OUT, 'body.pdf');
   await pg.pdf({
@@ -303,17 +312,33 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
     displayHeaderFooter: false,
   });
 
-  // 3) 표지 (여백 없이 꽉 차게) → 합치기
-  const { coverHtml } = require('./compose-cover.js');
+  // 3) 표지
+  const { coverHtml, coverPrintHtml } = require('./compose-cover.js');
   const coverImg = path.join(ROOT, 'cover', VOL > 1 ? `cover${VOL}.jpg` : 'cover.jpg');
+  const imgUri = 'data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64');
+  const BG = VOL > 1 ? '#dcd9d4' : '#d9d4d1'; // 사진 가장자리 평균색 (뒤표지·책등)
   const cover = path.join(OUT, 'cover.pdf');
-  await pg.setViewportSize({ width: 688, height: 971 });
-  await pg.setContent(coverHtml('data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64'), { initials: '', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
-  await pg.evaluate(() => document.fonts.ready);
-  await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
-  await browser.close();
-  const file = path.join(OUT, `일본어학습지_초급${VOL > 1 ? VOL : ''}.pdf`);
-  require('child_process').execFileSync('pdfunite', [cover, body, file]);
-  fs.unlinkSync(cover); fs.unlinkSync(body);
-  console.log('done:', file, 'sheet pages:', pages.length);
+  const name = `일본어학습지_초급${VOL > 1 ? VOL : ''}`;
+  if (MODE === 'screen') {
+    await pg.setViewportSize({ width: 688, height: 971 });
+    await pg.setContent(coverHtml(imgUri, { initials: '', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
+    await pg.evaluate(() => document.fonts.ready);
+    await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
+    await browser.close();
+    const file = path.join(OUT, `${name}.pdf`);
+    require('child_process').execFileSync('pdfunite', [cover, body, file]);
+    fs.unlinkSync(cover); fs.unlinkSync(body);
+    console.log('done:', file, 'sheet pages:', pages.length);
+  } else {
+    const back = MODE === 'wireless';
+    const cw = back ? (182 + BLEED) * 2 + SPINE : PAGE_W;
+    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, theme: '20 SHEETS', bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
+    await pg.evaluate(() => document.fonts.ready);
+    const coverFile = path.join(OUT, `${name}_${MODE}_표지${back ? '_펼침' : ''}.pdf`);
+    await pg.pdf({ path: coverFile, width: `${cw}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
+    await browser.close();
+    const bodyFile = path.join(OUT, `${name}_${MODE}_내지.pdf`);
+    fs.renameSync(body, bodyFile);
+    console.log('done:', coverFile, '+', bodyFile, 'sheet pages:', pages.length, `(cover ${cw}×${PAGE_H}mm, spine ${back ? SPINE : 0}mm, bleed ${BLEED}mm, gutter ${GUTTER}mm)`);
+  }
 })();

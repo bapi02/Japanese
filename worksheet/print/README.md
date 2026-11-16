@@ -31,3 +31,13 @@ python3 -c "from PIL import Image; import glob; [Image.open(f).convert('RGB').re
 ## 표지
 
 `cover/cover.jpg` — 스튜디오 제품사진 톤(노트 한 권), 타이포는 `compose-cover.js`가 얹음. 시안을 다시 뽑으려면 `gen-cover2.js`(사진 생성) → `node compose-cover.js <이름>`(미리보기 PNG).
+
+## 인쇄소(성원애드피아 등) 입고용
+
+```bash
+node worksheet/print/build.js 1 wireless 4     # 1권 무선제본: 표지 펼침면(뒤표지+책등 4mm+앞표지) + 내지, 재단여백 3mm, 제본쪽 여백 6mm
+node worksheet/print/build.js 1 spring         # 1권 스프링: 표지 낱장 + 내지, 재단여백 3mm, 제본쪽 여백 10mm
+node worksheet/print/build.js 2 wireless 4.5   # 2권 (책등 두께는 주문 화면 값으로 바꿔서)
+node worksheet/print/build.js 2 spring
+```
+결과는 `out/` 에 `..._표지(_펼침).pdf` + `..._내지.pdf` 두 파일로 나옴. 내지 크기 188×263mm(B5+3mm), 홀수쪽은 왼쪽·짝수쪽은 오른쪽에 제본 여백.
