@@ -66,7 +66,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .hdr .code { font-size: 24px; color: #8a8a8a; letter-spacing: 1px; line-height: 1; padding-bottom: 2px; font-family: 'NSKR'; }
 .hdr .code b { font-weight: 400; font-size: 26px; margin-right: 6px; }
 .hdr .ser { font-size: 10pt; color: #666; padding-top: 4px; letter-spacing: 0.5px; }
-.hdr.b .mark, .hdr.b .ser { visibility: hidden; }
+.hdr.sub .mark, .hdr.sub .ser { visibility: hidden; }
 
 /* ── 제목 박스 + 날짜/이름 ── */
 .tbar { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 8px; }
@@ -243,12 +243,21 @@ function blocksOf(s, imgH = 230) {
     comp.forEach((it, i) => B.push({ html: `<div class="it"><div class="cq"><span class="no">(${i + 1})</span><span class="kq">${esc(it.ko)}</span>${it.hint ? `<span class="hint jp">${ruby(it.hint).replace(/　/g, '<i></i>')}</span>` : ''}</div>
       <div class="cline jp"><span class="bl"></span>。</div></div>` }));
   }
+  // 여백 채우기: 남는 공간만큼 본문 문장 따라쓰기 (페이지를 새로 만들지는 않음)
+  const F = [];
+  if (s.passage) {
+    F.push({ head: true, html: `<div class="sec"><span class="n">${secNo + 1}</span> 본문과 예문을 따라 쓰고, 아래 줄에 보지 않고 한 번 더 쓰세요.</div>` });
+    const lines = [...s.passage.jp];
+    for (const [jp] of s.grammar.rules) if (!jp.includes('→') && !lines.includes(jp) && !lines.includes(jp + '。')) lines.push(jp.endsWith('。') || jp.endsWith('？') ? jp : jp + '。');
+    lines.forEach((l, i) => F.push({ html: `<div class="it"><div class="q"><span class="no">(${i + 1})</span></div><div class="trace" style="margin-top:-18px"><div class="g jp">${ruby(l)}</div><div class="ln s"></div></div></div>` }));
+  }
+  B.fillers = F;
   return B;
 }
 
 function header(s, side) {
   const { letter, n } = codeOf(s);
-  return `<div class="hdr ${side}"><div class="lg">${MARK}<div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${VOL} · ${letter} ${n}</div></div>`;
+  return `<div class="hdr ${side === 'a' ? 'a' : 'sub'}"><div class="lg">${MARK}<div class="code"><b>${letter}</b>${n}${side}</div></div><div class="ser">일본어 학습지 ${VOL} · ${letter} ${n}</div></div>`;
 }
 
 function renderCover() {
@@ -282,7 +291,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
     let blocks, m;
     for (const imgH of [230, 200, 170, 140]) {
       blocks = blocksOf(s, imgH);
-      const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${blocks.map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
+      const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${[...blocks, ...blocks.fillers].map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
       await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
       await pg.evaluate(() => document.fonts.ready);
       m = await measure(pg);
@@ -297,7 +306,15 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
       if (used + need > cap && out[out.length - 1].length) { out.push([]); used = m.hb; }
       out[out.length - 1].push(i); used += m.h[i];
     }
-    out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, 'abcdef'[pi] || 'z')}${idx.map((i) => `<div class="blk">${blocks[i].html}</div>`).join('')}</div>`));
+    const fill = [];
+    for (let j = 0; j < blocks.fillers.length; j++) {
+      const k = blocks.length + j; let need = m.h[k];
+      if (blocks.fillers[j].head) need += (m.h[k + 1] || 0) + 12;
+      if (used + need > cap) break;
+      fill.push(blocks.fillers[j].html); used += m.h[k];
+    }
+    if (fill.length > 1) out[out.length - 1].push(...fill.map((h) => ({ html: h })));
+    out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, 'abcdef'[pi] || 'z')}${idx.map((i) => `<div class="blk">${typeof i === 'number' ? blocks[i].html : i.html}</div>`).join('')}</div>`));
   }
 
   // 2) 본문 렌더
