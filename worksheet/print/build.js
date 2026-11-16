@@ -63,7 +63,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .measure .page { height: auto; overflow: visible; break-after: auto; }
 
 /* ── 머리글 ── */
-.hdr { display: flex; justify-content: space-between; align-items: flex-start; height: 44px; margin-bottom: 6px; }
+.hdr { display: flex; justify-content: space-between; align-items: flex-start; height: 44px; margin-bottom: 12px; }
 .hdr .lg { display: flex; align-items: flex-end; gap: 10px; }
 .hdr .mark { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; color: #666; padding-bottom: 1px; margin-right: 4px; }
 .hdr .mark .m1 { font-size: 19px; font-family: 'Inter'; font-weight: 900; line-height: 1; letter-spacing: -0.5px; color: #5a5a5a; }
@@ -85,7 +85,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .meta .r .lab { color: #777; font-size: 9.5pt; letter-spacing: 1px; margin-right: 2px; }
 
 /* ── 포인트 (작게) ── */
-.pbx { border: 1.5px solid var(--mint-d); border-radius: 8px; padding: 8px 12px 6px; margin: 6px 0 10px; background: #fbfdfc; }
+.pbx { border: 1.5px solid var(--mint-d); border-radius: 8px; padding: 10px 14px 8px; margin: 12px 0 14px; background: #fbfdfc; }
 .pbx .ph { font-size: 9pt; font-weight: 700; color: var(--teal); letter-spacing: 1px; margin-bottom: 4px; }
 .pbx .vocab { margin: 6px 0 2px; border: none; border-top: 1px dashed #cfd8d5; border-radius: 0; padding: 6px 0 0; }
 .pt { font-size: 9.2pt; color: #444; line-height: 1.6; margin: 0; }
@@ -100,7 +100,8 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .vocab .vw .jp { font-size: 10pt; color: #222; margin-right: 4px; }
 
 /* ── 섹션 ── */
-.sec { display: flex; align-items: center; gap: 7px; margin: 8px 0 6px; font-size: 10.5pt; break-after: avoid; }
+.sec { display: flex; align-items: center; gap: 7px; margin: 14px 0 10px; font-size: 10.5pt; break-after: avoid; }
+.blk:first-of-type > .sec, .hdr + .blk > .sec { margin-top: 2px; }
 .sec .n { font-size: 19pt; font-weight: 700; color: var(--teal); line-height: 1; min-width: 16px; }
 .sec .ic { width: 16px; height: 16px; }
 .sec .tag { font-size: 8pt; color: #555; border: 1px solid #888; border-radius: 2px; padding: 0 4px; line-height: 1.4; }
@@ -111,13 +112,18 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pbox .ptag { position: absolute; top: -9px; right: 14px; background: #fff; padding: 0 5px; font-size: 8pt; color: #555; display: flex; align-items: center; gap: 4px; }
 .pbox .ptag span { border: 1px solid #888; border-radius: 2px; padding: 0 4px; }
 .pbox .pl { font-size: 16pt; line-height: 2.05; letter-spacing: 2px; }
-.pbox .pimg { display: block; width: 100%; height: 300px; object-fit: cover; border-radius: 10px; margin: 2px auto 12px; }
+.pbox .pimg { position: relative; width: 100%; height: 300px; margin: 0 auto 8px; overflow: hidden; }
+.pbox .pimg img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pbox .pimg::after { content: ''; position: absolute; inset: -2px; box-shadow: inset 0 0 26px 24px #fff; pointer-events: none; }
 .pbox .pk { clear: none; }
 .pbox .pk { margin-top: 6px; font-size: 9.5pt; color: #333; line-height: 1.6; }
 .pbox .pk div { white-space: nowrap; }
 
 /* ── 답 쓰는 줄 ── */
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 26px; row-gap: 4px; }
+.grid2.exrow { column-gap: 34px; margin: 0 4px 16px; }
+.grid2.exrow .q { font-size: 11pt; }
+.grid2.exrow .ln { height: 46px; }
 .q { font-size: 10.5pt; line-height: 1.5; }
 .ln { border-bottom: 1.3px solid var(--line); height: 38px; }
 .ln.s { height: 30px; }
@@ -208,15 +214,16 @@ function blocksOf(s, imgH = 380, pFont = 16) {
 
   // 1. 본문
   if (s.passage) {
-    sec(`${FACE}<span class="tag">1-${ex.length}</span> 다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.`);
+    sec(`${FACE} 그림을 보면서, 다음 글을 소리 내어 읽으세요.`);
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
-      ${fs.existsSync(img) ? `<img class="pimg" style="height:${imgH}px" src="${dataUri(img)}">` : ''}
+      ${fs.existsSync(img) ? `<div class="pimg" style="height:${imgH}px"><img src="${dataUri(img)}"></div>` : ''}
       ${s.passage.jp.map((l) => `<div class="pl jp" style="font-size:${pFont}pt">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
+    if (ex.length) sec(`<span class="tag">1-${ex.length}</span> 위의 글에서 찾아, 알맞은 일본어를 쓰세요.`);
     for (let i = 0; i < ex.length; i += 2) {
       const pair = ex.slice(i, i + 2);
-      B.push({ html: `<div class="grid2">${pair.map((it, j) => `<div><div class="q">(${i + j + 1}) ${esc(it.ko)}</div><div class="ln"></div></div>`).join('')}</div>` });
+      B.push({ html: `<div class="grid2 exrow">${pair.map((it, j) => `<div><div class="q">(${i + j + 1}) ${esc(it.ko)}</div><div class="ln"></div></div>`).join('')}</div>` });
     }
   }
 
