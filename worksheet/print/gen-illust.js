@@ -45,6 +45,28 @@ const SCENES = {
   38: 'A karaoke room with a microphone and colorful lights, a person playing an acoustic guitar, a songbook with no text.',
   39: 'A tired office worker leaving work early with a bag, a window showing evening light, a calm weekend scene with a hammock in the corner.',
   40: 'Graduation day: a student in a cap and gown holding a diploma, an airplane in the sky, a small office building, a suitcase.',
+  // ── 3권 ──
+  41: 'A cozy Japanese house interior seen from the entrance: a hallway with several doors, a family of five smiling in the living room, a little girl waving.',
+  42: 'An office: a young woman at her desk looking pale with a hand on her forehead, a concerned colleague beside her, a thermometer and a cup of tea.',
+  43: 'Camping preparation: a tent half set up in a backyard with one bent pole, a bag of groceries, a worried person holding the pole.',
+  44: 'An empty classroom in the evening: ceiling light on, a window open with curtains moving, a notebook left on a desk.',
+  45: 'Two friends looking at a printed photo together; inside the photo, a boy in a cap and his friend stand in front of a Kyoto temple.',
+  46: 'A dark cloudy sky over a street, two friends with a folded umbrella looking at a new bakery window full of fresh bread.',
+  47: 'A small old bookstore at a station front with a closing-sale look, an elderly shopkeeper looking tired, two passersby whispering.',
+  48: 'A bright new apartment room with big windows, a train station visible nearby, rain outside, a person happily unpacking.',
+  49: 'A comic strip of an unlucky day: a foot stepped on in a crowded train, rain pouring at a station exit, a little brother eating pudding.',
+  50: 'A meeting room: a young woman raising her hand to present, a kind manager nodding, a coworker preparing documents.',
+  51: 'A cafe entrance: a polite waiter bowing to two customers, a menu held open, cups of coffee on a tray.',
+  52: 'A company reception desk: a receptionist with a gentle smile, a visitor in a suit holding documents, a waiting sofa.',
+  53: 'Morning jogging on a park path, and a desk at night with vocabulary flashcards and a lamp, side by side.',
+  54: 'A young man holding a moving box and a Tokyo map, a friend waving goodbye, a cooking pot with steam in a thought bubble.',
+  55: 'A person running toward a cinema with a phone to their ear, a clock above the entrance, a friend waiting with two tickets.',
+  56: 'Kyoto in autumn: a temple gate with bright red maple leaves, crowds of visitors, early morning soft light.',
+  57: 'A new cafe with a sunflower painted on its sign (no letters), two friends chatting outside, a slice of cake on a table.',
+  58: 'An apartment window left open with rain blowing in, a wet floor, a person rushing out the door with keys.',
+  59: 'A person waiting at the door looking at an empty mailbox, a delivery truck far down the street, a package in a thought bubble.',
+  60: 'Morning in a Japanese home: a father knocking on a bedroom door, a boy still in bed, a soccer uniform and ball ready by the door.',
+  61: 'A self-introduction scene: a young woman standing in front of a small group, a Korean flag pin on her bag, a cooking pot and a JLPT-style test paper (blank) on a board.',
 };
 async function gen(id) {
   const out = path.join('img', `step_${String(id).padStart(2, '0')}.png`);

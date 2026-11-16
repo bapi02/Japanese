@@ -11,8 +11,9 @@ const ROOT = __dirname, OUT = path.join(ROOT, 'out'), FONTS = path.join(ROOT, 'f
 fs.mkdirSync(OUT, { recursive: true });
 const src = fs.readFileSync(path.join(ROOT, '..', 'data.js'), 'utf8');
 const src2 = fs.readFileSync(path.join(ROOT, '..', 'data2.js'), 'utf8');
-const VOL = Number(process.argv[2] || 1); // 권 (1 또는 2)
-const ALL = new Function(src + src2 + ';return {WS_STEPS, WS_LEVELS};')();
+const src3 = fs.readFileSync(path.join(ROOT, '..', 'data3.js'), 'utf8');
+const VOL = Number(process.argv[2] || 1); // 권 (1 · 2 · 3)
+const ALL = new Function(src + '\n' + src2 + '\n' + src3 + ';return {WS_STEPS, WS_LEVELS};')();
 const WS_STEPS = ALL.WS_STEPS.filter((s) => (s.vol || 1) === VOL);
 const WS_LEVELS = ALL.WS_LEVELS.filter((l) => (l.vol || 1) === VOL);
 
@@ -27,8 +28,8 @@ const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('
 const FOOTER = () => `<style>@font-face{font-family:'Inter';src:url(data:font/ttf;base64,${fs.readFileSync(path.join(FONTS, 'Inter-900.ttf')).toString('base64')});font-weight:900}</style>
   <div style="width:100%;box-sizing:border-box;padding:0 ${M_SIDE}mm ${BLEED + 5}mm;display:flex;justify-content:space-between;align-items:flex-end;font-family:'Inter',sans-serif;font-weight:900;color:#8a8a8a;">
     <span style="font-size:10px;letter-spacing:-0.3px">BaPi</span><span class="pageNumber" style="font-size:7px;font-family:sans-serif;font-weight:400;color:#9a9a9a"></span></div>`; // about:blank 에서는 file:// 이미지가 막혀서 인라인
-const LETTER = { intro: 'A', basic: 'B', use: 'C', ext: 'D', plain: 'E', adv: 'F' };
-const codeOf = (s) => { const n = WS_STEPS.filter((x) => x.level === s.level && x.id <= s.id).length; return { letter: LETTER[s.level], n }; };
+const LETTER = { intro: 'A', basic: 'B', use: 'C', ext: 'D', plain: 'E', adv: 'F', sup: 'G', g: 'G', h: 'H', i: 'I' };
+const codeOf = (s) => { const n = s.codeNo != null ? s.codeNo : WS_STEPS.filter((x) => x.level === s.level && x.id <= s.id).length; return { letter: LETTER[s.level], n }; };
 
 /* 페이지 치수 (px, 96dpi) */
 const MM = 96 / 25.4;
@@ -37,7 +38,7 @@ const MM = 96 / 25.4;
 const MODE = process.argv[3] || 'screen';
 const BLEED = MODE === 'screen' ? 0 : 3;
 const GUTTER = MODE === 'wireless' ? 6 : MODE === 'spring' ? 10 : 0;
-const SPINE = Number(process.argv[4] || (VOL > 1 ? 4.5 : 4)); // 책등 두께 mm (무선제본)
+const SPINE = Number(process.argv[4] || (VOL > 1 ? 4.5 : 4)); // 책등 두께 mm (무선제본, 3권도 4.5)
 const PAGE_W = 182 + 2 * BLEED, PAGE_H = 257 + 2 * BLEED, M_TOP = 11 + BLEED, M_BOT = 11 + BLEED, M_SIDE = 13 + BLEED;
 const CONTENT_H = Math.floor((PAGE_H - M_TOP - M_BOT) * MM);
 
@@ -90,6 +91,10 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .pt .rules div { color: #666; }
 .pt .rules .jp { font-size: 9.5pt; color: #222; margin-right: 4px; }
 .pt .tip { color: #666; }
+.vocab { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px 8px; border: 1px solid #ddd; border-radius: 4px; padding: 5px 10px 4px; margin: -4px 0 10px; font-size: 8.3pt; color: #444; }
+.vocab .vh { grid-column: 1 / -1; font-size: 7.5pt; color: var(--teal); letter-spacing: 1px; font-weight: 700; margin-bottom: 1px; }
+.vocab .vw { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vocab .vw .jp { font-size: 10pt; color: #222; margin-right: 4px; }
 
 /* ── 섹션 ── */
 .sec { display: flex; align-items: center; gap: 7px; margin: 8px 0 6px; font-size: 10.5pt; break-after: avoid; }
@@ -196,7 +201,8 @@ function blocksOf(s, imgH = 230, pFont = 16) {
         <div class="r nm"><span class="lab">이름</span></div>
       </div>
     </div>
-    <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>` });
+    <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>
+    ${s.vocab ? `<div class="vocab"><div class="vh">오늘의 단어</div>${s.vocab.map(([w, k]) => `<div class="vw"><span class="jp">${ruby(w)}</span>${esc(k)}</div>`).join('')}</div>` : ''}` });
 
   // 1. 본문
   if (s.passage) {
@@ -267,7 +273,7 @@ function header(s, side) {
 function renderCover() {
   const toc = WS_LEVELS.map((lv) => `<div class="lv">${esc(lv.name)} · ${esc(lv.desc)}</div>` +
     WS_STEPS.filter((s) => s.level === lv.id).map((s) => { const c = codeOf(s); return `<div><span class="cd">${c.letter} ${c.n}</span><span class="jp">${ruby(s.title)}</span> · ${esc(s.sub)}</div>`; }).join('')).join('');
-  return `<div class="page"><div class="cover"><h1>목차</h1><div class="s">${VOL === 1 ? 'A 입문 · B 기초 · C 활용' : 'D 확장 · E 보통형 · F 응용'} — 20장 (앞면 a · 뒷면 b) + 정답</div>
+  return `<div class="page"><div class="cover"><h1>목차</h1><div class="s">${VOL === 1 ? 'A 입문 · B 기초 · C 활용 — 20장' : VOL === 2 ? 'D 확장 · E 보통형 · F 응용 — 20장' : 'G 0 보충 · G 보조동사 · H 수동·사역·경어 · I 응용 — 21장'} (앞면 a · 뒷면 b) + 정답</div>
     <div class="toc">${toc}</div>
     <div class="how">하루 3장. 시작·끝 시각과 이름을 적고 풀어요.<br>연한 글씨는 따라 쓰고, 그 아래 줄에는 보지 않고 한 번 더 써요.<br>다 풀면 맨 뒤 정답으로 채점하고, 틀린 문제는 한 번 더 써 보세요.</div></div></div>`;
 }
@@ -337,12 +343,12 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   const { coverHtml, coverPrintHtml } = require('./compose-cover.js');
   const coverImg = path.join(ROOT, 'cover', VOL > 1 ? `cover${VOL}.jpg` : 'cover.jpg');
   const imgUri = 'data:image/jpeg;base64,' + fs.readFileSync(coverImg).toString('base64');
-  const BG = VOL > 1 ? '#dcd9d4' : '#d9d4d1'; // 사진 가장자리 평균색 (뒤표지·책등)
+  const BG = { 1: '#d9d4d1', 2: '#dcd9d4', 3: '#ddd9d6' }[VOL] || '#dad6d1'; // 사진 가장자리 평균색 (뒤표지·책등)
   const cover = path.join(OUT, 'cover.pdf');
   const name = `일본어학습지_초급${VOL > 1 ? VOL : ''}`;
   if (MODE === 'screen') {
     await pg.setViewportSize({ width: 688, height: 971 });
-    await pg.setContent(coverHtml(imgUri, { initials: '', sub: 'BaPi — NIHONGO WORKSHEET', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
+    await pg.setContent(coverHtml(imgUri, { initials: '', sub: 'BaPi — NIHONGO WORKSHEET', theme: `${WS_STEPS.length} SHEETS`, vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
     await browser.close();
@@ -353,13 +359,22 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   } else {
     const back = MODE === 'wireless';
     const cw = back ? (182 + BLEED) * 2 + SPINE : PAGE_W;
-    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: '20 SHEETS', bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
+    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: `${WS_STEPS.length} SHEETS`, bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     const coverFile = path.join(OUT, `${name}_${MODE}_표지${back ? '_펼침' : ''}.pdf`);
     await pg.pdf({ path: coverFile, width: `${cw}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
     await browser.close();
     const bodyFile = path.join(OUT, `${name}_${MODE}_내지.pdf`);
     fs.renameSync(body, bodyFile);
+    if (back) { // 무선제본 내지는 짝수 쪽이어야 함 → 홀수면 빈 페이지 추가
+      require('child_process').execFileSync('python3', ['-c', `
+from pypdf import PdfReader, PdfWriter
+import sys
+p=sys.argv[1]; r=PdfReader(p)
+if len(r.pages)%2==1:
+    w=PdfWriter(); [w.add_page(pg) for pg in r.pages]; w.add_blank_page(); w.write(p); print('blank page added ->', len(r.pages)+1)
+`, bodyFile], { stdio: 'inherit' });
+    }
     console.log('done:', coverFile, '+', bodyFile, 'sheet pages:', pages.length, `(cover ${cw}×${PAGE_H}mm, spine ${back ? SPINE : 0}mm, bleed ${BLEED}mm, gutter ${GUTTER}mm)`);
   }
 })();

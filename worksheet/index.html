@@ -107,6 +107,10 @@ rt { font-size: 0.5em; color: var(--accent2); font-weight: 400; letter-spacing: 
 .spk:hover { border-color: var(--accent2); color: var(--text); }
 .tip { margin-top: 12px; background: var(--surface); border-left: 3px solid var(--yellow); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; color: var(--text-dim); }
 .tip::before { content: '💡 '; }
+.vocab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.vocab-row { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-dim); border-bottom: 1px dotted var(--border); padding: 4px 0; }
+.vocab-row .jp { font-size: 15px; color: var(--text); flex: 1; }
+.vocab-row .spk { padding: 2px 5px; font-size: 11px; }
 
 .items-label { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--text-dim); margin: 6px 2px 0; display: flex; justify-content: space-between; align-items: center; }
 .item { background: var(--card); border: 1.5px solid var(--border); border-radius: 14px; padding: 14px 16px; position: relative; transition: border-color 0.2s; }
@@ -230,10 +234,10 @@ html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8
   <div id="home-screen" style="display:flex;flex-direction:column;gap:14px;">
     <div class="home-intro">
       <h1>📝 일본어 학습지 · 초급</h1>
-      <p>구몬처럼 매일 조금씩. 써 보고, 바꿔 보고, 만들어 보기.<br>하루에 <b>3장</b>씩 새 학습지가 열려요. 1권(20장) → 2권(20장).</p>
+      <p>구몬처럼 매일 조금씩. 써 보고, 바꿔 보고, 만들어 보기.<br>하루에 <b>3장</b>씩 새 학습지가 열려요. 1권 → 2권 → 3권.</p>
     </div>
     <div class="progress-wrap">
-      <div class="progress-top"><span>전체 진도</span><b id="prog-text">0 / 40장</b></div>
+      <div class="progress-top"><span>전체 진도</span><b id="prog-text">0 / 61장</b></div>
       <div class="bar"><i id="prog-bar" style="width:0%"></i></div>
     </div>
     <div class="today-card">
@@ -242,7 +246,7 @@ html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8
     </div>
     <div id="level-sections"></div>
     <div class="home-foot">
-      <a href="print/worksheet.pdf" target="_blank" rel="noopener" style="color:var(--accent2);font-weight:700;text-decoration:none">🖨 종이 학습지 PDF 1권</a> · <a href="print/worksheet2.pdf" target="_blank" rel="noopener" style="color:var(--accent2);font-weight:700;text-decoration:none">2권</a><br>
+      <a href="print/worksheet.pdf" target="_blank" rel="noopener" style="color:var(--accent2);font-weight:700;text-decoration:none">🖨 종이 학습지 PDF 1권</a> · <a href="print/worksheet2.pdf" target="_blank" rel="noopener" style="color:var(--accent2);font-weight:700;text-decoration:none">2권</a> · <a href="print/worksheet3.pdf" target="_blank" rel="noopener" style="color:var(--accent2);font-weight:700;text-decoration:none">3권</a><br>
       <span id="sync-dot">진도는 이 브라우저에 저장돼요</span> · <button class="link-btn" onclick="unlockMore()">🔓 3장 더 열기</button> · <button class="link-btn" onclick="resetAll()">진도 초기화</button>
     </div>
   </div>
@@ -256,6 +260,7 @@ html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8
 
 <script src="data.js"></script>
 <script src="data2.js"></script>
+<script src="data3.js"></script>
 <script>
 /* ───────────── 저장 ───────────── */
 const STORE = 'ws_progress_v1';
@@ -486,6 +491,7 @@ function renderStep() {
       <div class="point">${ruby(s.grammar.point)}</div>
       <div class="rules">${rules}</div>
       ${s.grammar.tip ? `<div class="tip">${ruby(s.grammar.tip)}</div>` : ''}
+      ${s.vocab ? `<div class="vocab-box"><div class="g-head" style="margin:14px 0 6px">📒 오늘의 단어</div><div class="vocab-grid">${s.vocab.map(([w, k]) => `<div class="vocab-row"><span class="jp">${ruby(w)}</span><span>${esc(k)}</span><button class="spk" onclick="speak(${JSON.stringify(w).replace(/"/g, '&quot;')})">🔊</button></div>`).join('')}</div></div>` : ''}
     </div>
     ${passage}
     ${items.replace('<!--SEC2-->', `<div class="sec-head" style="margin-top:10px"><span class="sec-no">2</span>오늘의 포인트를 참고하여, 알맞은 일본어를 쓰세요. <span style="font-weight:400;color:var(--text-muted);font-size:11px;margin-left:auto">✍️ = 손글씨 패드</span></div>`)}

@@ -1,6 +1,6 @@
 # 인쇄용 PDF (구몬 스타일)
 
-`worksheet.pdf`(1권, STEP 1~20) · `worksheet2.pdf`(2권, STEP 21~40) — 표지 + 20장(앞면 a·뒷면 b) + 정답. B5(182×257mm, 구몬 학습지와 같은 크기) — A4 프린터는 "용지에 맞춤"으로. `../data.js` 내용을 그대로 종이 학습지로 만든 것입니다.
+`worksheet.pdf`(1권, STEP 1~20) · `worksheet2.pdf`(2권, STEP 21~40) · `worksheet3.pdf`(3권, STEP 41~61, 보충 1장 포함) — 표지 + 20장(앞면 a·뒷면 b) + 정답. B5(182×257mm, 구몬 학습지와 같은 크기) — A4 프린터는 "용지에 맞춤"으로. `../data.js` 내용을 그대로 종이 학습지로 만든 것입니다.
 
 ## 다시 만들기
 
@@ -17,6 +17,7 @@ curl -sSo KleeOne-600.ttf "https://fonts.gstatic.com/s/kleeone/v14/LDI2apCLNRc6A
 # 생성 (playwright + chromium 필요)
 node worksheet/print/build.js 1 && cp worksheet/print/out/일본어학습지_초급.pdf worksheet/print/worksheet.pdf
 node worksheet/print/build.js 2 && cp worksheet/print/out/일본어학습지_초급2.pdf worksheet/print/worksheet2.pdf
+node worksheet/print/build.js 3 && cp worksheet/print/out/일본어학습지_초급3.pdf worksheet/print/worksheet3.pdf
 ```
 
 ## 삽화
