@@ -171,7 +171,7 @@ const measure = (pg) => pg.evaluate(() => ({
 }));
 
 /* ── 블록 생성 (한 장 = 블록 목록, 나중에 페이지에 나눠 담음) ── */
-function blocksOf(s, imgH = 230) {
+function blocksOf(s, imgH = 230, pFont = 16) {
   const g = s.grammar;
   const ex = s.items.filter((it) => it.type === 'extract');
   const trace = s.items.filter((it) => it.type === 'trace');
@@ -200,7 +200,7 @@ function blocksOf(s, imgH = 230) {
     const img = path.join(ROOT, 'img', `step_${String(s.id).padStart(2, '0')}.jpg`);
     B.push({ html: `<div class="pbox"><div class="ptag">${FACE}<span>${n}a</span></div>
       ${fs.existsSync(img) ? `<img class="pimg" style="height:${imgH}px;width:${Math.round(imgH * 340 / 230)}px" src="${dataUri(img)}">` : ''}
-      ${s.passage.jp.map((l) => `<div class="pl jp">${ruby(l)}</div>`).join('')}
+      ${s.passage.jp.map((l) => `<div class="pl jp" style="font-size:${pFont}pt">${ruby(l)}</div>`).join('')}
       <div class="pk">${s.passage.ko.map((k) => `<div>${esc(k)}</div>`).join('')}</div></div>` });
     for (let i = 0; i < ex.length; i += 2) {
       const pair = ex.slice(i, i + 2);
@@ -289,8 +289,8 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   for (const s of WS_STEPS) {
     // 본문(그림+글)이 앞면에 들어가도록 그림 높이를 단계적으로 줄여 가며 측정
     let blocks, m;
-    for (const imgH of [230, 200, 170, 140]) {
-      blocks = blocksOf(s, imgH);
+    for (const [imgH, pFont] of [[230, 16], [200, 16], [170, 15.5], [140, 15], [120, 14.5], [100, 14], [90, 13.5]]) {
+      blocks = blocksOf(s, imgH, pFont);
       const html = `<div class="page"><div id="ha">${header(s, 'a')}</div><div id="hb">${header(s, 'b')}</div>${[...blocks, ...blocks.fillers].map((b, i) => `<div class="blk" data-i="${i}">${b.html}</div>`).join('')}</div>`;
       await pg.setContent(doc(html, 'measure'), { waitUntil: 'load' });
       await pg.evaluate(() => document.fonts.ready);
