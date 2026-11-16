@@ -85,9 +85,17 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .meta .r .lab { color: #777; font-size: 9.5pt; letter-spacing: 1px; margin-right: 2px; }
 
 /* ── 포인트 (작게) ── */
-.pbx { border: 1.5px solid var(--mint-d); border-radius: 8px; padding: 10px 14px 8px; margin: 12px 0 14px; background: #fbfdfc; }
+.pbx { border: 1.5px solid var(--mint-d); border-radius: 8px; padding: 10px 14px 8px; margin: 12px 0 10px; background: #fbfdfc; }
 .pbx .ph { font-size: 9pt; font-weight: 700; color: var(--teal); letter-spacing: 1px; margin-bottom: 4px; }
-.pbx .vocab { margin: 6px 0 2px; border: none; border-top: 1px dashed #cfd8d5; border-radius: 0; padding: 6px 0 0; }
+.vbx { border: 1.5px solid #d8d8d8; border-radius: 8px; padding: 9px 14px 10px; margin: 0 0 14px; }
+.vbx .ph { font-size: 9pt; font-weight: 700; color: var(--teal); letter-spacing: 1px; margin-bottom: 4px; }
+.vbx .ph span { font-weight: 400; color: #888; letter-spacing: 0; margin-left: 8px; font-size: 8.3pt; }
+.vtab { display: grid; grid-template-columns: 1fr 1fr; grid-auto-flow: column; grid-template-rows: repeat(5, auto); column-gap: 26px; }
+.vr { display: flex; align-items: flex-end; gap: 6px; height: 33px; }
+.vr .vn { font-size: 7.5pt; color: #aaa; width: 12px; padding-bottom: 3px; }
+.vr .w { font-size: 12.5pt; white-space: nowrap; line-height: 1.2; }
+.vr .k { font-size: 8.3pt; color: #666; white-space: nowrap; padding-bottom: 2px; }
+.vr .wl { flex: 1; min-width: 60px; border-bottom: 1.1px solid #555; height: 100%; }
 .pt { font-size: 9.2pt; color: #444; line-height: 1.6; margin: 0; }
 .pt b { color: #2a4a44; }
 .pt .rules { display: grid; grid-template-columns: repeat(2, 1fr); column-gap: 14px; margin: 2px 0 1px; }
@@ -238,7 +246,10 @@ function blocksOf(s, imgH = 380, pFont = 16, exAfter = false) {
   // 오늘의 포인트 + 단어: 항상 뒷면(b) 맨 위에 고정
     B.push({ point: true, breakBefore: true, html: `<div class="pbx"><div class="ph">📖 오늘의 포인트</div>
     <div class="pt">${rubyHtml(g.point)}${g.rules.length > 1 ? `<div class="rules">${g.rules.slice(1).map(([jp, ko]) => `<div><span class="jp">${ruby(jp)}</span>${esc(ko)}</div>`).join('')}</div>` : ''}${g.tip ? `<div class="tip">※ ${rubyHtml(g.tip)}</div>` : ''}</div>
-    ${s.vocab ? `<div class="vocab"><div class="vh">오늘의 단어</div>${s.vocab.map(([w, k]) => `<div class="vw"><span class="jp">${ruby(w)}</span>${esc(k)}</div>`).join('')}</div>` : ''}</div>` });
+</div>` });
+  // 오늘의 단어: 포인트 박스 바로 아래, 단어 + 뜻 + 한 번 써 보는 줄
+  if (s.vocab) B.push({ html: `<div class="vbx"><div class="ph">📒 오늘의 단어 <span>소리 내어 읽고, 옆 줄에 한 번씩 써 보세요.</span></div>
+    <div class="vtab">${s.vocab.map(([w, k], i) => `<div class="vr"><span class="vn">${i + 1}</span><span class="w jp">${ruby(w)}</span><span class="k">${esc(k)}</span><span class="wl"></span></div>`).join('')}</div></div>` });
   if (exAfter) pushExtracts();
 
   // 2. 따라쓰기
