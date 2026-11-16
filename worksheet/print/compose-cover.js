@@ -51,10 +51,10 @@ function coverPrintHtml(img, { vol = 'VOL. 1', theme = '20 SHEETS', sub = 'NIHON
   .spine .st { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(90deg); transform-origin: center; white-space: nowrap; color: ${dark}; font-family: 'Inter'; font-weight: 900; font-size: ${Math.min(7, spine * 1.4)}pt; letter-spacing: 0.8mm; }
   .back { position: absolute; left: 0; top: 0; width: ${PW}mm; height: ${PH}mm; }
   .back .bt { position: absolute; left: ${bleed + 12.7}mm; bottom: ${bleed + 10.6}mm; color: ${dark}; font-family: 'Inter'; font-weight: 900; font-size: 7pt; letter-spacing: 0.8mm; line-height: 1.9; opacity: 0.8; }
-  .back .mark { position: absolute; left: ${bleed + 12.7}mm; top: ${bleed + 11.6}mm; width: 9mm; height: 9mm; border: 0.4mm solid ${dark}; border-radius: 1mm; opacity: 0.55; display: flex; align-items: center; justify-content: center; font-family: 'NSJP'; font-size: 11pt; color: ${dark}; }
+  .back .mark { position: absolute; left: ${bleed + 12.7}mm; top: ${bleed + 11.6}mm; font-family: 'Inter'; font-weight: 900; font-size: 14pt; letter-spacing: -0.3mm; color: ${dark}; opacity: 0.75; }
   .guide { position: absolute; top: 0; bottom: 0; width: 0; border-left: 0.1mm dashed rgba(0,0,0,0.0); }
   </style></head><body><div class="wrap">
-  ${back ? `<div class="back"><div class="mark">日</div><div class="bt">${sub}<br>${vol} · ${theme}</div></div>
+  ${back ? `<div class="back"><div class="mark">BaPi</div><div class="bt">${sub}<br>${vol} · ${theme}</div></div>
   <div class="spine"><div class="st">${sub} &nbsp;·&nbsp; ${vol}</div></div>` : ''}
   <div class="front"><img src="${img}"></div>
   <div class="t sub">${sub}</div><div class="rule"></div>

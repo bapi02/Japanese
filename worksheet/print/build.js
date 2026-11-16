@@ -44,6 +44,7 @@ const CSS = `
 @font-face { font-family: 'NSJP'; src: url('${fontUrl('NotoSansJP-400.ttf')}'); font-weight: 400; }
 @font-face { font-family: 'NSJP'; src: url('${fontUrl('NotoSansJP-700.ttf')}'); font-weight: 700; }
 @font-face { font-family: 'NSKR'; src: url('${fontUrl('NotoSansKR-400.ttf')}'); font-weight: 400; }
+@font-face { font-family: 'Inter'; src: url('${fontUrl('Inter-900.ttf')}'); font-weight: 900; }
 @font-face { font-family: 'NSKR'; src: url('${fontUrl('NotoSansKR-700.ttf')}'); font-weight: 700; }
 :root { --mint: #cfe9e3; --mint-d: #8fcdc0; --mint-bg: #e8f5f2; --teal: #4aaa9a; --ink: #222; --gray: #777; --lgray: #b5b5b5; --line: #2b2b2b; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -60,9 +61,9 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 /* ── 머리글 ── */
 .hdr { display: flex; justify-content: space-between; align-items: flex-start; height: 44px; margin-bottom: 6px; }
 .hdr .lg { display: flex; align-items: flex-end; gap: 10px; }
-.hdr .mark { width: 36px; height: 36px; border: 1.5px solid #999; border-radius: 3px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #666; }
-.hdr .mark .m1 { font-size: 15px; font-family: 'Klee'; line-height: 1; }
-.hdr .mark .m2 { font-size: 6px; letter-spacing: 1.5px; margin-top: 2px; }
+.hdr .mark { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; color: #666; padding-bottom: 1px; margin-right: 4px; }
+.hdr .mark .m1 { font-size: 19px; font-family: 'Inter'; font-weight: 900; line-height: 1; letter-spacing: -0.5px; color: #5a5a5a; }
+.hdr .mark .m2 { font-size: 6.5px; letter-spacing: 1.2px; margin-top: 3px; color: #8a8a8a; font-family: 'NSJP'; }
 .hdr .code { font-size: 24px; color: #8a8a8a; letter-spacing: 1px; line-height: 1; padding-bottom: 2px; font-family: 'NSKR'; }
 .hdr .code b { font-weight: 400; font-size: 26px; margin-right: 6px; }
 .hdr .ser { font-size: 10pt; color: #666; padding-top: 4px; letter-spacing: 0.5px; }
@@ -163,7 +164,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 
 const CAT = `<svg viewBox="0 0 24 24" fill="none" stroke="#2a4a44" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"><path d="M4 10 L4 4 L8.5 7.5 M20 10 L20 4 L15.5 7.5"/><path d="M4 10 C4 17 7 20 12 20 C17 20 20 17 20 10 C20 7 17 6 12 6 C7 6 4 7 4 10 Z"/><circle cx="9" cy="12" r="0.9" fill="#2a4a44"/><circle cx="15" cy="12" r="0.9" fill="#2a4a44"/><path d="M11 15 L12 16 L13 15 M2 12 L6 13 M2 15 L6 14.5 M22 12 L18 13 M22 15 L18 14.5"/></svg>`;
 const FACE = `<svg class="ic" viewBox="0 0 16 16" fill="none" stroke="#4aaa9a" stroke-width="1.2"><circle cx="8" cy="8" r="6.5"/><circle cx="6" cy="7" r="0.7" fill="#4aaa9a"/><circle cx="10" cy="7" r="0.7" fill="#4aaa9a"/><path d="M5.5 10 Q8 12 10.5 10"/></svg>`;
-const MARK = `<div class="mark"><div class="m1">日</div><div class="m2">NIHONGO</div></div>`;
+const MARK = `<div class="mark"><div class="m1">BaPi</div><div class="m2">日本語 学習紙</div></div>`;
 
 const measure = (pg) => pg.evaluate(() => ({
   ha: document.getElementById('ha').offsetHeight, hb: document.getElementById('hb').offsetHeight,
@@ -338,7 +339,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   const name = `일본어학습지_초급${VOL > 1 ? VOL : ''}`;
   if (MODE === 'screen') {
     await pg.setViewportSize({ width: 688, height: 971 });
-    await pg.setContent(coverHtml(imgUri, { initials: '', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
+    await pg.setContent(coverHtml(imgUri, { initials: '', sub: 'BaPi — NIHONGO WORKSHEET', theme: '20 SHEETS', vol: `VOL. ${VOL}` }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     await pg.pdf({ path: cover, width: `${PAGE_W}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
     await browser.close();
@@ -349,7 +350,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
   } else {
     const back = MODE === 'wireless';
     const cw = back ? (182 + BLEED) * 2 + SPINE : PAGE_W;
-    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, theme: '20 SHEETS', bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
+    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: '20 SHEETS', bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     const coverFile = path.join(OUT, `${name}_${MODE}_표지${back ? '_펼침' : ''}.pdf`);
     await pg.pdf({ path: coverFile, width: `${cw}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
