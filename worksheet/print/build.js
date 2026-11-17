@@ -81,7 +81,10 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .log .g { display: flex; align-items: flex-end; gap: 5px; }
 .log .lb { font-family: 'Inter', 'NSKR'; font-weight: 900; font-size: 8px; letter-spacing: 1.5px; color: #777; margin-right: 4px; padding-bottom: 2px; }
 .log i { display: inline-block; border-bottom: 1.1px solid #555; height: 24px; }
-.log i.y { width: 68px; } .log i.m { width: 52px; } .log i.t { width: 48px; }
+.log i.y { width: 68px; } .log i.m { width: 52px; } .log i.t { width: 48px; } .log i.nm { width: 250px; }
+.log { border-radius: 6px 6px 0 0; margin-bottom: 0; }
+.log.two { border-radius: 0 0 6px 6px; margin-bottom: 12px; height: 40px; }
+.stamp { margin-left: auto; width: 38px; height: 38px; flex-shrink: 0; align-self: center; transform: rotate(-9deg); }
 
 /* ── 포인트 (작게) ── */
 .pbx { border-radius: 6px; padding: 11px 16px 9px; margin: 0 0 10px; background: var(--paper); }
@@ -190,6 +193,8 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .ks li .alt { color: #888; font-size: 8pt; }
 `;
 
+// BaPi 도장(판코) — 「ば」
+const STAMP = `<svg class="stamp" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="#b9502f" stroke-width="2.2"/><circle cx="20" cy="20" r="14.2" fill="none" stroke="#b9502f" stroke-width="0.7"/><text x="20" y="27.5" text-anchor="middle" font-family="Klee, NSJP, serif" font-weight="600" font-size="20" fill="#b9502f">ば</text></svg>`;
 const unitNo = (s) => String(s.id).padStart(2, '0'); // 단원 번호 = STEP 번호 (권이 바뀌어도 이어짐)
 
 const measure = (pg) => pg.evaluate(() => ({
@@ -223,11 +228,15 @@ function blocksOf(s, imgH = 380, pFont = 16, exAfter = false, bake = false) {
 
   // 제목 박스 + 날짜/이름 (포인트·단어는 본문 뒤로 → 앞면은 큰 삽화 + 본문)
   B.push({ html: `
-    <div class="ttl"><span class="tj jp">${ruby(s.title)}</span><span class="tk">${esc(s.sub)}</span><span class="sc"><span class="lb">SCORE</span><i></i>/ ${s.items.length}</span></div>
+    <div class="ttl"><span class="tj jp">${ruby(s.title)}</span><span class="tk">${esc(s.sub)}</span>${STAMP}</div>
     <div class="key jp"><span class="kl">KEY SENTENCE</span>${ruby(g.rules[0][0])}</div>
     <div class="log">
       <span class="g"><span class="lb">DATE</span><i class="y"></i>년 <i class="m"></i>월 <i class="m"></i>일</span>
       <span class="g"><span class="lb">TIME</span><i class="t"></i>:<i class="t"></i> ~ <i class="t"></i>:<i class="t"></i></span>
+    </div>
+    <div class="log two">
+      <span class="g"><span class="lb">NAME</span><i class="nm"></i></span>
+      <span class="g"><span class="lb">SCORE</span><i class="t"></i>/ ${s.items.length}</span>
     </div>` });
 
   // 1. 본문
