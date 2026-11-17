@@ -355,7 +355,7 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
       const pt = blocks.findIndex((b) => b.point);
       return m.ha + m.h.slice(0, pt).reduce((a, b) => a + b, 0) <= cap;
     };
-    const READ_ONLY_A = VOL >= 3; // 3권: 앞면은 큰 삽화 + 본문만, 문제는 뒷면부터
+    const READ_ONLY_A = VOL >= 2; // 2·3권: 앞면은 큰 삽화 + 본문만, 문제는 뒷면부터
     const BIG = Array.from({ length: 27 }, (_, i) => [470 - i * 10, 16]).filter(([h]) => h > 380 || h % 30 !== 20); // 470→210, 촘촘하게 맞춤
     const SIZES = [[380, 16], [350, 16], [320, 16], [300, 16], [280, 16], [260, 16], [240, 15.5], [220, 15.5], [200, 15], [180, 14.5], [165, 14.5], [150, 14], [135, 14]];
     if (!READ_ONLY_A) for (const [imgH, pFont] of SIZES) { if (await tryFit(imgH, pFont, false)) { chosen = { imgH, pFont, exAfter: false }; break; } }
