@@ -26,7 +26,7 @@ const kanji = (s) => String(s ?? '').replace(RUBY_RE, '$1');
 const fontUrl = (f) => 'file://' + path.join(FONTS, f);
 const dataUri = (f) => 'data:image/jpeg;base64,' + fs.readFileSync(f).toString('base64');
 const FOOTER = () => `<style>@font-face{font-family:'Inter';src:url(data:font/ttf;base64,${fs.readFileSync(path.join(FONTS, 'Inter-900.ttf')).toString('base64')});font-weight:900}</style>
-  <div style="width:100%;box-sizing:border-box;padding:0 ${M_SIDE}mm ${BLEED + 5}mm;display:flex;justify-content:space-between;align-items:flex-end;font-family:'Inter',sans-serif;font-weight:900;color:#8a8a8a;">
+  <div style="width:100%;box-sizing:border-box;padding:0 ${M_SIDE}mm ${BLEED + 5}mm;display:flex;justify-content:${MODE === 'screen' ? 'space-between' : 'center'};gap:10px;align-items:flex-end;font-family:'Inter',sans-serif;font-weight:900;color:#8a8a8a;">
     <span style="font-size:10px;letter-spacing:-0.3px">BaPi</span><span class="pageNumber" style="font-size:7px;font-family:sans-serif;font-weight:400;color:#9a9a9a"></span></div>`; // about:blank 에서는 file:// 이미지가 막혀서 인라인
 
 /* 페이지 치수 (px, 96dpi) */
@@ -36,7 +36,8 @@ const MM = 96 / 25.4;
 const MODE = process.argv[3] || 'screen';
 const BLEED = MODE === 'screen' ? 0 : 3;
 const GUTTER = MODE === 'wireless' ? 6 : MODE === 'spring' ? 10 : 0;
-const SPINE = Number(process.argv[4] || (VOL > 1 ? 4.5 : 4)); // 책등 두께 mm (무선제본, 3권도 4.5)
+const SPINE_ARG = process.argv[4] ? Number(process.argv[4]) : null; // 책등 두께 mm 직접 지정 (없으면 내지 쪽수로 계산)
+const SHEET_MM = 0.12; // 모조지 100g 한 장 두께(대략). 인쇄소 값이 다르면 책등을 직접 지정
 const PAGE_W = 182 + 2 * BLEED, PAGE_H = 257 + 2 * BLEED, M_TOP = 11 + BLEED, M_BOT = 11 + BLEED, M_SIDE = 13 + BLEED;
 const CONTENT_H = Math.floor((PAGE_H - M_TOP - M_BOT) * MM);
 
@@ -84,7 +85,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .log i.y { width: 68px; } .log i.m { width: 52px; } .log i.t { width: 48px; } .log i.nm { width: 250px; }
 .log { border-radius: 6px 6px 0 0; margin-bottom: 0; }
 .log.two { border-radius: 0 0 6px 6px; margin-bottom: 12px; height: 40px; }
-.stamp { margin-left: auto; width: 38px; height: 38px; flex-shrink: 0; align-self: center; transform: rotate(-9deg); }
+.stamp { margin-left: auto; width: 42px; height: 42px; flex-shrink: 0; align-self: center; transform: rotate(-9deg); }
 
 /* ── 포인트 (작게) ── */
 .pbx { border-radius: 6px; padding: 11px 16px 9px; margin: 0 0 10px; background: var(--paper); }
@@ -194,7 +195,7 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 `;
 
 // BaPi 도장(판코) — 「ば」
-const STAMP = `<svg class="stamp" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="#b9502f" stroke-width="2.2"/><circle cx="20" cy="20" r="14.2" fill="none" stroke="#b9502f" stroke-width="0.7"/><text x="20" y="27.5" text-anchor="middle" font-family="Klee, NSJP, serif" font-weight="600" font-size="20" fill="#b9502f">ば</text></svg>`;
+const STAMP = `<svg class="stamp" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="#b9502f" stroke-width="2.2"/><circle cx="20" cy="20" r="14.2" fill="none" stroke="#b9502f" stroke-width="0.7"/><text x="20" y="18.6" text-anchor="middle" font-family="Klee, NSJP, serif" font-weight="600" font-size="12.5" fill="#b9502f">バ</text><text x="20" y="31" text-anchor="middle" font-family="Klee, NSJP, serif" font-weight="600" font-size="12.5" fill="#b9502f">ピ</text></svg>`;
 const unitNo = (s) => String(s.id).padStart(2, '0'); // 단원 번호 = STEP 번호 (권이 바뀌어도 이어짐)
 
 const measure = (pg) => pg.evaluate(() => ({
@@ -418,23 +419,24 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
     console.log('done:', file, 'sheet pages:', pages.length);
   } else {
     const back = MODE === 'wireless';
+    const bodyFile = path.join(OUT, `${name}_${MODE}_내지.pdf`);
+    fs.renameSync(body, bodyFile);
+    // 내지 쪽수 (무선제본은 짝수여야 하므로 홀수면 빈 페이지 추가)
+    const nPages = Number(require('child_process').execFileSync('python3', ['-c', `
+from pypdf import PdfReader, PdfWriter
+import sys
+p=sys.argv[1]; r=PdfReader(p); n=len(r.pages)
+if sys.argv[2]=='1' and n%2==1:
+    w=PdfWriter(); [w.add_page(pg) for pg in r.pages]; w.add_blank_page(); w.write(p); n+=1
+print(n)
+`, bodyFile, back ? '1' : '0']).toString().trim());
+    const SPINE = back ? (SPINE_ARG || Math.round(nPages / 2 * SHEET_MM * 10) / 10) : 0;
     const cw = back ? (182 + BLEED) * 2 + SPINE : PAGE_W;
     await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: `${WS_STEPS.length} SHEETS`, bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     const coverFile = path.join(OUT, `${name}_${MODE}_표지${back ? '_펼침' : ''}.pdf`);
     await pg.pdf({ path: coverFile, width: `${cw}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
     await browser.close();
-    const bodyFile = path.join(OUT, `${name}_${MODE}_내지.pdf`);
-    fs.renameSync(body, bodyFile);
-    if (back) { // 무선제본 내지는 짝수 쪽이어야 함 → 홀수면 빈 페이지 추가
-      require('child_process').execFileSync('python3', ['-c', `
-from pypdf import PdfReader, PdfWriter
-import sys
-p=sys.argv[1]; r=PdfReader(p)
-if len(r.pages)%2==1:
-    w=PdfWriter(); [w.add_page(pg) for pg in r.pages]; w.add_blank_page(); w.write(p); print('blank page added ->', len(r.pages)+1)
-`, bodyFile], { stdio: 'inherit' });
-    }
-    console.log('done:', coverFile, '+', bodyFile, 'sheet pages:', pages.length, `(cover ${cw}×${PAGE_H}mm, spine ${back ? SPINE : 0}mm, bleed ${BLEED}mm, gutter ${GUTTER}mm)`);
+    console.log('done:', path.basename(coverFile), '+', path.basename(bodyFile), `| 내지 ${nPages}쪽 | 표지 ${Math.round(cw * 10) / 10}×${PAGE_H}mm | 책등 ${SPINE}mm | 재단여백 ${BLEED}mm | 제본여백 ${GUTTER}mm`);
   }
 })();
