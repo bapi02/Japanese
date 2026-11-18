@@ -26,7 +26,7 @@ function coverHtml(img, { initials = 'MK', sub = 'NIHONGO WORKSHEET', vol = 'VOL
 }
 
 /* 인쇄소용 표지 (mm 단위, 재단 여백 포함)
-   back=true  → 뒤표지 + 책등 + 앞표지 펼침면 (무선제본). 책등 7mm 미만이면 책등 글자 없음(인쇄 불가)
+   back=true  → 뒤표지 + 책등 + 앞표지 펼침면 (무선제본). 책등 5mm 미만이면 책등 글자 없음
    back=false → 앞표지 낱장 (스프링제본)                                */
 function coverPrintHtml(img, { vol = 'VOL. 1', theme = '20 SHEETS', sub = 'NIHONGO WORKSHEET', year = '2026', dark = '#1d1d1b', bg = '#d9d4d1', bleed = 3, spine = 4, back = true, trimW = 182, trimH = 257 } = {}) {
   const TW = trimW, TH = trimH;                   // 재단 크기
@@ -55,7 +55,7 @@ function coverPrintHtml(img, { vol = 'VOL. 1', theme = '20 SHEETS', sub = 'NIHON
   .guide { position: absolute; top: 0; bottom: 0; width: 0; border-left: 0.1mm dashed rgba(0,0,0,0.0); }
   </style></head><body><div class="wrap">
   ${back ? `<div class="back"><div class="mark">BaPi</div><div class="bt">${sub}<br>${vol} · ${theme}</div></div>
-  <div class="spine">${spine >= 7 ? `<div class="st">${sub} &nbsp;·&nbsp; ${vol}</div>` : ''}</div>` : ''}
+  <div class="spine">${spine >= 5 ? `<div class="st">${sub} &nbsp;·&nbsp; ${vol}</div>` : ''}</div>` : ''}
   <div class="front"><img src="${img}"></div>
   <div class="t sub">${sub}</div><div class="rule"></div>
   <div class="t vol">${vol}<br><span class="th">${theme}</span></div><div class="t yr">${year}</div>
