@@ -38,7 +38,9 @@ const BLEED = MODE === 'screen' ? 0 : 3;
 const GUTTER = MODE === 'wireless' ? 6 : MODE === 'spring' ? 10 : 0;
 const SPINE_ARG = process.argv[4] ? Number(process.argv[4]) : null; // 책등 두께 mm 직접 지정 (없으면 내지 쪽수로 계산)
 const SHEET_MM = 0.12; // 모조지 100g 한 장 두께(대략). 인쇄소 값이 다르면 책등을 직접 지정
-const PAGE_W = 182 + 2 * BLEED, PAGE_H = 257 + 2 * BLEED, M_TOP = 11 + BLEED, M_BOT = 11 + BLEED, M_SIDE = 13 + BLEED;
+// 재단 크기: 기본 B5 182×257. 인쇄소 규격이 다르면 WS_TRIM=183x258 처럼 지정
+const [TRIM_W, TRIM_H] = (process.env.WS_TRIM || '182x257').split('x').map(Number);
+const PAGE_W = TRIM_W + 2 * BLEED, PAGE_H = TRIM_H + 2 * BLEED, M_TOP = 11 + BLEED, M_BOT = 11 + BLEED, M_SIDE = 13 + BLEED;
 const CONTENT_H = Math.floor((PAGE_H - M_TOP - M_BOT) * MM);
 
 const CSS = `
@@ -455,12 +457,15 @@ if sys.argv[2]=='1' and n%2==1:
 print(n)
 `, bodyFile, back ? '1' : '0']).toString().trim());
     const SPINE = back ? (SPINE_ARG || Math.round(nPages / 2 * SHEET_MM * 10) / 10) : 0;
-    const cw = back ? (182 + BLEED) * 2 + SPINE : PAGE_W;
-    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: `${WS_STEPS.length} SHEETS`, bg: BG, bleed: BLEED, spine: SPINE, back }), { waitUntil: 'load' });
+    const cw = back ? (TRIM_W + BLEED) * 2 + SPINE : PAGE_W;
+    await pg.setContent(coverPrintHtml(imgUri, { vol: `VOL. ${VOL}`, sub: 'BaPi — NIHONGO WORKSHEET', theme: `${WS_STEPS.length} SHEETS`, bg: BG, bleed: BLEED, spine: SPINE, back, trimW: TRIM_W, trimH: TRIM_H }), { waitUntil: 'load' });
     await pg.evaluate(() => document.fonts.ready);
     const coverFile = path.join(OUT, `${name}_${MODE}_표지${back ? '_펼침' : ''}.pdf`);
     await pg.pdf({ path: coverFile, width: `${cw}mm`, height: `${PAGE_H}mm`, printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 }, pageRanges: '1' });
     await browser.close();
-    console.log('done:', path.basename(coverFile), '+', path.basename(bodyFile), `| 내지 ${nPages}쪽 | 표지 ${Math.round(cw * 10) / 10}×${PAGE_H}mm | 책등 ${SPINE}mm | 재단여백 ${BLEED}mm | 제본여백 ${GUTTER}mm`);
+    // 브라우저 PDF 출력은 1/96인치 단위로 반올림되므로 정확한 mm 로 다시 맞춤
+    const ex = (f, w, h) => require('child_process').execFileSync('python3', [path.join(ROOT, 'exact-size.py'), f, String(w), String(h)]);
+    ex(coverFile, Math.round(cw * 100) / 100, PAGE_H); ex(bodyFile, PAGE_W, PAGE_H);
+    console.log('done:', path.basename(coverFile), '+', path.basename(bodyFile), `| 재단 ${TRIM_W}×${TRIM_H} | 내지 ${nPages}쪽 ${PAGE_W}×${PAGE_H}mm | 표지 ${Math.round(cw * 100) / 100}×${PAGE_H}mm | 책등 ${SPINE}mm | 재단여백 ${BLEED}mm | 제본여백 ${GUTTER}mm`);
   }
 })();

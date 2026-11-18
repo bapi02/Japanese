@@ -28,8 +28,8 @@ function coverHtml(img, { initials = 'MK', sub = 'NIHONGO WORKSHEET', vol = 'VOL
 /* 인쇄소용 표지 (mm 단위, 재단 여백 포함)
    back=true  → 뒤표지 + 책등 + 앞표지 펼침면 (무선제본)
    back=false → 앞표지 낱장 (스프링제본)                                */
-function coverPrintHtml(img, { vol = 'VOL. 1', theme = '20 SHEETS', sub = 'NIHONGO WORKSHEET', year = '2026', dark = '#1d1d1b', bg = '#d9d4d1', bleed = 3, spine = 4, back = true } = {}) {
-  const TW = 182, TH = 257;                       // 재단 크기
+function coverPrintHtml(img, { vol = 'VOL. 1', theme = '20 SHEETS', sub = 'NIHONGO WORKSHEET', year = '2026', dark = '#1d1d1b', bg = '#d9d4d1', bleed = 3, spine = 4, back = true, trimW = 182, trimH = 257 } = {}) {
+  const TW = trimW, TH = trimH;                   // 재단 크기
   const PW = TW + bleed, PH = TH + 2 * bleed;      // 패널(바깥쪽 여백 포함)
   const total = back ? PW * 2 + spine : TW + 2 * bleed;
   const fx = back ? PW + spine : bleed;            // 앞표지 재단선 x 시작
