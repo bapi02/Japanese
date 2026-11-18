@@ -42,3 +42,11 @@ node worksheet/print/build.js 2 wireless 4.5   # 2권 (책등 두께는 주문 �
 node worksheet/print/build.js 2 spring
 ```
 결과는 `out/` 에 `..._표지(_펼침).pdf` + `..._내지.pdf` 두 파일로 나옴. 내지 크기 188×263mm(B5+3mm), 홀수쪽은 왼쪽·짝수쪽은 오른쪽에 제본 여백.
+
+## CMYK 변환 (인쇄소가 CMYK를 요구할 때)
+
+```bash
+apt-get install -y ghostscript            # 최초 1회
+python3 worksheet/print/to-cmyk.py <입력.pdf> <출력_CMYK.pdf>
+```
+검은 글자·선은 먹 1도(K)로, 삽화와 포인트 색은 CMYK로 변환됩니다. 페이지 크기와 쪽수는 그대로.
