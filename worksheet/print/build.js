@@ -141,6 +141,10 @@ rt { font-size: 0.42em; color: #333; letter-spacing: 0; font-family: 'Klee', 'NS
 .ln { border-bottom: 1.3px solid var(--line); height: 38px; }
 .ln.s { height: 30px; }
 .blk { break-inside: avoid; display: flow-root; }
+.note { margin-top: 18px; }
+.note .nh { font-size: 9pt; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.note .nh em { font-style: normal; font-family: 'Inter'; font-weight: 900; font-size: 7.5px; letter-spacing: 2px; color: var(--ac); margin-right: 8px; vertical-align: 1px; }
+.note .nl { height: 36px; border-bottom: 1px solid var(--rule); }
 
 /* 문제 유형별 */
 .it { margin-bottom: 8px; }
@@ -383,7 +387,27 @@ const doc = (body, cls = '') => `<!DOCTYPE html><html lang="ko"><head><meta char
       if (used + need > cap) break;
       fill.push(blocks.fillers[j].html); used += m.h[k];
     }
-    if (fill.length > 1) out[out.length - 1].push(...fill.map((h) => ({ html: h })));
+    let usedF = 0;
+    if (fill.length > 1) { out[out.length - 1].push(...fill.map((h) => ({ html: h }))); usedF = fill.length; }
+    // 단원은 항상 짝수 쪽 → 책으로 묶으면 모든 단원이 왼쪽(본문)·오른쪽(문제)으로 펼쳐짐.
+    // 홀수로 끝나면 복습 쓰기(남은 따라쓰기) + 노트 줄로 한 쪽을 채워 붙임
+    if (out.length % 2 === 1) {
+      const extra = []; let u2 = m.hb;
+      const F = blocks.fillers;
+      if (usedF < F.length) {
+        if (usedF > 0 && F[0]) { extra.push({ html: F[0].html.replace('</div>', ' (이어서)</div>') }); u2 += m.h[blocks.length]; }
+        for (let j = usedF; j < F.length; j++) {
+          const k = blocks.length + j; let need = m.h[k];
+          if (F[j].head) need += (m.h[k + 1] || 0) + 12;
+          if (u2 + need > cap - 150) break; // 노트 줄 자리는 남겨 둠
+          extra.push({ html: F[j].html }); u2 += m.h[k];
+        }
+        if (extra.length === 1 && F[0] && extra[0].html.startsWith(F[0].html.slice(0, 20))) { extra.length = 0; u2 = m.hb; }
+      }
+      const nLines = Math.floor((cap - u2 - 64) / 36);
+      if (nLines >= 2) extra.push({ html: `<div class="note"><div class="nh"><em>NOTE</em>틀린 문제나 새로 알게 된 말을 적어 두세요.</div>${'<div class="nl"></div>'.repeat(nLines)}</div>` });
+      out.push(extra);
+    }
     out.forEach((idx, pi) => pages.push(`<div class="page">${header(s, pi, out.length)}${idx.map((i) => `<div class="blk">${typeof i === 'number' ? blocks[i].html : i.html}</div>`).join('')}</div>`));
   }
 
