@@ -8,8 +8,8 @@ const RUBY = /\{([^|{}]+)\|([^|{}]+)\}/g;
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const rb = (s) => esc(s).replace(RUBY, '<ruby>$1<rt>$2</rt></ruby>').replace(/\[\[(.+?)\]\]/g, '<u>$1</u>');
 
-const UNIT = {
-  no: 'R01', title: 'コンビニのアルバイト', sub: '편의점 아르바이트', level: 'N4', chars: 230,
+const UNITS = [{
+  no: 'R01', title: 'コンビニのアルバイト', sub: '편의점 아르바이트', level: 'N4', chars: 230, genre: '생활문', goal: '3분', pic: 118,
   // 문단별 문장. [[ ]] = 밑줄(문제에서 물어보는 부분)
   paras: [
     ['わたしは{先月|せんげつ}から、{駅前|えきまえ}のコンビニでアルバイトをしています。', '{週|しゅう}に{三回|さんかい}、{夕方|ゆうがた}の{五時|ごじ}から{九時|くじ}まで{働|はたら}いています。'],
@@ -23,7 +23,21 @@ const UNIT = {
   ref: { q: '「そのとき」は、いつのことですか。', opts: ['お{客|きゃく}さんに「{遅|おそ}い」と{言|い}われたとき', 'おばあさんが「いつもありがとう」と{言|い}ってくれたとき', '{店長|てんちょう}にレジの{使|つか}い{方|かた}を{聞|き}いたとき'] },
   order: ['{一人|ひとり}でレジができるようになった。', 'コンビニでアルバイトを{始|はじ}めた。', 'おばあさんに「ありがとう」と{言|い}われた。', 'お{客|きゃく}さんに「{遅|おそ}い」と{言|い}われた。'],
   write: 'あなたはアルバイトをしたことがありますか。どんな{仕事|しごと}をしてみたいですか。',
-};
+}, {
+  no: 'R02', title: '{消|き}えたプリン', sub: '사라진 푸딩', level: 'N4', chars: 290, genre: '이야기', goal: '4분', pic: 136,
+  paras: [
+    ['{昨日|きのう}の{夜|よる}、わたしは{冷蔵庫|れいぞうこ}にプリンを{入|い}れておきました。', '{今日|きょう}、{学校|がっこう}から{帰|かえ}ったら{食|た}べるつもりでした。'],
+    ['ところが、{家|いえ}に{帰|かえ}って{冷蔵庫|れいぞうこ}を{開|あ}けると、プリンがありません。', '{弟|おとうと}に{聞|き}くと、「{知|し}らないよ」と{言|い}いました。', 'でも、{弟|おとうと}の{口|くち}のまわりに{何|なに}かついています。'],
+    ['「{食|た}べたでしょう」と{言|い}うと、{弟|おとうと}は{泣|な}きそうな{顔|かお}で「ごめんなさい」と{言|い}いました。', 'わたしは{少|すこ}し{怒|おこ}っていましたが、[[それ]]を{見|み}て、{何|なに}も{言|い}えなくなりました。'],
+    ['{夜|よる}、{弟|おとうと}がコンビニでプリンを{二|ふた}つ{買|か}ってきてくれました。', '{一|ひと}つは{母|はは}に{食|た}べられてしまいましたが、とてもおいしかったです。'],
+  ],
+  words: [['{冷蔵庫|れいぞうこ}', '냉장고'], ['ところが', '그런데'], ['{口|くち}のまわり', '입 주위'], ['つく', '묻다'], ['{怒|おこ}る', '화내다'], ['{顔|かお}', '얼굴']],
+  tf: ['わたしは{昨日|きのう}の{夜|よる}、プリンを{食|た}べました。', '{弟|おとうと}ははじめ、「{知|し}らない」と{言|い}いました。', '{弟|おとうと}はプリンを{一|ひと}つだけ{買|か}ってきました。', 'お{母|かあ}さんもプリンを{食|た}べました。'],
+  qa: ['わたしは、いつプリンを{食|た}べるつもりでしたか。', 'どうして{弟|おとうと}が{食|た}べたとわかりましたか。', '{夜|よる}、{弟|おとうと}は{何|なに}をしてくれましたか。'],
+  ref: { q: '「それ」は{何|なん}ですか。', opts: ['{弟|おとうと}の{泣|な}きそうな{顔|かお}', '{冷蔵庫|れいぞうこ}の{中|なか}', 'コンビニのプリン'] },
+  order: ['{弟|おとうと}が「ごめんなさい」と{言|い}った。', 'プリンを{冷蔵庫|れいぞうこ}に{入|い}れた。', '{弟|おとうと}がプリンを{買|か}ってきてくれた。', '{冷蔵庫|れいぞうこ}を{開|あ}けたら、プリンがなかった。'],
+  write: 'あなたも{食|た}べ{物|もの}をだれかに{食|た}べられたことがありますか。そのとき、どうしましたか。',
+}];
 const CSS = `
 @font-face { font-family: 'Klee'; src: url('${fu('KleeOne-400.ttf')}'); font-weight: 400; }
 @font-face { font-family: 'Klee'; src: url('${fu('KleeOne-600.ttf')}'); font-weight: 600; }
@@ -63,14 +77,15 @@ u { text-decoration: none; border-bottom: 2px solid var(--ac); padding-bottom: 1
 .foot { position: absolute; left: 0; right: 0; bottom: -2px; display: flex; justify-content: space-between; font-family: 'Inter'; font-weight: 900; font-size: 10px; color: #8a8a8a; } .foot span:last-child { font-size: 7px; font-weight: 400; font-family: sans-serif; }
 `;
 const STAMP = `<svg class="stamp" viewBox="0 0 40 40"><circle cx="20" cy="20" r="17.5" fill="none" stroke="#b9502f" stroke-width="2.2"/><circle cx="20" cy="20" r="14.2" fill="none" stroke="#b9502f" stroke-width="0.7"/><text x="20" y="18.6" text-anchor="middle" font-family="Klee" font-weight="600" font-size="12.5" fill="#b9502f">バ</text><text x="20" y="31" text-anchor="middle" font-family="Klee" font-weight="600" font-size="12.5" fill="#b9502f">ピ</text></svg>`;
+function render(UNIT) {
 const hdr = (pi) => `<div class="hdr"><div class="u"><span class="lab">UNIT</span><span class="num">${UNIT.no}</span><span class="pg">${pi} / 2</span></div><div class="ser">BaPi NIHONGO · VOL. 5 · 독해</div></div>`;
 const sec = (n, t) => `<div class="sec"><span class="n">${n}</span>${t}</div>`;
 const p1 = `<div class="page">${hdr(1)}
   <div class="ttl"><span class="tj jp">${rb(UNIT.title)}</span><span class="tk">${UNIT.sub}</span>${STAMP}</div>
-  <div class="badges"><span>LEVEL ${UNIT.level}</span><span>약 ${UNIT.chars}자</span><span>목표 3분</span></div>
+  <div class="badges"><span>${UNIT.genre}</span><span>LEVEL ${UNIT.level}</span><span>약 ${UNIT.chars}자</span><span>목표 ${UNIT.goal}</span></div>
   <div class="log"><span class="g"><span class="lb">DATE</span><i class="y"></i>년 <i></i>월 <i></i>일</span><span class="g"><span class="lb">읽은 시간</span><i></i>분 <i></i>초</span><span class="g"><span class="lb">SCORE</span><i></i>/ 12</span></div>
   ${sec(1, '먼저 끝까지 한 번 읽고, 시간을 적어 보세요. 그다음 소리 내어 한 번 더 읽어요.')}
-  <div class="pic">IMAGE</div>
+  <div class="pic" style="height:${UNIT.pic}px">IMAGE</div>
   <div class="text">${UNIT.paras.map((p, i) => `<div class="para"><span class="pn">${i + 1}</span><div class="pt jp">${p.map(rb).join('')}</div></div>`).join('')}</div>
   <div class="words"><div class="wh">WORDS</div>${UNIT.words.map(([w, k]) => `<span><span class="jp">${rb(w)}</span>${k}</span>`).join('')}</div>
   <div class="foot"><span>BaPi</span><span>1</span></div></div>`;
@@ -86,9 +101,11 @@ const p2 = `<div class="page">${hdr(2)}
   ${sec(6, '내 이야기를 두세 문장으로 써 보세요.')}
   <div class="wq jp">${rb(UNIT.write)}</div><div class="wl"></div><div class="wl"></div>
   <div class="foot"><span>BaPi</span><span>2</span></div></div>`;
+return p1 + p2;
+}
 (async () => {
   const b = await chromium.launch(); const pg = await b.newPage();
-  await pg.setContent(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>${p1}${p2}</body></html>`, { waitUntil: 'load' });
+  await pg.setContent(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>${CSS}</style></head><body>${UNITS.map(render).join('')}</body></html>`, { waitUntil: 'load' });
   await pg.evaluate(() => document.fonts.ready);
   const over = await pg.evaluate(() => [...document.querySelectorAll('.page')].map((p) => { const f = p.querySelector('.foot'); const kids = [...p.children].filter((c) => c !== f); return Math.round(Math.max(...kids.map((c) => c.offsetTop + c.offsetHeight))); }));
   console.log('content bottoms (page height 888, footer at ~872):', over);
