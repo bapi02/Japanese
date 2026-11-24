@@ -422,16 +422,30 @@ function isRight(it, mine) {
 function typeLabel(t) { return { extract: '본문에서 찾기', trace: '따라쓰기', fill: '빈칸', choice: '고르기', transform: '바꿔쓰기', compose: '작문' }[t]; }
 
 /* ───────────── TTS ───────────── */
-function speak(text) {
-  if (!('speechSynthesis' in window)) { toast('이 브라우저는 음성 읽기를 지원하지 않아요'); return; }
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(plainKanji(text).replace(/[＿_]+/g, '、'));
-  u.lang = 'ja-JP'; u.rate = 0.9;
-  const vs = window.speechSynthesis.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ja'));
-  const pref = vs.find((v) => /kyoko|o-ren|nanami|google/i.test(v.name)) || vs[0];
-  if (pref) u.voice = pref;
-  window.speechSynthesis.speak(u);
+/* onclick="speak(...)" 속성에 넣을 문자열 (큰따옴표가 속성을 끊지 않게) */
+function qa(t) { return JSON.stringify(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+let ttsTimer = null; const ttsKeep = [];
+/* cancel() 바로 뒤에 speak() 하면 첫 문장이 통째로 묻히는 브라우저가 있어서,
+   읽는 중일 때만 멈추고 잠깐 뒤에 읽기 시작. 읽는 중이 아니면 탭한 그 순간 바로 읽음 */
+function sayList(texts, rate) {
+  const synth = window.speechSynthesis;
+  if (!synth) { toast('이 브라우저는 음성 읽기를 지원하지 않아요'); return; }
+  clearTimeout(ttsTimer);
+  const go = () => {
+    const vs = synth.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ja'));
+    const pref = vs.find((v) => /kyoko|o-ren|nanami|google/i.test(v.name)) || vs[0];
+    ttsKeep.length = 0;
+    texts.filter(Boolean).forEach((t) => {
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'ja-JP'; u.rate = rate; if (pref) u.voice = pref;
+      ttsKeep.push(u);            // 읽는 도중에 지워지지 않게 잡아 둠
+      synth.speak(u);
+    });
+    try { synth.resume(); } catch (e) {}
+  };
+  if (synth.speaking || synth.pending) { synth.cancel(); ttsTimer = setTimeout(go, 150); } else go();
 }
+function speak(text) { sayList([plainKanji(text).replace(/[＿_]+/g, '、').replace(/^[^：]{1,8}：/, '')], 0.9); }
 if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices(); }
 
 function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._tm); t._tm = setTimeout(() => t.classList.remove('show'), 1800); }
@@ -519,7 +533,7 @@ function openStep(id) {
   renderStep();
   window.scrollTo({ top: 0 });
 }
-function goBack() { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); cur = null; renderHome(); window.scrollTo({ top: 0 }); }
+function goBack() { clearTimeout(ttsTimer); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); cur = null; renderHome(); window.scrollTo({ top: 0 }); }
 
 function renderStep() {
   const s = cur;
@@ -533,11 +547,11 @@ function renderStep() {
   const r = state.results[s.id];
   const draft = state.drafts[s.id] || {};
 
-  const rules = s.grammar.rules.map(([jp, ko]) => `<div class="rule"><div class="r-jp jp">${ruby(jp)}</div><div class="r-ko">${esc(ko)}</div><button class="spk" onclick="speak(${JSON.stringify(jp)})" title="듣기">🔊</button></div>`).join('');
+  const rules = s.grammar.rules.map(([jp, ko]) => `<div class="rule"><div class="r-jp jp">${ruby(jp)}</div><div class="r-ko">${esc(ko)}</div><button class="spk" onclick="speak(${qa(jp)})" title="듣기">🔊</button></div>`).join('');
 
   const exN = s.items.filter((it) => it.type === 'extract').length;
   const items = s.items.map((it, i) => renderItem(it, i, draft[i], it.type === 'extract' ? `(${i + 1})` : `${i - exN + 1}.`)).join('');
-  const pLines = s.passage ? s.passage.jp.map((jp) => `<div class="p-line"><div class="p-jp jp">${ruby(jp)}</div><button class="spk" onclick="speak(${JSON.stringify(jp).replace(/"/g, '&quot;')})" title="듣기">🔊</button></div>`).join('') : '';
+  const pLines = s.passage ? s.passage.jp.map((jp) => `<div class="p-line"><div class="p-jp jp">${ruby(jp)}</div><button class="spk" onclick="speak(${qa(jp)})" title="듣기">🔊</button></div>`).join('') : '';
   const passage = s.passage ? `
     <div class="sec-head"><span class="sec-no">1</span>다음 글을 소리 내어 읽고, 빈칸에 알맞은 일본어를 쓰세요.</div>
     <div class="passage">${pLines}<div class="p-all"><button class="tool-btn" onclick="speakAll()">🔊 전체 듣기</button></div>
@@ -561,7 +575,7 @@ function renderStep() {
       <div class="point">${ruby(s.grammar.point)}</div>
       <div class="rules">${rules}</div>
       ${s.grammar.tip ? `<div class="tip">${ruby(s.grammar.tip)}</div>` : ''}
-      ${s.vocab ? `<div class="vocab-box"><div class="g-head" style="margin:14px 0 6px">📒 오늘의 단어</div><div class="vocab-grid">${s.vocab.map(([w, k]) => `<div class="vocab-row"><span class="jp">${ruby(w)}</span><span>${esc(k)}</span><button class="spk" onclick="speak(${JSON.stringify(w).replace(/"/g, '&quot;')})">🔊</button></div>`).join('')}</div></div>` : ''}
+      ${s.vocab ? `<div class="vocab-box"><div class="g-head" style="margin:14px 0 6px">📒 오늘의 단어</div><div class="vocab-grid">${s.vocab.map(([w, k]) => `<div class="vocab-row"><span class="jp">${ruby(w)}</span><span>${esc(k)}</span><button class="spk" onclick="speak(${qa(w)})">🔊</button></div>`).join('')}</div></div>` : ''}
     </div>
     ${passage}
     ${items.replace('<!--SEC2-->', `<div class="sec-head" style="margin-top:10px"><span class="sec-no">2</span>오늘의 포인트를 참고하여, 알맞은 일본어를 쓰세요. <span style="font-weight:400;color:var(--text-muted);font-size:11px;margin-left:auto">✍️ = 손글씨 패드</span></div>`)}
@@ -574,7 +588,7 @@ function renderStep() {
 function renderItem(it, i, saved, label) {
   const no = `<div class="i-head"><div class="i-no">${label}</div><div class="i-type">${typeLabel(it.type)}</div><div class="i-mark" id="mark-${i}"></div></div>`;
   const tools = `<div class="i-tools">
-      ${it.type !== 'choice' || it.say ? `<button class="tool-btn" onclick="speak(${JSON.stringify(it.say || (it.type === 'trace' ? it.jp : modelOf(it))).replace(/"/g, '&quot;')})" title="듣기">🔊</button>` : ''}
+      ${it.type !== 'choice' || it.say ? `<button class="tool-btn" onclick="speak(${qa(it.say || (it.type === 'trace' ? it.jp : modelOf(it)))})" title="듣기">🔊</button>` : ''}
       <button class="tool-btn" id="padbtn-${i}" onclick="togglePad(${i})">✍️ 손글씨</button>
     </div>
     <div class="pad" id="pad-${i}"><canvas id="cv-${i}"></canvas><div class="pad-bar"><span>손가락이나 펜으로 써 보세요 (채점 안 됨)</span><button class="tool-btn" onclick="clearPad(${i})">지우기</button></div></div>`;
@@ -667,7 +681,7 @@ function renderKana() {
   document.getElementById('header-badge').textContent = `${s.items.length}문제`;
   const r = state.results[s.id];
   const draft = state.drafts[s.id] || {};
-  const q = (t) => JSON.stringify(t).replace(/"/g, '&quot;');
+  const q = qa;
   const cards = s.cards ? `<div class="kana-cards ${s.cardStyle}">${s.cards.map((c) => `<div class="kcard">
       <div class="k jp-k">${c.c}</div>${c.s ? strokeSteps(c.c, 34) : ''}
       ${c.h ? `<div class="h jp-k"><small>ひらがな</small>${c.h}</div>` : ''}${c.from ? `<div class="f jp-k">${c.from}</div>` : ''}
@@ -732,8 +746,8 @@ function grade(silent) {
     const model = modelOf(it);
     const res = document.getElementById(`res-${i}`);
     res.innerHTML = ok
-      ? `<div class="r-lab">정답 ○</div><div class="r-ans jp">${ruby(model)}${it.type === 'trace' ? '' : ' <button class="spk" onclick="speak(' + JSON.stringify(model).replace(/"/g, '&quot;') + ')">🔊</button>'}</div>${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}`
-      : `<div class="r-lab">정답은 이렇게</div>${mine ? `<div class="r-mine">${esc(mine)}</div>` : ''}${scriptMiss ? '<div class="r-note">💡 소리는 맞아요. 글자 종류(히라가나·가타카나)를 확인하세요.</div>' : ''}<div class="r-ans jp">${ruby(model)} <button class="spk" onclick="speak(${JSON.stringify(model).replace(/"/g, '&quot;')})">🔊</button></div>
+      ? `<div class="r-lab">정답 ○</div><div class="r-ans jp">${ruby(model)}${it.type === 'trace' ? '' : ' <button class="spk" onclick="speak(' + qa(model) + ')">🔊</button>'}</div>${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}`
+      : `<div class="r-lab">정답은 이렇게</div>${mine ? `<div class="r-mine">${esc(mine)}</div>` : ''}${scriptMiss ? '<div class="r-note">💡 소리는 맞아요. 글자 종류(히라가나·가타카나)를 확인하세요.</div>' : ''}<div class="r-ans jp">${ruby(model)} <button class="spk" onclick="speak(${qa(model)})">🔊</button></div>
          ${Array.isArray(it.a) && it.a.length > 1 ? `<div style="font-size:12px;color:var(--text-muted)">다른 표현: ${it.a.slice(1).map((x) => plainKanji(x)).join(' / ')}</div>` : ''}
          ${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}
          ${it.type === 'compose' && mine ? `<button class="self-ok" onclick="selfMark(${i})">뜻이 같게 썼어요 → ○ 로 바꾸기</button>` : ''}`;
@@ -827,16 +841,8 @@ function clearPad(i) {
 /* ───────────── 기타 ───────────── */
 function fmtElapsed(sec) { const m = Math.floor(sec / 60), s = sec % 60; return m ? `${m}분 ${s}초` : `${s}초`; }
 function speakAll() {
-  if (!cur || !cur.passage || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  cur.passage.jp.forEach((line) => {
-    const u = new SpeechSynthesisUtterance(plainKanji(line).replace(/^[^：]+：/, ''));
-    u.lang = 'ja-JP'; u.rate = 0.85;
-    const vs = window.speechSynthesis.getVoices().filter((v) => (v.lang || '').toLowerCase().replace('_', '-').startsWith('ja'));
-    const pref = vs.find((v) => /kyoko|o-ren|nanami|google/i.test(v.name)) || vs[0];
-    if (pref) u.voice = pref;
-    window.speechSynthesis.speak(u);
-  });
+  if (!cur || !cur.passage) return;
+  sayList(cur.passage.jp.map((line) => plainKanji(line).replace(/^[^：]+：/, '')), 0.85);
 }
 const THEME_KEY = 'ws_theme';
 function applyTheme() {
