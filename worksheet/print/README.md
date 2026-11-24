@@ -1,6 +1,8 @@
 # BaPi 일본어 학습지 · 인쇄용 PDF
 
-`worksheet.pdf`(1권, STEP 1~20) · `worksheet2.pdf`(2권, STEP 21~40) · `worksheet3.pdf`(3권, STEP 41~61, 보충 1장 포함) — 표지 + 20장(앞면 a·뒷면 b) + 정답. B5(182×257mm) — A4 프린터는 "용지에 맞춤"으로. `../data.js` 내용을 그대로 종이 학습지로 만든 것입니다.
+1권(STEP 1~20) · 2권(STEP 21~40) · 3권(STEP 41~61, 보충 1장 포함) — 표지 + 20장 + 정답. B5(182×257mm) — A4 프린터는 "용지에 맞춤"으로. `../data.js` 내용을 그대로 종이 학습지로 만든 것입니다.
+
+완성된 PDF는 저장소에 올리지 않습니다(판매용). 아래 명령으로 만들면 `out/` 에 생기고, `out/` 과 `worksheet*.pdf` 는 `.gitignore` 에 들어 있습니다.
 
 ## 다시 만들기
 
@@ -15,15 +17,15 @@ curl -sSo KleeOne-400.ttf "https://fonts.gstatic.com/s/kleeone/v14/LDIxapCLNRc6A
 curl -sSo KleeOne-600.ttf "https://fonts.gstatic.com/s/kleeone/v14/LDI2apCLNRc6A8oT4pbYF8Os.ttf"
 
 # 생성 (playwright + chromium 필요)
-node worksheet/print/build.js 1 && cp worksheet/print/out/일본어학습지_초급.pdf worksheet/print/worksheet.pdf
-node worksheet/print/build.js 2 && cp worksheet/print/out/일본어학습지_초급2.pdf worksheet/print/worksheet2.pdf
-node worksheet/print/build.js 3 && cp worksheet/print/out/일본어학습지_초급3.pdf worksheet/print/worksheet3.pdf
+node worksheet/print/build.js 1   # → out/일본어학습지_초급.pdf
+node worksheet/print/build.js 2   # → out/일본어학습지_초급2.pdf
+node worksheet/print/build.js 3   # → out/일본어학습지_초급3.pdf
 ```
 
 ## 0권 (문자편 · 히라가나 + 가타카나)
 
 ```bash
-node worksheet/print/kana/build.js screen   && cp worksheet/print/out/일본어학습지_0권.pdf worksheet/print/worksheet0.pdf
+node worksheet/print/kana/build.js screen   # → out/일본어학습지_0권.pdf
 node worksheet/print/kana/build.js wireless # 인쇄소용 내지 188×263mm (재단 여백 3mm, 제본 쪽 여백 홀짝 교대)
 ```
 
