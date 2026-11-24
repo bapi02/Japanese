@@ -204,10 +204,12 @@ html[data-theme="paper"] .btn-main { background: linear-gradient(135deg, #4a63c8
 
 /* ── 0권 문자편 ── */
 .jp-k { font-family: 'Klee One', var(--font-jp); }
-details.vol0 > summary { list-style: none; cursor: pointer; }
-details.vol0 > summary::-webkit-details-marker { display: none; }
-details.vol0 > summary .vol-head small::after { content: ' ▾'; }
-details.vol0[open] > summary .vol-head small::after { content: ' ▴'; }
+details.vol > summary { list-style: none; cursor: pointer; border-radius: 12px; }
+details.vol > summary::-webkit-details-marker { display: none; }
+details.vol > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+details.vol > summary .vol-head { margin-top: 12px; }
+details.vol > summary .vol-head small::after { content: '  ▾ 펼치기'; color: var(--accent2); font-weight: 700; }
+details.vol[open] > summary .vol-head small::after { content: '  ▴ 접기'; }
 .kana-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
 .kana-cards.mini { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
 .kcard { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 6px 8px; text-align: center; min-width: 0; }
@@ -480,10 +482,12 @@ function renderHome() {
 
   const sec = document.getElementById('level-sections');
   const vols = [...new Set(WS_LEVELS.map((l) => l.vol || 1))];
+  const curStep = WS_STEPS.find((s) => s.id === Math.max(1, unlockedCount())) || WS_STEPS[0];
+  const curVol = curStep.vol || 1;   // 지금 풀고 있는 권만 펼쳐 둠
   sec.innerHTML = kanaHome() + vols.map((vol) => {
     const vSteps = WS_STEPS.filter((s) => (s.vol || 1) === vol);
     const vDone = vSteps.filter((s) => state.results[s.id]).length;
-    return `<div class="vol-head"><span>📘 ${vol}권 · 초급 ${vol}</span><small>${vDone} / ${vSteps.length}장 완료</small></div>` + WS_LEVELS.filter((l) => (l.vol || 1) === vol).map((lv) => {
+    return volBox(vol, `📘 ${vol}권 · 초급 ${vol}`, `${vDone} / ${vSteps.length}장 완료`, vol === curVol, WS_LEVELS.filter((l) => (l.vol || 1) === vol).map((lv) => {
     const steps = WS_STEPS.filter((s) => s.level === lv.id);
     const cards = steps.map((s) => {
       const r = state.results[s.id];
@@ -497,15 +501,22 @@ function renderHome() {
       </button>`;
     }).join('');
     return `<div class="section-label"><span>${esc(lv.name)}</span><small>${esc(lv.desc)}</small></div><div class="step-grid" style="margin-top:8px">${cards}</div>`;
-  }).join('');
+  }).join(''));
   }).join('');
 }
 
-/* 0권 문자편 목록 (잠금 없음, 접었다 펼 수 있음) */
-const VOL0_KEY = 'ws_vol0_open';
+/* 권별 목록: 접었다 펼 수 있고, 펼친 상태는 이 브라우저에 기억 */
+const VOL_KEY = 'ws_vol_open';
+function volOpenMap() { try { return JSON.parse(localStorage.getItem(VOL_KEY)) || {}; } catch (e) { return {}; } }
+function setVolOpen(vol, open) { const m = volOpenMap(); m[vol] = open ? 1 : 0; try { localStorage.setItem(VOL_KEY, JSON.stringify(m)); } catch (e) {} }
+function volBox(vol, title, meta, defOpen, body) {
+  const m = volOpenMap(); const open = m[vol] === undefined ? defOpen : !!m[vol];
+  return `<details class="vol" id="vol-${vol}" ${open ? 'open' : ''} ontoggle="setVolOpen(${vol}, this.open)">
+    <summary><div class="vol-head"><span>${title}</span><small>${meta}</small></div></summary>${body}</details>`;
+}
+/* 0권 문자편 목록 (잠금 없음) */
 function kanaHome() {
   if (!KANA.length) return '';
-  let open = true; try { open = localStorage.getItem(VOL0_KEY) !== '0'; } catch (e) {}
   const done = KANA.filter((s) => state.results[s.id]).length;
   const parts = WS_KANA_PARTS.map((p) => {
     const cards = KANA.filter((s) => s.level === p.id).map((s) => {
@@ -519,8 +530,7 @@ function kanaHome() {
     }).join('');
     return `<div class="section-label"><span>${esc(p.name)}</span><small>${esc(p.desc)}</small></div><div class="step-grid" style="margin-top:8px">${cards}</div>`;
   }).join('');
-  return `<details class="vol0" id="vol0" ${open ? 'open' : ''} ontoggle="try{localStorage.setItem(VOL0_KEY,this.open?'1':'0')}catch(e){}">
-    <summary><div class="vol-head" style="margin-top:12px"><span>📗 0권 · 문자편</span><small>${done} / ${KANA.length}장 완료 · 잠금 없음</small></div></summary>${parts}</details>`;
+  return volBox(0, '📗 0권 · 문자편', `${done} / ${KANA.length}장 완료 · 잠금 없음`, false, parts);
 }
 
 /* ───────────── 학습지 ───────────── */
