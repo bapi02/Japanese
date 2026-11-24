@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+<meta name="googlebot" content="noindex, nofollow">
+<title>実況 · AI 스포츠 중계</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&family=Noto+Sans+JP:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
+:root { --bg:#0d0f14; --surface:#161820; --card:#1e2130; --border:#2a2d3e; --text:#eceef5; --text-dim:#8b8fa8; --text-muted:#4a4d60; --accent:#7c6ef5; --accent2:#4ecdc4; --red:#ff6b6b; --yellow:#ffe66d; --green:#51cf66; --font-jp:'Noto Serif JP',serif; --font-ui:'Inter',sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--font-ui); min-height:100vh; display:flex; flex-direction:column; align-items:center; }
+header { width:100%; padding:16px 20px 12px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; gap:10px; }
+.header-left { display:flex; align-items:center; gap:10px; min-width:0; }
+.back-btn { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:13px; color:var(--text-dim); cursor:pointer; font-family:inherit; text-decoration:none; white-space:nowrap; }
+.back-btn:hover { border-color:var(--accent); color:var(--text); }
+.header-titles .ep { font-size:10px; letter-spacing:2px; color:var(--accent); font-weight:700; text-transform:uppercase; }
+.header-titles .title { font-size:15px; font-weight:700; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mode-badge { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; background:var(--card); border:1px solid var(--border); color:var(--text-dim); cursor:pointer; font-family:inherit; white-space:nowrap; }
+main { width:100%; max-width:640px; padding:16px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+
+.stage { position:relative; background:#000; border:1px solid var(--border); border-radius:16px; overflow:hidden; aspect-ratio:16/10; display:flex; align-items:center; justify-content:center; }
+.stage video { width:100%; height:100%; object-fit:contain; display:none; }
+.stage video.on { display:block; }
+.stage .placeholder { color:var(--text-muted); font-size:13px; text-align:center; padding:20px; line-height:1.7; }
+.badge { position:absolute; top:10px; display:none; align-items:center; gap:6px; background:rgba(0,0,0,.6); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; color:#fff; }
+.badge.on { display:flex; }
+#st-live { left:12px; } #st-live i { width:8px; height:8px; border-radius:50%; background:var(--red); animation:blink 1s infinite; }
+#st-ai { right:12px; } #st-ai.talking { background:rgba(124,110,245,.9); }
+.caption { position:absolute; left:0; right:0; bottom:0; padding:10px 14px 12px; background:linear-gradient(transparent, rgba(0,0,0,.85)); font-family:var(--font-jp); font-size:17px; line-height:1.5; color:#fff; text-shadow:0 1px 2px #000; min-height:46px; }
+.caption small { display:block; font-family:var(--font-ui); font-size:12px; color:#cfd3e6; margin-top:3px; }
+@keyframes blink { 50% { opacity:.3; } }
+
+.row { display:flex; gap:8px; }
+.src-btn { flex:1; padding:12px 8px; border-radius:12px; background:var(--card); border:1px solid var(--border); color:var(--text-dim); font-size:13px; cursor:pointer; font-family:inherit; display:flex; flex-direction:column; align-items:center; gap:3px; }
+.src-btn .ic { font-size:20px; }
+.src-btn:hover { border-color:var(--accent); color:var(--text); }
+.src-btn.active { border-color:var(--accent2); color:var(--accent2); background:#15252a; }
+.src-btn:disabled { opacity:.4; cursor:not-allowed; }
+
+.big-btn { width:100%; padding:16px; border-radius:14px; background:linear-gradient(135deg, var(--accent), #5a4fd4); color:#fff; font-size:16px; font-weight:700; border:none; cursor:pointer; font-family:inherit; }
+.big-btn.stop { background:linear-gradient(135deg, #c0392b, #96281b); }
+.big-btn:disabled { opacity:.5; cursor:not-allowed; }
+
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label { font-size:12px; color:var(--text-dim); font-weight:600; }
+.field input, .field textarea, .field select { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:11px 13px; color:var(--text); font-family:var(--font-jp); font-size:15px; outline:none; width:100%; }
+.field input:focus, .field textarea:focus { border-color:var(--accent); }
+.field textarea { min-height:64px; resize:vertical; line-height:1.5; }
+.presets { display:flex; flex-wrap:wrap; gap:6px; }
+.chip { padding:7px 11px; border-radius:20px; background:var(--card); border:1px solid var(--border); color:var(--text-dim); font-size:12px; cursor:pointer; font-family:inherit; white-space:nowrap; }
+.chip:hover { border-color:var(--accent); color:var(--text); }
+.chip.on { border-color:var(--green); color:var(--green); background:#14241a; }
+
+.log { display:flex; flex-direction:column; gap:8px; max-height:320px; overflow-y:auto; }
+.line { padding:10px 12px; border-radius:12px; background:var(--card); border:1px solid var(--border); font-family:var(--font-jp); font-size:15px; line-height:1.6; animation:fadeUp .2s ease; }
+.line .t { font-family:var(--font-ui); font-size:10px; color:var(--text-muted); margin-right:6px; }
+.line.me { border-color:var(--accent2); background:#1a2535; }
+.line.sys { font-family:var(--font-ui); font-size:12px; color:var(--text-dim); border-style:dashed; background:var(--surface); }
+.line.sys.err { border-color:var(--red); color:#ffb3b3; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(6px);} to { opacity:1; transform:none; } }
+
+.mic-row { display:flex; align-items:center; gap:10px; }
+.mic-btn { width:56px; height:56px; border-radius:50%; border:2px solid var(--border); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:22px; background:var(--card); flex-shrink:0; }
+.mic-btn.on { background:#2a0e0e; border-color:var(--red); animation:pulse 1s infinite; }
+.mic-btn:disabled { opacity:.4; cursor:not-allowed; }
+@keyframes pulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,107,107,.5);} 50% { box-shadow:0 0 0 10px rgba(255,107,107,0);} }
+.ask { flex:1; min-width:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-family:var(--font-jp); font-size:15px; outline:none; }
+.ask:focus { border-color:var(--accent); }
+.send { padding:0 14px; border-radius:12px; background:var(--card); border:1px solid var(--border); color:var(--text); cursor:pointer; font-family:inherit; font-size:13px; }
+.sub { font-size:11px; color:var(--text-muted); line-height:1.6; }
+.sub b { color:var(--text-dim); }
+.notice { background:#2a1a10; border:1px solid #6b3a20; border-radius:12px; padding:12px 14px; font-size:13px; color:#e8a87c; line-height:1.6; display:none; }
+.notice.err { border-color:var(--red); }
+details.adv { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:12px; color:var(--text-dim); display:flex; flex-direction:column; gap:10px; }
+details.adv summary { cursor:pointer; font-weight:600; }
+.sb-box { position:absolute; border:2px solid var(--yellow); border-radius:4px; display:none; pointer-events:none; box-shadow:0 0 0 1px rgba(0,0,0,.6); }
+.sb-box.on { display:block; }
+.sb-box.flash { border-color:#fff; box-shadow:0 0 12px var(--yellow); }
+.sb-pick { position:absolute; inset:0; display:none; align-items:flex-start; justify-content:center; padding-top:40px; font-size:13px; color:#fff; background:rgba(0,0,0,.35); cursor:crosshair; touch-action:none; user-select:none; }
+.sb-pick.on { display:flex; }
+.stage { touch-action:pan-y; }
+canvas { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <a class="back-btn" href="./index.html">← 목록</a>
+    <div class="header-titles">
+      <div class="ep">🎙 実況</div>
+      <div class="title">AI 실시간 일본어 스포츠 중계</div>
+    </div>
+  </div>
+  <button class="mode-badge" id="key-btn" onclick="openKeySettings()">🔑 Gemini 키</button>
+</header>
+
+<main>
+  <div class="notice" id="notice"></div>
+
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted autoplay></video>
+    <div class="placeholder" id="placeholder">TV로 경기를 틀어놓고 📷 카메라로 화면을 비추세요.<br>TV가 화면에 <b>꽉 차게, 가까이, 흔들리지 않게(거치)</b> 할수록 선수 동작을 잘 봐요.<br>(PC라면 🖥 화면 공유로 다시보기 탭을 공유해도 돼요)</div>
+    <div class="badge" id="st-live"><i></i>LIVE</div>
+    <div class="badge" id="st-ai">🎙 중계 대기</div>
+    <div class="caption" id="caption"></div>
+    <div class="sb-box" id="sb-box"></div>
+    <div class="sb-pick" id="sb-pick">점수판을 드래그해서 감싸주세요</div>
+  </div>
+  <div class="row">
+    <button class="chip" id="sb-btn" onclick="toggleSbPick()">📊 점수판 영역 지정</button>
+    <button class="chip" id="sb-clear" onclick="clearSb()" style="display:none;">✖ 지정 해제</button>
+    <span class="sub" id="sb-status" style="align-self:center;">점수판을 지정하면 점수가 바뀌는 순간 하던 말을 끊고 그 플레이부터 말해요.</span>
+  </div>
+
+  <div class="row">
+    <button class="src-btn" id="src-cam" onclick="startCamera()"><span class="ic">📷</span>카메라</button>
+    <button class="src-btn" id="src-scr" onclick="startScreen()"><span class="ic">🖥</span>화면 공유</button>
+    <button class="src-btn" id="src-flip" onclick="flipCamera()" disabled><span class="ic">🔄</span>전/후면</button>
+    <button class="src-btn" id="src-stop" onclick="stopSource()" disabled><span class="ic">⏹</span>끄기</button>
+  </div>
+
+  <div class="field">
+    <label>경기 정보 (종목·팀·선수 등. 중계 정확도가 확 올라가요)</label>
+    <div class="presets">
+      <button class="chip" onclick="preset('バレーボール')">🏐 배구</button>
+      <button class="chip" onclick="preset('バスケットボール')">🏀 농구</button>
+      <button class="chip" onclick="preset('サッカー')">⚽ 축구</button>
+      <button class="chip" onclick="preset('卓球')">🏓 탁구</button>
+      <button class="chip" onclick="preset('バドミントン')">🏸 배드민턴</button>
+      <button class="chip" onclick="preset('テニス')">🎾 테니스</button>
+      <button class="chip" onclick="preset('陸上競技')">🏃 육상</button>
+      <button class="chip" onclick="preset('柔道')">🥋 유도</button>
+      <button class="chip" onclick="preset('水泳')">🏊 수영</button>
+    </div>
+    <textarea id="ctx" placeholder="예: 女子決勝 東九州龍谷（赤）vs 就実（青）。背番号1はセッター。第3セット。"></textarea>
+  </div>
+
+  <button class="big-btn" id="go-btn" onclick="toggleLive()" disabled>🎙 중계 시작</button>
+
+  <div class="log" id="log"></div>
+
+  <div class="mic-row">
+    <button class="mic-btn" id="mic-btn" onclick="toggleMic()" disabled>🎤</button>
+    <input class="ask" id="ask" placeholder="질문·지시 (예: 今のは何のファウル？ / 青の7番を追って / 1番＝佐藤)" onkeydown="if(event.key==='Enter')sendTextUI()">
+    <button class="send" onclick="sendTextUI()">보내기</button>
+  </div>
+  <div class="sub">🎤 를 켜면 마이크 소리도 같이 보내서 말로 질문할 수 있어요 (TV 소리가 섞이면 끄는 게 나아요). 중계 수준: <button class="chip on" id="lv-easy" onclick="setLevel('easy')">쉬운 일본어</button> <button class="chip" id="lv-real" onclick="setLevel('real')">진짜 실황 스타일</button></div>
+
+  <details class="adv">
+    <summary>⚙️ 설정 · 사용량</summary>
+    <div class="field"><label>모델</label><select id="model-sel" onchange="saveSetting('jk_model', this.value)"></select></div>
+    <div class="field"><label>목소리</label><select id="voice-sel" onchange="saveSetting('jk_voice', this.value)"></select></div>
+    <div class="field"><label>Live 프레임 간격 (점수판·질문용)</label><select id="fps-sel" onchange="saveSetting('jk_fps', this.value)">
+      <option value="1000">1초 (1fps · API 최대)</option><option value="2000">2초</option><option value="3000">3초 (비용 절약)</option></select></div>
+    <div class="field"><label>👁 눈 분석 간격 (짧을수록 빠르지만 호출이 많음)</label><select id="eyes-sel" onchange="saveSetting('jk_eyes', this.value)">
+      <option value="2000">2초</option><option value="2500" selected>2.5초 (기본)</option><option value="3500">3.5초</option><option value="5000">5초 (절약)</option></select></div>
+    <div class="field"><label>👁 눈 모델</label><select id="eyes-model-sel" onchange="saveSetting('jk_eyes_model', this.value)">
+      <option value="gemini-3.8-flash" selected>Gemini 3.8 Flash (기본)</option><option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (저렴·조금 덜 정확)</option></select></div>
+    <div class="field"><label>기억 범위 (컨텍스트 · 유료일 때 비용 좌우)</label><select id="ctxsize-sel" onchange="saveSetting('jk_ctxsize', this.value)">
+      <option value="small">작게 — 직전 1~2분만 (가장 저렴)</option><option value="normal" selected>보통 — 몇 분 (기본)</option><option value="large">크게 — 흐름 잘 기억 (비쌈)</option></select></div>
+    <div class="field"><label>한국어 자막</label><select id="ko-sel" onchange="saveSetting('jk_ko', this.value)"><option value="1">켜기 (중계가 조금 느려짐)</option><option value="0">끄기</option></select></div>
+    <div class="sub" id="usage">연결 안 됨</div>
+    <div class="sub">💰 <b>비용</b>: 무료 티어 키면 0원 (데이터가 Google 학습에 쓰임). 유료면 눈 모델이 시간당 약 1~2달러, Live는 기억 범위에 따라 시간당 몇 달러~수십 달러. 무료 키는 분당 호출 한도에 걸리면 자동으로 간격을 늘려요.</div>
+    <div class="sub">Gemini Live API에 웹소켓으로 직접 연결해요. 키는 이 브라우저에만 저장되고 Google 서버로만 전송돼요. 세션은 길이 제한이 있어서 끊기면 자동으로 다시 연결해요.</div>
+  </details>
+</main>
+<canvas id="cap"></canvas>
+<canvas id="tiny"></canvas>
+<script>
+// ── Gemini API 키 ──
+const KEY_STORE = 'gemini_api_key';
+const $ = (id) => document.getElementById(id);
+function getKey() { return localStorage.getItem(KEY_STORE) || ''; }
+function updateKeyBtn() { $('key-btn').textContent = getKey() ? '🔑 Gemini 키 설정됨' : '🔑 Gemini 키 필요'; }
+function openKeySettings() {
+  const cur = getKey();
+  const masked = cur ? cur.slice(0, 8) + '…' + cur.slice(-4) : '(없음)';
+  const input = window.prompt(
+    'Gemini API 키를 입력하세요 (AIza... 로 시작).\nGoogle AI Studio(aistudio.google.com) → Get API key 에서 무료로 만들 수 있어요.\n' +
+    '이 키는 이 브라우저에만 저장되고, 중계할 때 Google 서버로만 전송됩니다.\n비우고 확인하면 삭제됩니다.\n\n현재: ' + masked, cur);
+  if (input === null) return;
+  const v = input.trim();
+  if (v === '') localStorage.removeItem(KEY_STORE); else localStorage.setItem(KEY_STORE, v);
+  updateKeyBtn();
+}
+function saveSetting(k, v) { localStorage.setItem(k, v); }
+function getSetting(k, d) { return localStorage.getItem(k) || d; }
+
+// ── 설정 목록 ──
+const MODELS = [
+  ['gemini-3.8-live', 'Gemini 3.8 Live (추천)'],
+  ['gemini-3.8-live-extended-thinking', 'Gemini 3.8 Live Extended Thinking (느림)'],
+  ['gemini-3.1-flash-live-preview', 'Gemini 3.1 Flash Live (구형)'],
+];
+const VOICES = [['Fenrir', 'Fenrir (흥분형 · 실황에 딱)'], ['Puck', 'Puck (경쾌)'], ['Charon', 'Charon (차분한 해설)'], ['Kore', 'Kore (단단한 여성)'], ['Leda', 'Leda (젊은 여성)'], ['Orus', 'Orus (단단한 남성)'], ['Sadachbia', 'Sadachbia (활기)'], ['Zephyr', 'Zephyr (밝음)']];
+const TRANSLATE_MODEL = 'gemini-3.5-flash-lite';
+const WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+
+// ── 상태 ──
+let stream = null, sourceKind = null, facing = 'environment';
+let ws = null, live = false, setupDone = false, resumeHandle = null, reconnectTimer = null, manualStop = false;
+let frameTimer = null, cueTimer = null, generating = false, lastCueAt = 0, lastTurnEndAt = 0, cueSentAt = 0;
+let audioCtx = null, playHead = 0, playingNodes = [], micCtx = null, micNode = null, micStream = null, micOn = false;
+let curTranscript = '', curKo = null, level = 'easy', tokensTotal = 0, turns = 0, sessionStart = 0;
+
+function notice(msg, isErr) { const n = $('notice'); n.style.display = msg ? 'block' : 'none'; n.textContent = msg || ''; n.classList.toggle('err', !!isErr); }
+function addLine(text, cls) { const d = document.createElement('div'); d.className = 'line' + (cls ? ' ' + cls : ''); d.textContent = text; $('log').appendChild(d); $('log').scrollTop = $('log').scrollHeight; return d; }
+function setAiBadge(text, talking) { const b = $('st-ai'); b.textContent = text; b.classList.toggle('talking', !!talking); }
+function setLevel(l) { level = l; $('lv-easy').classList.toggle('on', l === 'easy'); $('lv-real').classList.toggle('on', l === 'real'); if (live) sendText('（設定変更：' + (l === 'easy' ? 'これからは やさしい日本語で' : 'これからは 本物の実況アナウンサーのように') + '）'); }
+function preset(t) { const el = $('ctx'); const cur = el.value.trim(); if (!cur.includes(t)) el.value = 'インターハイ ' + t + '。' + (cur ? '\n' + cur : '\n'); el.focus(); saveSetting('jk_ctx', el.value); }
+
+// ── 영상 소스 ──
+async function startCamera() {
+  stopSource(true);
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  catch (e) {
+    if (facing === 'environment') { try { facing = 'user'; stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); } catch (e2) { return notice('카메라를 열 수 없어요: ' + e2.message + ' (HTTPS·권한 확인)', true); } }
+    else return notice('카메라를 열 수 없어요: ' + e.message, true);
+  }
+  attach('camera'); $('src-flip').disabled = false;
+}
+async function startScreen() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) return notice('이 브라우저는 화면 공유를 지원하지 않아요 (iOS 등). 카메라로 TV를 비춰주세요.', true);
+  stopSource(true);
+  try { stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 5 }, audio: false }); } catch (e) { return notice('화면 공유가 취소됐거나 실패했어요: ' + e.message, true); }
+  attach('screen'); stream.getVideoTracks()[0].addEventListener('ended', () => stopSource());
+}
+function attach(kind) {
+  sourceKind = kind; const v = $('video'); v.srcObject = stream; v.classList.add('on'); v.play().catch(() => {});
+  $('placeholder').style.display = 'none'; $('st-live').classList.add('on');
+  $('src-cam').classList.toggle('active', kind === 'camera'); $('src-scr').classList.toggle('active', kind === 'screen');
+  $('src-stop').disabled = false; $('go-btn').disabled = false; notice('');
+  v.addEventListener('loadedmetadata', drawSb, { once: true }); setTimeout(drawSb, 500);
+}
+function stopSource(silent) {
+  if (live) stopLive();
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+  sourceKind = null; const v = $('video'); v.srcObject = null; v.classList.remove('on');
+  $('placeholder').style.display = ''; $('st-live').classList.remove('on');
+  $('src-cam').classList.remove('active'); $('src-scr').classList.remove('active');
+  $('src-stop').disabled = true; $('src-flip').disabled = true; $('go-btn').disabled = true;
+  if (!silent) addLine('영상을 껐어요.', 'sys');
+}
+function flipCamera() { facing = facing === 'environment' ? 'user' : 'environment'; startCamera(); }
+
+function captureFrame(maxSide, quality) {
+  const v = $('video'); if (!stream || !v.videoWidth) return null;
+  const MAX = maxSide || 768, scale = Math.min(1, MAX / Math.max(v.videoWidth, v.videoHeight));
+  const c = $('cap'); c.width = Math.round(v.videoWidth * scale); c.height = Math.round(v.videoHeight * scale);
+  const ctx = c.getContext('2d');
+  if (sourceKind === 'camera' && facing === 'user') { ctx.translate(c.width, 0); ctx.scale(-1, 1); }
+  ctx.drawImage(v, 0, 0, c.width, c.height); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  return c.toDataURL('image/jpeg', quality || 0.7).split(',')[1];
+}
+
+// ── 시스템 프롬프트 ──
+const SPORT_GUIDE = {
+  'バレーボール': 'ポジション：セッター、アウトサイド（レフト）、ミドル（センター）、オポジット、リベロ。プレー：サーブ（ジャンプサーブ／フローター）、サーブレシーブ（レセプション）、トス、スパイク（クロス／ストレート／フェイント／プッシュ）、ブロック（ワンタッチ／シャットアウト）、ディグ、二段トス、ラリー。質の言い方：サーブが浮いた・短い・強い・ネットにかかった／レシーブが乱れた・セッターにぴたり／トスが低い・ネットから離れた／スパイクが決まった・ブロックに当たった・アウト。',
+  'バスケットボール': 'ポジション：PG、SG、SF、PF、C。プレー：ドライブ、ピック＆ロール、スリーポイント、ミドルシュート、レイアップ、ダンク、リバウンド（オフェンス／ディフェンス）、スティール、ブロック、ターンオーバー、ファウル、フリースロー、速攻、ゾーンディフェンス。質の言い方：シュートが短い・長い・リングに嫌われた／パスが通った・カットされた／ディフェンスが遅れた。',
+  'サッカー': 'ポジション：GK、CB、SB、ボランチ、サイドハーフ、トップ下、FW。プレー：パス、ドリブル、クロス、スルーパス、シュート、セーブ、クリア、タックル、オフサイド、コーナーキック、フリーキック、プレス、カウンター。質の言い方：シュートが枠を外れた・枠内・ポスト／クロスが合わなかった／プレスがはまった。',
+  '卓球': 'プレー：サーブ（下回転／横回転／ロング）、レシーブ（ツッツキ／チキータ／フリック）、ドライブ、スマッシュ、ブロック、カウンター、ラリー、台上プレー。質の言い方：サーブミス、レシーブが浮いた、ドライブが鋭い、ネットイン、エッジ。',
+  'バドミントン': 'プレー：サーブ（ショート／ロング）、クリア、ドロップ、スマッシュ、ヘアピン、ロブ、プッシュ、ドライブ、ラリー。質の言い方：スマッシュが決まった・ネットにかかった、ヘアピンが浮いた、クリアが短い、ラインぎりぎり。',
+  'テニス': 'プレー：サーブ（ファースト／セカンド）、リターン、フォア、バック、ボレー、スマッシュ、ドロップショット、ロブ、ラリー。質の言い方：エース、ダブルフォルト、ネット、アウト、ウィナー、アンフォーストエラー、ブレークポイント。',
+  '陸上競技': '種目に応じて：スタート反応、加速、中間走、ラストスパート、バトンパス、踏み切り、助走、クリアランス、ペース配分、ラップ。順位・レーン・ゼッケン番号で選手を区別する。',
+  '柔道': '技：背負い投げ、内股、大外刈り、払い腰、小内刈り、寝技（固め技・絞め技・関節技）。判定：一本、技あり、指導、組み手争い、ゴールデンスコア。白と青の柔道着で区別する。',
+  '水泳': '種目：自由形、背泳ぎ、平泳ぎ、バタフライ、個人メドレー、リレー。スタート反応、ターン、ストローク数、ラップ、コース番号で選手を区別する。'
+};
+function sportFromCtx(ctxText) { for (const k of Object.keys(SPORT_GUIDE)) if (ctxText.includes(k)) return k; return null; }
+function systemPrompt() {
+  const ctxText = $('ctx').value.trim();
+  const sport = sportFromCtx(ctxText);
+  const style = level === 'easy'
+    ? '相手は日本語を勉強中の韓国人（GENKI1〜N4レベル）なので、文はやさしく短く。専門用語はそのまま使ってよい（それが学習になる）。'
+    : '本物のテレビのスポーツ実況アナウンサーのように、テンポよく、臨場感たっぷりに。';
+  return 'あなたは日本の高校スポーツ大会「インターハイ」のテレビ中継の実況アナウンサー（声）です。\n'
+    + style + '\n'
+    + '【しくみ】\n'
+    + '- あなたには「目」の担当がいます。目は高解像度の連続画像でプレーを見て、起きたことを日本語1文の「実況メモ」としてあなたに渡します。メモは「（実況メモ：…）」という形で届きます。\n'
+    + '- メモが届いたら、すぐにその内容を実況として声に出してください。棒読みではなく、本物の実況アナウンサーのように：テンポ、抑揚、感嘆（「決まったー！」「惜しい！」「さあ！」）、間の取り方。短い相づちや感情は自由に足してよい。ただし、メモにない事実（選手名、プレー、結果）を足してはいけません。「メモ」「目」という言葉は口にしない。\n'
+    + '- あなたにも1秒に1枚の低解像度画像が届きますが、それはスコアボードを読むためと、質問に答えるためのものです。その画像からプレーを想像して語ってはいけません。\n'
+    + '- メモが来ていないときは話さない（放送の「間」です）。「静止しています」「準備しています」のような描写の埋め草は言わない。\n'
+    + '【スコア】「（スコアが動いた！…）」という合図が来たら、話している途中でもやめて、スコアボードを読んで「鎮西に1点、17対23！」のように熱く1文で言う。24点以上ならセットポイント／マッチポイントと叫ぶ。そのあとメモが届いたら、何で点が入ったかを続ける。スコアは動いたときだけ言う。\n'
+    + '【チーム名】チームは色ではなく学校名で呼ぶ。学校名はスコアボードから読む。【試合情報】に学校名があればそれを優先。読めないうちだけ一時的に色で呼ぶ。学校名を推測で作らない。\n'
+    + '【開始】「（開始）」の合図が来たら、放送の冒頭のように挨拶し、スコアボードから両校の学校名・ユニフォームの色・いまのスコアと状況を一度伝える（例：「清風が白、鎮西が青。第3セット、鎮西が22対17とリードしています」）。そのあとはメモを待つ。\n'
+    + '【質問・指示】ユーザーが声やテキストで質問・指示したら、短く答え、指示はそれ以降ずっと守る。\n'
+    + '【言語】日本語だけで話す。英語・韓国語は使わない。\n'
+    + (sport ? '【' + sport + 'の用語】\n' + SPORT_GUIDE[sport] + '\n' : '')
+    + (ctxText ? '【試合情報】\n' + ctxText + '\n' : '');
+}
+
+// ───── 눈(vision) 프롬프트: 연속 프레임을 보고 실황 메모 1문 ─────
+function eyesPrompt(scoreJustChanged) {
+  const ctxText = $('ctx').value.trim();
+  const sport = sportFromCtx(ctxText);
+  const style = level === 'easy' ? '日本語を勉強中の韓国人向けなので、文は短く、言葉はやさしめに。ただし実況の熱とテンポは落とさない。' : '';
+  return 'あなたはテレビのスポーツ中継の実況アナウンサー兼解説者です。カメラでテレビを撮った、0.5秒間隔の連続した静止画が時間順に並んでいます。この数秒間のプレーを、放送で流せる実況として書いてください。' + style + '\n'
+    + '【これは「描写」ではなく「実況」です】\n'
+    + '- ダメな例（視覚障害者向けの音声ガイドになっている）：「青の選手がボールを打ちました。白の選手が受けました。」\n'
+    + '- 良い例：「鎮西、7番のスパイク！　清風、拾った！　ラリーが続く…清風のレフトから、決まったーっ！　清風が追いつく、20対20！」\n'
+    + '- 現在形・体言止め・感嘆を使い、名前（学校名＋背番号）を呼び、ラリーのテンポを声に出す。1〜2文、長くても3文。\n'
+    + '【実況に乗せてよいもの】プレーの質の評価（いいサーブ、崩れた、鋭い）、感情（惜しい！、大きい1点）、試合状況（セットポイント・マッチポイント・デュース・連続得点・終盤）、短い解説（なぜ決まったか、次に何を狙うか）。スコアが24以上ならセットポイント／マッチポイントに必ず触れる。\n'
+    + '【乗せてはいけないもの】画像に写っていないプレーや結果を、競技の典型的な流れで埋めて語ること。写っていない選手名。ただし、スコアが動いたなら「決まった！」「鎮西に1点」と結果は言ってよい。番号が読めなければ「鎮西のレフト」「後衛」で。\n'
+    + '【何も起きていないとき】サーブ前・タイムアウト・リプレイなどでプレーがないときは、毎回ではなく時々（直前のメモが解説なら今回は書かない）、解説者として一言：状況整理（「鎮西、ここでサーブ。2点差を守れるか」）や注目点。それも不要なら「なし」とだけ。「静止している」「準備している」のような描写は書かない。\n'
+    + '【学校名】スコアボードから読む。【試合情報】にあればそれを優先。色では呼ばない。\n'
+    + '【出力】実況の文だけ。前置き・説明・記号・改行なし。\n'
+    + (scoreJustChanged ? '【いま得点が入った直後】この画像の中で、どちらに点が入り、何で（スパイク・ブロック・サーブ・相手ミス）決まったかを、実況として熱く。見えなければ、スコアと試合状況（セットポイントなど）だけを熱く言う。\n' : '')
+    + (sport ? '【' + sport + 'の用語】\n' + SPORT_GUIDE[sport] + '\n' : '')
+    + (ctxText ? '【試合情報】\n' + ctxText + '\n' : '')
+    + (eyesRecent.length ? '【直前のメモ（同じ内容をくり返さない・テンポをつなぐ）】\n' + eyesRecent.join('\n') + '\n' : '');
+}
+
+// 컨텍스트 압축 크기: Live API는 매 턴 컨텍스트 전체를 다시 과금하므로, 작을수록 싸고 기억은 짧아짐
+function ctxSize() {
+  const v = getSetting('jk_ctxsize', 'normal');
+  if (v === 'small') return { slidingWindow: { targetTokens: 3000 }, triggerTokens: 7000 };
+  if (v === 'large') return { slidingWindow: { targetTokens: 24000 }, triggerTokens: 56000 };
+  return { slidingWindow: { targetTokens: 8000 }, triggerTokens: 18000 };
+}
+
+// ── Live 세션 ──
+function toggleLive() { if (live) { manualStop = true; stopLive(); addLine('중계를 멈췄어요.', 'sys'); } else startLive(); }
+function startLive() {
+  if (!getKey()) { openKeySettings(); if (!getKey()) return; }
+  if (!stream) return notice('먼저 카메라나 화면 공유를 켜주세요.', true);
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+  audioCtx.resume();
+  manualStop = false; live = true; sessionStart = Date.now(); tokensTotal = 0; turns = 0;
+  $('go-btn').textContent = '⏹ 중계 멈추기'; $('go-btn').classList.add('stop'); $('mic-btn').disabled = false;
+  connect();
+}
+function connect() {
+  if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+  setupDone = false; generating = false; curTranscript = '';
+  setAiBadge('🎙 연결 중…');
+  ws = new WebSocket(WS_BASE + '?key=' + encodeURIComponent(getKey()));
+  ws.onopen = () => {
+    const setup = {
+      model: 'models/' + getSetting('jk_model', MODELS[0][0]),
+      generationConfig: {
+        responseModalities: ['AUDIO'],
+        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: getSetting('jk_voice', 'Fenrir') } } },
+        mediaResolution: 'MEDIA_RESOLUTION_MEDIUM'
+      },
+      systemInstruction: { parts: [{ text: systemPrompt() }] },
+      realtimeInputConfig: { turnCoverage: 'TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO' },
+      outputAudioTranscription: {},
+      inputAudioTranscription: {},
+      contextWindowCompression: ctxSize(),
+      sessionResumption: resumeHandle ? { handle: resumeHandle } : {}
+    };
+    ws.send(JSON.stringify({ setup }));
+  };
+  ws.onmessage = async (ev) => {
+    const data = typeof ev.data === 'string' ? ev.data : await ev.data.text();
+    let msg; try { msg = JSON.parse(data); } catch (e) { return; }
+    handleServer(msg);
+  };
+  ws.onerror = () => {};
+  ws.onclose = (ev) => {
+    stopStreams();
+    if (!live) return;
+    const reason = ev.reason || '';
+    if (ev.code === 1008 || /API key|invalid|unauth|permission|not found/i.test(reason)) {
+      addLine('연결이 거부됐어요: ' + (reason || 'code ' + ev.code) + ' — API 키와 모델을 확인해주세요.', 'sys err');
+      live = false; manualStop = true; resetUi(); return;
+    }
+    if (manualStop) return;
+    setAiBadge('🔁 재연결 중…');
+    addLine('연결이 끊겨서 다시 연결해요' + (reason ? ' (' + reason + ')' : '') + '.', 'sys');
+    reconnectTimer = setTimeout(connect, 1200);
+  };
+}
+function handleServer(msg) {
+  if (msg.setupComplete) {
+    setupDone = true; setAiBadge('🎙 중계 중'); 
+    addLine(resumeHandle ? '다시 연결됐어요. 중계 계속!' : '연결 완료. 중계 시작!', 'sys');
+    startStreams();
+    return;
+  }
+  if (msg.sessionResumptionUpdate) {
+    const u = msg.sessionResumptionUpdate; if (u.resumable && u.newHandle) resumeHandle = u.newHandle; return;
+  }
+  if (msg.goAway) { addLine('서버가 곧 연결을 닫아요 (' + (msg.goAway.timeLeft || '') + '). 자동으로 이어갈게요.', 'sys'); return; }
+  if (msg.usageMetadata) { if (msg.usageMetadata.totalTokenCount) tokensTotal = msg.usageMetadata.totalTokenCount; updateUsage(); }
+  const sc = msg.serverContent; if (!sc) return;
+  if (sc.interrupted) { stopPlayback(); curTranscript = ''; generating = false; setAiBadge('🎙 중계 중'); return; }
+  if (sc.inputTranscription && sc.inputTranscription.text) {
+    const t = sc.inputTranscription.text.trim(); if (t) addLine('🎤 ' + t, 'me');
+  }
+  if (sc.modelTurn && sc.modelTurn.parts) {
+    for (const part of sc.modelTurn.parts) {
+      if (part.inlineData && part.inlineData.data) { generating = true; setAiBadge('🔊 말하는 중', true); playPcm(part.inlineData.data); }
+      if (part.text) curTranscript += part.text;
+    }
+  }
+  if (sc.outputTranscription && sc.outputTranscription.text) {
+    curTranscript += sc.outputTranscription.text;
+    $('caption').innerHTML = esc(curTranscript) + (curKo ? '<small>' + esc(curKo) + '</small>' : '');
+  }
+  if (sc.turnComplete) {
+    generating = false; lastTurnEndAt = Date.now(); turns++; setAiBadge('🎙 중계 중');
+    const t = curTranscript.trim(); curTranscript = ''; curKo = null;
+    if (t) { const line = addLine(t); if (getSetting('jk_ko', '1') === '1') translateKo(t, line); }
+    updateUsage();
+  }
+}
+// 라이브에는 1초 1장(점수판·질문용), 눈에는 0.5초 간격 고해상도 프레임 묶음
+let eyesBuf = [], eyesTimer = null, eyesInFlight = false, eyesLastSentAt = 0, eyesRecent = [], eyesScorePending = false, eyesBackoff = 0, lastNoteAt = 0, eyesCalls = 0;
+let eyesNoThinkingCfg = false, eyes429Noted = false, eyesErrNoted = false, eyesHealthy = false;
+function startStreams() {
+  stopStreams();
+  const fpsMs = Math.max(1000, Number(getSetting('jk_fps', '1000')));   // Live API 상한: 초당 1프레임
+  frameTimer = setInterval(() => {
+    if (!ws || ws.readyState !== 1 || !setupDone) return;
+    const b64 = captureFrame(512, 0.6); if (!b64) return;
+    ws.send(JSON.stringify({ realtimeInput: { video: { mimeType: 'image/jpeg', data: b64 } } }));
+  }, fpsMs);
+  eyesBuf = []; eyesRecent = []; eyesInFlight = false; pendingMemo = null; eyes429Noted = false; eyesErrNoted = false; eyesHealthy = false; eyesBackoff = 0; eyesScorePending = false; eyesLastSentAt = Date.now(); lastNoteAt = Date.now();
+  eyesTimer = setInterval(eyesCapture, 500);
+  cueTimer = setInterval(cueTick, 500);
+  setTimeout(() => sendText('（開始）'), 2500);
+}
+function stopStreams() { clearInterval(frameTimer); clearInterval(cueTimer); clearInterval(eyesTimer); frameTimer = cueTimer = eyesTimer = null; }
+function eyesCapture() {
+  if (!live) return;
+  const b64 = captureFrame(768, 0.7); if (!b64) return;
+  eyesBuf.push({ t: Date.now(), b64 }); if (eyesBuf.length > 12) eyesBuf.shift();
+}
+let pendingMemo = null;
+function speakMemo(memo) { generating = true; cueSentAt = Date.now(); sendText(memo); }
+function cueTick() {
+  if (!ws || ws.readyState !== 1 || !setupDone) return;
+  sbTick();
+  const now = Date.now();
+  // 보류 중인 메모: 말이 끝났을 때(또는 8초 넘게 말하면) 보냄 → 문장 중간에 끊지 않음
+  if (pendingMemo) {
+    const audioLeft = audioCtx ? Math.max(0, playHead - audioCtx.currentTime) : 0;
+    if (!generating || (audioLeft < 0.4 && now - cueSentAt > 1200) || now - cueSentAt > 8000) { const m = pendingMemo; pendingMemo = null; speakMemo(m); }
+  }
+  // 눈: 일정 간격마다(또는 득점 직후 즉시) 최근 프레임 묶음을 분석
+  const interval = Number(getSetting('jk_eyes', '2500')) + eyesBackoff;
+  if (!eyesInFlight && (eyesScorePending || now - eyesLastSentAt >= interval)) runEyes(eyesScorePending);
+  // 오래 조용하면 한마디 (메모가 20초 넘게 없을 때)
+  if (eyesHealthy && !generating && now - lastNoteAt > 25000 && now - lastCueAt > 25000) { lastCueAt = now; lastNoteAt = now; sendText('（間：解説者として、いまの試合状況について一言。描写ではなく、状況整理か注目点を）'); }
+}
+async function runEyes(scoreJustChanged) {
+  const frames = scoreJustChanged ? eyesBuf.slice(-7) : eyesBuf.filter((f) => f.t > eyesLastSentAt - 400).slice(-6);
+  eyesScorePending = false; eyesLastSentAt = Date.now();
+  if (frames.length < 2) return;
+  eyesInFlight = true; eyesCalls++;
+  const parts = frames.map((f) => ({ inlineData: { mimeType: 'image/jpeg', data: f.b64 } }));
+  parts.push({ text: '以上、' + frames.length + '枚（0.5秒間隔・時間順）。この間の実況メモを1文で。何もなければ「なし」。' });
+  try {
+    const ctrl = new AbortController(); const to = setTimeout(() => ctrl.abort(), 9000);
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + getSetting('jk_eyes_model', 'gemini-3.8-flash') + ':generateContent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getKey() }, signal: ctrl.signal,
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: eyesPrompt(scoreJustChanged) }] }, contents: [{ role: 'user', parts }],
+        generationConfig: Object.assign({ maxOutputTokens: 120 }, eyesNoThinkingCfg ? {} : { thinkingConfig: { thinkingLevel: 'LOW' } }) })
+    });
+    clearTimeout(to);
+    if (res.status === 429) {
+      eyesBackoff = Math.min(8000, eyesBackoff + 1500); eyesScorePending = false;
+      if (!eyes429Noted) { eyes429Noted = true; addLine('눈 모델이 분당 호출 한도(무료 티어)에 걸렸어요. 분석 간격을 자동으로 늘릴게요. 더 촘촘한 중계를 원하면 설정에서 눈 모델을 Flash-Lite로 바꾸거나, Google 쪽에 결제를 연결해야 해요.', 'sys'); }
+      return;
+    }
+    if (!res.ok) {
+      const t = await res.text();
+      if (res.status === 400 && /thinking/i.test(t) && !eyesNoThinkingCfg) { eyesNoThinkingCfg = true; eyesScorePending = scoreJustChanged; eyesLastSentAt = 0; return; }   // 사고 설정 미지원 → 빼고 재시도
+      if (!eyesErrNoted) { eyesErrNoted = true; addLine('눈 모델 오류 ' + res.status + ': ' + t.slice(0, 160), 'sys err'); }
+      return;
+    }
+    eyesHealthy = true;
+    const d = await res.json();
+    const txt = ((((d.candidates || [])[0] || {}).content || {}).parts || []).map((x) => x.text || '').join('').trim();
+    if (!txt || /^「?なし」?[。.]?$/.test(txt)) return;
+    if (eyesBackoff > 0) eyesBackoff = Math.max(0, eyesBackoff - 250);
+    eyesRecent.push(txt); if (eyesRecent.length > 3) eyesRecent.shift();
+    lastNoteAt = Date.now();
+    if (!ws || ws.readyState !== 1 || !setupDone) return;
+    const memo = (scoreJustChanged ? '（スコアが動いた直後の実況メモ：' : '（実況メモ：') + txt + '）';
+    if (scoreJustChanged) { pendingMemo = null; speakMemo(memo); }   // 득점 메모는 바로 (말 끊어도 됨)
+    else pendingMemo = memo;                                           // 일반 메모는 말 끝난 뒤 (최신 것만 유지)
+  } catch (e) { if (e.name !== 'AbortError') addLine('눈 모델 호출 실패: ' + e.message, 'sys err'); }
+  finally { eyesInFlight = false; updateUsage(); }
+}
+function sendText(t) { if (ws && ws.readyState === 1 && setupDone) ws.send(JSON.stringify({ realtimeInput: { text: t } })); }
+function sendTextUI() {
+  const el = $('ask'); const q = el.value.trim(); if (!q) return; el.value = '';
+  if (!live) return addLine('먼저 중계를 시작해주세요.', 'sys');
+  addLine('💬 ' + q, 'me'); stopPlayback(); generating = true; cueSentAt = Date.now(); sendText(q);
+}
+function stopLive() {
+  live = false; stopStreams(); stopPlayback(); stopMic();
+  clearTimeout(reconnectTimer);
+  if (ws) { try { ws.onclose = null; ws.close(); } catch (e) {} ws = null; }
+  resumeHandle = null; resetUi();
+}
+function resetUi() { $('go-btn').textContent = '🎙 중계 시작'; $('go-btn').classList.remove('stop'); $('mic-btn').disabled = true; setAiBadge('🎙 중계 대기'); $('caption').textContent = ''; }
+
+// ── 점수판 감시: 영역의 픽셀이 바뀌면(숫자가 바뀌면) 말을 끊고 "득점부터" 신호 ──
+let sbRect = null, sbPicking = false, sbDrag = null, sbPrev = null, sbLastAt = 0;
+try { sbRect = JSON.parse(localStorage.getItem('jk_sb') || 'null'); } catch (e) {}
+function toggleSbPick() {
+  if (!stream) return notice('먼저 카메라나 화면 공유를 켜주세요.', true);
+  sbPicking = !sbPicking; $('sb-pick').classList.toggle('on', sbPicking);
+  $('sb-btn').textContent = sbPicking ? '취소' : '📊 점수판 영역 지정';
+}
+function clearSb() { sbRect = null; sbPrev = null; localStorage.removeItem('jk_sb'); drawSb(); }
+function drawSb() {
+  const box = $('sb-box'); const v = $('video');
+  $('sb-clear').style.display = sbRect ? '' : 'none';
+  $('sb-status').textContent = sbRect ? '📊 점수판 감시 중 — 점수가 바뀌면 바로 끼어들어요.' : '점수판을 지정하면 점수가 바뀌는 순간 하던 말을 끊고 그 플레이부터 말해요.';
+  if (!sbRect || !v.videoWidth) { box.classList.remove('on'); return; }
+  // 비디오는 object-fit:contain → 실제 표시 영역 계산
+  const st = $('stage').getBoundingClientRect(); const sc = Math.min(st.width / v.videoWidth, st.height / v.videoHeight);
+  const dw = v.videoWidth * sc, dh = v.videoHeight * sc, ox = (st.width - dw) / 2, oy = (st.height - dh) / 2;
+  box.style.left = (ox + sbRect.x * dw) + 'px'; box.style.top = (oy + sbRect.y * dh) + 'px';
+  box.style.width = (sbRect.w * dw) + 'px'; box.style.height = (sbRect.h * dh) + 'px'; box.classList.add('on');
+}
+(function sbPickInit() {
+  const el = $('sb-pick');
+  const pos = (e) => { const st = $('stage').getBoundingClientRect(); const v = $('video'); const sc = Math.min(st.width / v.videoWidth, st.height / v.videoHeight);
+    const dw = v.videoWidth * sc, dh = v.videoHeight * sc, ox = (st.width - dw) / 2, oy = (st.height - dh) / 2;
+    return { x: Math.min(1, Math.max(0, (e.clientX - st.left - ox) / dw)), y: Math.min(1, Math.max(0, (e.clientY - st.top - oy) / dh)) }; };
+  el.addEventListener('pointerdown', (e) => { if (!$('video').videoWidth) return; sbDrag = pos(e); el.setPointerCapture(e.pointerId); e.preventDefault(); });
+  el.addEventListener('pointermove', (e) => { if (!sbDrag) return; const p = pos(e); sbRect = { x: Math.min(sbDrag.x, p.x), y: Math.min(sbDrag.y, p.y), w: Math.abs(p.x - sbDrag.x), h: Math.abs(p.y - sbDrag.y) }; drawSb(); });
+  el.addEventListener('pointerup', (e) => { if (!sbDrag) return; sbDrag = null;
+    if (!sbRect || sbRect.w < 0.03 || sbRect.h < 0.02) { sbRect = null; drawSb(); return; }
+    localStorage.setItem('jk_sb', JSON.stringify(sbRect)); sbPrev = null; toggleSbPick(); drawSb(); addLine('📊 점수판 영역을 지정했어요. 점수가 바뀌면 끼어들어서 말해요.', 'sys'); });
+  window.addEventListener('resize', drawSb);
+})();
+function sbSample() {
+  const v = $('video'); if (!sbRect || !stream || !v.videoWidth) return null;
+  const t = $('tiny'); const W = 48, H = 16; t.width = W; t.height = H; const ctx = t.getContext('2d');
+  ctx.drawImage(v, sbRect.x * v.videoWidth, sbRect.y * v.videoHeight, sbRect.w * v.videoWidth, sbRect.h * v.videoHeight, 0, 0, W, H);
+  const d = ctx.getImageData(0, 0, W, H).data; const g = new Float32Array(W * H);
+  for (let i = 0; i < g.length; i++) g[i] = d[i * 4] * 0.3 + d[i * 4 + 1] * 0.59 + d[i * 4 + 2] * 0.11;
+  return g;
+}
+let sbCand = null, sbCandAt = 0;
+function sbTick() {
+  const g = sbSample(); if (!g) return;
+  if (!sbPrev) { sbPrev = g; return; }
+  // 크게 바뀐 픽셀의 비율: 숫자 하나가 바뀌면 좁은 영역만(0.4%~20%), 손떨림이면 전체가 흔들림(20%↑)
+  let changed = 0; for (let i = 0; i < g.length; i++) if (Math.abs(g[i] - sbPrev[i]) > 40) changed++;
+  const frac = changed / g.length; const now = Date.now();
+  if (frac >= 0.2) { sbCand = null; }                              // 흔들림/장면 전환 → 무시
+  else if (frac > 0.004) { sbCand = g; sbCandAt = now; }           // 국소 변화 → 후보
+  else if (sbCand && now - sbCandAt <= 1500) {                     // 변화 후 안정됨 → 확정
+    sbCand = null;
+    if (now - sbLastAt > 2500) { sbLastAt = now; scoreEvent(); }
+  }
+  sbPrev = g;
+}
+function scoreEvent() {
+  if (!ws || ws.readyState !== 1 || !setupDone) return;
+  const box = $('sb-box'); box.classList.add('flash'); setTimeout(() => box.classList.remove('flash'), 600);
+  stopPlayback(); generating = true; cueSentAt = Date.now(); lastCueAt = Date.now(); lastNoteAt = Date.now();
+  // 말하던 중이어도 이 텍스트가 '활동'으로 잡혀 현재 응답을 끊고 새 턴이 시작됨
+  sendText('（スコアが動いた！話している途中ならやめて、スコアボードを読んで「どちらに1点、何対何」だけを1文で）');
+  eyesScorePending = true;   // 눈은 직전 3.5초 프레임으로 "무엇으로 득점했나" 분석 → 뒤이어 말함
+}
+
+// ── 오디오 재생 (24kHz PCM16) ──
+function playPcm(b64) {
+  if (!audioCtx) return;
+  const bin = atob(b64); const n = bin.length >> 1; const f32 = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const lo = bin.charCodeAt(i * 2), hi = bin.charCodeAt(i * 2 + 1); let v = (hi << 8) | lo; if (v >= 0x8000) v -= 0x10000; f32[i] = v / 32768; }
+  const buf = audioCtx.createBuffer(1, n, 24000); buf.getChannelData(0).set(f32);
+  const src = audioCtx.createBufferSource(); src.buffer = buf; src.connect(audioCtx.destination);
+  const t = Math.max(audioCtx.currentTime + 0.05, playHead); src.start(t); playHead = t + buf.duration;
+  playingNodes.push(src); src.onended = () => { playingNodes = playingNodes.filter((x) => x !== src); };
+}
+function stopPlayback() { playingNodes.forEach((s) => { try { s.stop(); } catch (e) {} }); playingNodes = []; playHead = 0; }
+
+// ── 마이크 (16kHz PCM16 으로 전송) ──
+async function toggleMic() { if (micOn) stopMic(); else await startMic(); }
+async function startMic() {
+  if (!live) return;
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false }); }
+  catch (e) { return notice('마이크를 열 수 없어요: ' + e.message, true); }
+  micCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const srcNode = micCtx.createMediaStreamSource(micStream);
+  micNode = micCtx.createScriptProcessor(4096, 1, 1);
+  const inRate = micCtx.sampleRate, ratio = inRate / 16000;
+  micNode.onaudioprocess = (e) => {
+    if (!ws || ws.readyState !== 1 || !setupDone) return;
+    const inp = e.inputBuffer.getChannelData(0);
+    const outLen = Math.floor(inp.length / ratio); const pcm = new Int16Array(outLen);
+    for (let i = 0; i < outLen; i++) { const v = Math.max(-1, Math.min(1, inp[Math.floor(i * ratio)])); pcm[i] = v < 0 ? v * 0x8000 : v * 0x7fff; }
+    let bin = ''; const bytes = new Uint8Array(pcm.buffer); for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    ws.send(JSON.stringify({ realtimeInput: { audio: { mimeType: 'audio/pcm;rate=16000', data: btoa(bin) } } }));
+  };
+  srcNode.connect(micNode); micNode.connect(micCtx.destination);
+  micOn = true; $('mic-btn').classList.add('on'); addLine('🎤 마이크 켜짐 — 말하면 중계가 멈추고 대답해요.', 'sys');
+}
+function stopMic() {
+  if (!micOn) return;
+  try { micNode.disconnect(); } catch (e) {} try { micCtx.close(); } catch (e) {}
+  if (micStream) micStream.getTracks().forEach((t) => t.stop());
+  micOn = false; micStream = micCtx = micNode = null; $('mic-btn').classList.remove('on');
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } }));
+}
+
+// ── 한국어 자막 (별도 텍스트 모델, 중계 속도에 영향 없음) ──
+async function translateKo(jp, lineEl) {
+  try {
+    const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + TRANSLATE_MODEL + ':generateContent', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': getKey() },
+      body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: '다음 일본어 스포츠 실황을 자연스러운 한국어로 번역만 해줘. 설명 없이 번역문만:\n' + jp }] }], generationConfig: { maxOutputTokens: 200 } })
+    });
+    if (!res.ok) return;
+    const d = await res.json();
+    const ko = (((d.candidates || [])[0] || {}).content || {}).parts; const t = ko && ko.map((p) => p.text || '').join('').trim();
+    if (!t) return;
+    const s = document.createElement('div'); s.style.cssText = 'font-family:var(--font-ui);font-size:12px;color:var(--text-dim);margin-top:4px;'; s.textContent = t; lineEl.appendChild(s);
+    if ($('caption').textContent.indexOf(jp.slice(0, 12)) === 0) { curKo = t; $('caption').innerHTML = esc(jp) + '<small>' + esc(t) + '</small>'; }
+  } catch (e) {}
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function updateUsage() {
+  const min = sessionStart ? Math.round((Date.now() - sessionStart) / 60000) : 0;
+  $('usage').textContent = `이번 세션: ${min}분 · 중계 ${turns}턴 · 눈 분석 ${eyesCalls}회 · Live 컨텍스트 ${tokensTotal.toLocaleString()} 토큰` + (resumeHandle ? ' · 재연결 가능' : '');
+}
+
+// ── 초기화 ──
+(function init() {
+  updateKeyBtn();
+  const ms = $('model-sel'); MODELS.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; ms.appendChild(o); }); ms.value = getSetting('jk_model', MODELS[0][0]);
+  const vs = $('voice-sel'); VOICES.forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; vs.appendChild(o); }); vs.value = getSetting('jk_voice', 'Fenrir');
+  $('fps-sel').value = getSetting('jk_fps', '1000'); $('ctxsize-sel').value = getSetting('jk_ctxsize', 'normal'); $('eyes-sel').value = getSetting('jk_eyes', '2500'); $('eyes-model-sel').value = getSetting('jk_eyes_model', 'gemini-3.8-flash'); $('ko-sel').value = getSetting('jk_ko', '1');
+  $('ctx').value = getSetting('jk_ctx', ''); $('ctx').addEventListener('input', () => saveSetting('jk_ctx', $('ctx').value));
+  $('ctx').addEventListener('change', () => { if (live) sendText('（試合情報の更新：' + $('ctx').value.trim() + '）'); });
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) notice('이 브라우저는 카메라 접근을 지원하지 않아요. HTTPS 주소에서 Chrome/Safari로 열어주세요.', true);
+  document.addEventListener('visibilitychange', () => { if (document.hidden && live) { manualStop = true; stopLive(); addLine('화면이 꺼져서 중계를 멈췄어요. 다시 시작 버튼을 눌러주세요.', 'sys'); } });
+})();
+</script>
+</body>
+</html>
