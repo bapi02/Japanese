@@ -235,10 +235,47 @@ details.vol[open] > summary .vol-head small::after { content: '  ▴ 접기'; }
 .k-note .rd { font-size: 19px; line-height: 2; color: var(--text); } .k-note .rk { font-size: 12px; } .k-note .cb { display: none; }
 .k-note .ex { font-size: 14px; } .k-note .nm { display: flex; flex-wrap: wrap; gap: 2px 16px; }
 .k-chart { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-top: 6px; }
-.k-chart div { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; text-align: center; padding: 4px 0 3px; font-size: 20px; min-width: 0; }
-.k-chart div.x { visibility: hidden; }
+.k-chart > * { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; text-align: center; padding: 4px 0 3px; font-size: 20px; min-width: 0; }
+.k-chart .x { visibility: hidden; }
 .k-chart small { display: block; font-size: 10px; color: var(--text-muted); font-family: var(--font-ui); }
 .k-chart-lab { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--accent2); margin-top: 12px; }
+
+/* ── 0권: 탭으로 푸는 단계 ── */
+.g-steps { display: flex; gap: 6px; }
+.g-steps span { flex: 1; text-align: center; font-size: 11px; font-weight: 700; padding: 6px 2px; border-radius: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text-muted); white-space: nowrap; }
+.g-steps span.on { border-color: var(--accent); color: var(--text); }
+.g-steps span.done { color: var(--green); }
+.g-top { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.g-top .bar { flex: 1; } .g-top .bar > i { transition: width 0.15s linear; }
+.g-combo { min-width: 56px; text-align: right; font-weight: 700; color: var(--yellow); }
+.g-q, .g-learn { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.g-ins { font-size: 12px; font-weight: 700; letter-spacing: 0.5px; color: var(--accent2); }
+.g-count { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; }
+.g-big { font-size: 112px; font-weight: 600; line-height: 1.1; }
+.g-pair { font-size: 22px; color: var(--text-dim); } .g-pair small { font-size: 10px; letter-spacing: 1px; color: var(--accent2); margin-right: 6px; font-family: var(--font-ui); }
+.g-read { font-size: 20px; font-weight: 700; }
+.g-hint { font-size: 12px; color: var(--text-dim); line-height: 1.6; }
+.g-prompt { font-size: 30px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+.g-prompt.kana { font-size: 84px; font-weight: 600; line-height: 1.15; } .g-prompt.word { font-size: 40px; font-weight: 600; } .g-prompt.sent { font-size: 24px; font-weight: 600; }
+.g-prompt .blank { display: inline-block; min-width: 40px; border-bottom: 2px solid var(--accent2); color: var(--accent2); margin: 0 4px; }
+.g-sub { font-size: 14px; color: var(--text-dim); line-height: 1.7; } .g-sub b { color: var(--text); font-size: 18px; margin-left: 4px; }
+.g-opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.g-opts.long { grid-template-columns: 1fr; }
+.g-opt { min-width: 0; padding: 16px 8px; border-radius: 14px; background: var(--card); border: 1.5px solid var(--border); color: var(--text); font-size: 20px; font-weight: 700; cursor: pointer; overflow-wrap: anywhere; }
+.g-opt.jp-k { font-size: 34px; font-weight: 600; padding: 10px 8px; } .g-opts.long .g-opt.jp-k { font-size: 24px; padding: 14px 8px; }
+.g-opt.ok { border-color: var(--green); color: var(--green); } .g-opt.ng { border-color: var(--red); color: var(--red); }
+.g-slots { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 6px; }
+.g-slot { width: 46px; height: 54px; border-radius: 10px; border: 1.5px dashed var(--border); background: var(--surface); color: var(--text); font-size: 28px; font-weight: 600; cursor: pointer; padding: 0; }
+.g-slot.set { border-style: solid; border-color: var(--accent); } .g-slot.given { border-style: solid; color: var(--text-muted); cursor: default; }
+.g-slots.ok .g-slot { border-color: var(--green); color: var(--green); border-style: solid; } .g-slots.ng .g-slot.set { border-color: var(--red); color: var(--red); }
+.g-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.g-tile { width: 56px; height: 60px; border-radius: 12px; border: 1.5px solid var(--border); background: var(--card); color: var(--text); font-size: 30px; font-weight: 600; cursor: pointer; padding: 0; }
+.g-tile:disabled { opacity: 0.25; cursor: default; }
+.g-nav { display: flex; gap: 8px; } .g-nav .btn-main { flex: 1; } .g-go { width: 100%; }
+.g-stars { font-size: 44px; letter-spacing: 6px; color: var(--yellow); line-height: 1.2; }
+button.kcard { color: var(--text); cursor: pointer; font-family: inherit; } button.kc { color: var(--text); cursor: pointer; font-family: inherit; }
+@media (prefers-reduced-motion: no-preference) { .g-slots.ng { animation: gShake 0.3s; } }
+@keyframes gShake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
 /* ── 인쇄 (종이 학습지) ── */
 @media print {
@@ -273,7 +310,7 @@ details.vol[open] > summary .vol-head small::after { content: '  ▴ 접기'; }
   <div id="home-screen" style="display:flex;flex-direction:column;gap:14px;">
     <div class="home-intro">
       <h1>📝 일본어 학습지 · 초급</h1>
-      <p>매일 조금씩. 써 보고, 바꿔 보고, 만들어 보기.<br>하루에 <b>3장</b>씩 새 학습지가 열려요. 1권 → 2권 → 3권.<br>글자가 처음이면 <b>0권 문자편</b>부터. 0권은 잠금 없이 모두 열려 있어요.</p>
+      <p>매일 조금씩. 써 보고, 바꿔 보고, 만들어 보기.<br>하루에 <b>3장</b>씩 새 학습지가 열려요. 1권 → 2권 → 3권.<br>글자가 처음이면 <b>0권 문자편</b>부터. 0권은 키보드 없이 탭으로 풀고, 잠금 없이 모두 열려 있어요.</p>
     </div>
     <div class="progress-wrap">
       <div class="progress-top"><span>전체 진도</span><b id="prog-text">0 / 61장</b></div>
@@ -351,7 +388,7 @@ async function connectRemote() {
     if (remote && typeof remote === 'object') {
       state = mergeState(state, remote);
       try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {}
-      if (cur) renderStep(); else renderHome();
+      if (!cur) renderHome(); else if (cur.vol !== 0) renderStep();   // 0권은 푸는 도중에 화면을 다시 그리지 않음
     }
     document.getElementById('sync-dot').textContent = '☁️ 계정에 저장됨';
     flushRemote();
@@ -414,12 +451,6 @@ function modelOf(it) {
   if (it.type === 'trace') return it.jp;
   if (it.type === 'choice') return it.a;
   return it.a[0];
-}
-/* 0권: 히라가나/가타카나를 구별해서 채점 (norm 은 가타카나를 히라가나로 접어 버림) */
-function normS(s) { return (s || '').replace(/[\s　]/g, '').replace(/[。、．，.,!！?？「」『』・〜~\-]/g, ''); }
-function isRight(it, mine) {
-  if (it.strict) return (it.type === 'trace' ? [it.jp] : it.a).map(normS).includes(normS(mine));
-  return answersOf(it).includes(norm(mine));
 }
 function typeLabel(t) { return { extract: '본문에서 찾기', trace: '따라쓰기', fill: '빈칸', choice: '고르기', transform: '바꿔쓰기', compose: '작문' }[t]; }
 
@@ -525,7 +556,7 @@ function kanaHome() {
         <div class="no">${s.no}</div>
         <div class="jp jp-k">${esc(s.title)}</div>
         <div class="ko">${esc(s.sub.replace(/^(히라가나|가타카나) /, ''))}</div>
-        <div class="st ${r ? 'done' : 'open'}">${r ? `✓ ${Math.round(r.score / r.total * 100)}점` : '열림'}</div>
+        <div class="st ${r ? 'done' : 'open'}">${r ? (r.total === 3 ? starStr(r.score) : '✓') : '열림'}</div>
       </button>`;
     }).join('');
     return `<div class="section-label"><span>${esc(p.name)}</span><small>${esc(p.desc)}</small></div><div class="step-grid" style="margin-top:8px">${cards}</div>`;
@@ -543,7 +574,7 @@ function openStep(id) {
   renderStep();
   window.scrollTo({ top: 0 });
 }
-function goBack() { clearTimeout(ttsTimer); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); cur = null; renderHome(); window.scrollTo({ top: 0 }); }
+function goBack() { gStop(); clearTimeout(ttsTimer); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); cur = null; renderHome(); window.scrollTo({ top: 0 }); }
 
 function renderStep() {
   const s = cur;
@@ -598,7 +629,7 @@ function renderStep() {
 function renderItem(it, i, saved, label) {
   const no = `<div class="i-head"><div class="i-no">${label}</div><div class="i-type">${typeLabel(it.type)}</div><div class="i-mark" id="mark-${i}"></div></div>`;
   const tools = `<div class="i-tools">
-      ${it.type !== 'choice' || it.say ? `<button class="tool-btn" onclick="speak(${qa(it.say || (it.type === 'trace' ? it.jp : modelOf(it)))})" title="듣기">🔊</button>` : ''}
+      ${it.type !== 'choice' ? `<button class="tool-btn" onclick="speak(${qa(it.type === 'trace' ? it.jp : modelOf(it))})" title="정답 듣기">🔊</button>` : ''}
       <button class="tool-btn" id="padbtn-${i}" onclick="togglePad(${i})">✍️ 손글씨</button>
     </div>
     <div class="pad" id="pad-${i}"><canvas id="cv-${i}"></canvas><div class="pad-bar"><span>손가락이나 펜으로 써 보세요 (채점 안 됨)</span><button class="tool-btn" onclick="clearPad(${i})">지우기</button></div></div>`;
@@ -661,7 +692,19 @@ function pick(i, btn) {
   if (graded) ungrade();
 }
 
-/* ───────────── 0권 문자편 화면 ───────────── */
+/* ───────────── 0권 문자편: 탭으로 푸는 4단계 (배우기 → 고르기 → 낱말 → 타임어택) ───────────── */
+const TA_SEC = 30, TA_STAR2 = 8, TA_STAR3 = 14;
+const G_STAGES = ['배우기', '고르기', '낱말', '타임어택'];
+let G = null;
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function gLater(fn, ms) { const g = G; const t = setTimeout(() => { if (G === g && cur && cur.vol === 0) fn(); }, ms); g.timers.push(t); }
+function gStop() { if (!G) return; G.timers.forEach(clearTimeout); clearInterval(G.tick); G = null; }
+function starStr(n) { return '★'.repeat(n) + '☆'.repeat(3 - n); }
+function saveKana(stars, ta) {
+  const prev = state.results[cur.id] || {};
+  state.results[cur.id] = { score: Math.max(prev.total === 3 ? prev.score : 0, stars), total: 3, date: todayKey(), best: Math.max(prev.best || 0, ta || 0) };
+  saveState();
+}
 function strokeSteps(ch, size) {
   const d = (typeof WS_STROKES !== 'undefined' && WS_STROKES[ch]) || null; if (!d) return '';
   return `<div class="kso">${d.map((_, k) => {
@@ -672,62 +715,171 @@ function strokeSteps(ch, size) {
 }
 function kanaChart(sc) {
   const col = sc === 'k' ? 1 : 0;
-  const cell = (c, r) => (c ? `<div class="jp-k">${c}<small>${r}</small></div>` : '<div class="x"></div>');
+  const cell = (c, r) => (c ? `<button class="kc jp-k" onclick="speak(${qa(c)})">${c}<small>${r}</small></button>` : '<div class="x"></div>');
   const rows = (list, basic) => list.map((row, ri) => {
     const cs = [...row[col]], rs = row[2].split(' ');
     let cells = cs.map((c, i) => [c, rs[i]]);
     if (basic && cs.length === 3) cells = ri === 7 ? [cells[0], [], cells[1], [], cells[2]] : [cells[0], cells[2], [], [], cells[1]];
     return cells.map((x) => cell(x[0], x[1])).join('');
   }).join('');
-  return `<div class="k-chart-lab">기본 46자</div><div class="k-chart">${rows(WS_KANA_CHART.basic, true)}</div><div class="k-chart-lab">탁음 · 반탁음</div><div class="k-chart">${rows(WS_KANA_CHART.daku, false)}</div>`;
+  return `<div class="k-chart-lab">기본 46자 · 누르면 소리가 나요</div><div class="k-chart">${rows(WS_KANA_CHART.basic, true)}</div><div class="k-chart-lab">탁음 · 반탁음</div><div class="k-chart">${rows(WS_KANA_CHART.daku, false)}</div>`;
 }
 function renderKana() {
   const s = cur;
   document.getElementById('home-screen').style.display = 'none';
-  const ws = document.getElementById('ws-screen');
-  ws.style.display = 'flex';
+  document.getElementById('ws-screen').style.display = 'flex';
   document.getElementById('back-btn').style.display = 'block';
   document.getElementById('header-title').textContent = `${s.no} · ${s.sub.replace(/^(히라가나|가타카나) /, '')}`;
-  document.getElementById('header-badge').textContent = `${s.items.length}문제`;
-  const r = state.results[s.id];
-  const draft = state.drafts[s.id] || {};
-  const q = qa;
-  const cards = s.cards ? `<div class="kana-cards ${s.cardStyle}">${s.cards.map((c) => `<div class="kcard">
-      <div class="k jp-k">${c.c}</div>${c.s ? strokeSteps(c.c, 34) : ''}
-      ${c.h ? `<div class="h jp-k"><small>ひらがな</small>${c.h}</div>` : ''}${c.from ? `<div class="f jp-k">${c.from}</div>` : ''}
-      <div class="r">${c.r || ''}${c.ko ? ' · ' + c.ko : ''}</div>
-      <button class="spk" onclick="speak(${q(c.c)})" title="듣기">🔊</button></div>`).join('')}</div>` : '';
-  const rules = s.rules ? `<div class="rules" style="border-top:none;margin-top:0">${s.rules.map((x) => (x.head
-    ? `<div class="k-head">${x.head}</div>${x.html ? `<div class="k-note">${x.html}${x.say ? `<div style="text-align:right"><button class="tool-btn" onclick="speak(${q(x.say)})">🔊 듣기</button></div>` : ''}</div>` : ''}`
-    : `<div class="rule"><div class="r-jp jp-k">${esc(x[0])}</div><div class="r-ko">${esc(x[1])}</div><button class="spk" onclick="speak(${q(x[0].replace(/　/g, '、'))})" title="듣기">🔊</button></div>`)).join('')}</div>` : '';
-  const items = s.items.map((it, i) => renderItem(it, i, draft[i], `${i + 1}.`)).join('');
-  const d = new Date();
-  const started = draft.__start ? new Date(draft.__start) : null;
-  const hhmm = (t) => `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
-  ws.innerHTML = `
-    <div class="ws-title">
-      <div><div class="no">${s.no}</div><div class="jp jp-k">${esc(s.title)}</div><div class="ko">${esc(s.sub)}</div></div>
-      <div class="ws-score"><div class="big" id="ws-score-big">${r ? r.score + '/' + r.total : '—'}</div><div class="small">${r ? '최근 점수' : '아직 안 풀었어요'}</div></div>
-      <div class="ws-meta">
-        <span>📅 ${d.getMonth() + 1}월 ${d.getDate()}일</span>
-        <span>⏱ ${started ? hhmm(started) : hhmm(d)} ~ <span id="ws-end">${r && r.elapsed != null && draft.__graded ? fmtElapsed(r.elapsed) : ''}</span></span>
-        <span>이름 <input id="ws-name" value="${esc(state.name || '')}" placeholder="____" autocomplete="off" oninput="state.name=this.value;saveState()"></span>
+  document.getElementById('bottom-bar').classList.remove('show');
+  gStop(); G = { id: s.id, stage: 0, timers: [], li: 0 };
+  kanaLearn();
+}
+function gShell(inner) {
+  document.getElementById('header-badge').textContent = `${G.stage + 1} / 4 ${G_STAGES[G.stage]}`;
+  document.getElementById('ws-screen').innerHTML = `<div class="g-steps">${G_STAGES.map((t, i) => `<span class="${i === G.stage ? 'on' : i < G.stage ? 'done' : ''}">${i + 1} ${t}</span>`).join('')}</div>${inner}`;
+}
+/* 1 배우기 */
+function kanaLearn(noSpeak) {
+  const s = cur; G.stage = 0;
+  const rules = s.rules ? s.rules.map((x) => (x.head
+    ? `<div class="k-head">${x.head}</div>${x.html ? `<div class="k-note">${x.html}${x.say ? `<div style="text-align:right"><button class="tool-btn" onclick="speak(${qa(x.say)})">🔊 듣기</button></div>` : ''}</div>` : ''}`
+    : `<div class="rule"><div class="r-jp jp-k">${esc(x[0])}</div><div class="r-ko">${esc(x[1])}</div><button class="spk" onclick="speak(${qa(x[0].replace(/　/g, '、'))})" title="듣기">🔊</button></div>`)).join('') : '';
+  const go = `<button class="btn-main g-go" onclick="kanaQuizStart()">문제 풀기 →</button>`;
+  let body;
+  if (s.cards && s.cardStyle === 'big') {
+    const n = s.cards.length, c = s.cards[G.li], last = G.li === n - 1;
+    body = `<div class="grammar g-learn">
+        <div class="g-count">${G.li + 1} / ${n}</div>
+        <div class="g-big jp-k">${c.c}</div>
+        ${strokeSteps(c.c, 46)}
+        ${c.h ? `<div class="g-pair jp-k"><small>ひらがな</small>${c.h}</div>` : ''}
+        <div class="g-read">${c.ko} · ${c.r}</div>
+        <button class="tool-btn" onclick="speak(${qa(c.c)})">🔊 다시 듣기</button>
+        <div class="g-hint">빨간 선이 지금 긋는 획, 빨간 점이 시작하는 곳이에요. 손가락으로 허공에 따라 써 보세요.</div>
       </div>
+      <div class="g-nav"><button class="btn-sub" ${G.li ? '' : 'disabled'} onclick="G.li--;kanaLearn()">← 이전</button>
+        ${last ? go : `<button class="btn-main" onclick="G.li++;kanaLearn()">다음 글자 →</button>`}</div>
+      ${last && s.tip ? `<div class="tip" style="margin-top:0">${s.tip}</div>` : ''}`;
+    if (!noSpeak) speak(c.c);
+  } else {
+    const cards = s.cards ? `<div class="kana-cards mini">${s.cards.map((c) => `<button class="kcard" onclick="speak(${qa(c.c)})">
+        <div class="k jp-k">${c.c}</div>${c.from ? `<div class="f jp-k">${c.from}</div>` : ''}<div class="r">${c.ko ? c.ko + ' · ' : ''}${c.r || ''}</div></button>`).join('')}</div>
+        <div class="g-hint" style="margin-top:8px">글자를 누르면 소리가 나요. 한 번씩 눌러서 들어 보세요.</div>` : '';
+    body = `<div class="grammar"><div class="g-head">${s.cards ? '✏️ 오늘의 글자' : '📖 오늘의 포인트'}</div>${cards}
+        ${s.tip ? `<div class="tip">${s.tip}</div>` : ''}${rules ? `<div class="rules" style="border-top:none;margin-top:0">${rules}</div>` : ''}
+        ${s.chart ? kanaChart(s.chart) : ''}</div>
+      <div class="g-nav">${go}</div>`;
+  }
+  gShell(body); window.scrollTo({ top: 0 });
+}
+/* 2 고르기: 틀린 문제는 뒤에 다시 나옴 */
+function kanaQuizStart() { G.stage = 1; G.queue = shuffle(cur.quiz); G.total = G.queue.length; G.done = 0; G.combo = 0; kanaQuizShow(); window.scrollTo({ top: 0 }); }
+function kanaQuizShow() {
+  const q = G.queue[0]; if (!q) return kanaBuildStart();
+  G.lock = false; G.opts = shuffle(q.opts);
+  const long = G.opts.some((o) => [...o].length > 3);
+  const prompt = q.pk === 'sent' ? `<div class="g-prompt sent jp-k">${esc(q.p).replace('＿', '<span class="blank">?</span>')}</div><div class="g-sub">${esc(q.sub)}</div>`
+    : `<div class="g-prompt ${q.pk} ${q.pk === 'kana' || q.pk === 'word' ? 'jp-k' : ''}">${esc(q.p)}</div>`;
+  gShell(`<div class="g-top"><div class="bar"><i style="width:${G.done / G.total * 100}%"></i></div><span>${G.done} / ${G.total}</span><span class="g-combo">${G.combo >= 2 ? `🔥 ${G.combo}연속` : ''}</span></div>
+    <div class="grammar g-q"><div class="g-ins">${q.ins}</div>${prompt}
+      ${q.say ? `<button class="tool-btn" onclick="speak(${qa(q.say)})">🔊 다시 듣기</button>` : ''}</div>
+    <div class="g-opts ${long ? 'long' : ''}">${G.opts.map((o, i) => `<button class="g-opt ${/[가-힣a-z]/.test(o) ? '' : 'jp-k'}" id="g-opt-${i}" onclick="kanaQuizPick(${i})">${esc(o)}</button>`).join('')}</div>`);
+  if (q.say) speak(q.say);
+}
+function kanaQuizPick(i) {
+  if (G.lock) return; G.lock = true;
+  const q = G.queue[0]; const ok = G.opts[i] === q.opts[0];
+  document.getElementById('g-opt-' + G.opts.indexOf(q.opts[0])).classList.add('ok');
+  if (ok) { G.combo++; G.done++; G.queue.shift(); if (q.after) speak(q.after); }
+  else { document.getElementById('g-opt-' + i).classList.add('ng'); G.combo = 0; G.queue.push(G.queue.shift()); }
+  gLater(kanaQuizShow, ok ? 650 : 1300);
+}
+/* 3 낱말 조립: 뜻과 소리를 먼저 보여 주고 글자 타일로 완성 */
+function kanaBuildStart() { G.stage = 2; G.wi = 0; kanaBuildShow(); window.scrollTo({ top: 0 }); }
+function kanaBuildShow() {
+  const w = cur.words[G.wi]; if (!w) { saveKana(1); return kanaTaIntro(); }
+  const chars = [...w.jp];
+  G.lock = false; G.tries = 0;
+  G.slots = chars.map((c, i) => (w.fill[i] ? { c: null } : { c, given: true }));
+  const need = chars.filter((c, i) => w.fill[i]);
+  const knownChars = [...new Set(WS_KANA_POOL[cur.sc].slice(0, cur.pool).flatMap(([c]) => ([...c].length === 1 ? [c] : [])))];
+  const extra = shuffle(knownChars.filter((c) => !chars.includes(c))).slice(0, 3);
+  G.tiles = shuffle([...need, ...extra]).map((c) => ({ c, used: false }));
+  kanaBuildDraw(); speak(w.jp);
+}
+function kanaBuildDraw(cls) {
+  const w = cur.words[G.wi];
+  gShell(`<div class="g-top"><div class="bar"><i style="width:${G.wi / cur.words.length * 100}%"></i></div><span>${G.wi} / ${cur.words.length}</span><span class="g-combo"></span></div>
+    <div class="grammar g-q"><div class="g-ins">뜻과 소리를 보고, 글자를 눌러 낱말을 완성하세요.</div>
+      <div class="g-prompt ko">${esc(w.ko)}</div>
+      ${w.read ? `<div class="g-sub ${cur.sc === 'k' ? 'jp-k' : ''}">${cur.sc === 'k' ? '히라가나로는 ' : '소리: '}<b>${esc(w.read)}</b></div>` : ''}
+      <button class="tool-btn" onclick="speak(${qa(w.jp)})">🔊 다시 듣기</button>
+      <div class="g-slots ${cls || ''}">${G.slots.map((s, i) => `<button class="g-slot jp-k ${s.given ? 'given' : s.c ? 'set' : ''}" ${s.given ? 'disabled' : `onclick="kanaSlot(${i})"`}>${s.c || ''}</button>`).join('')}</div>
+      ${G.slots.some((s) => s.given) ? '<div class="g-hint">흐린 글자는 아직 안 배운 글자라 미리 채워 뒀어요.</div>' : ''}
     </div>
-    <div class="grammar">
-      <div class="g-head">${s.cards ? '✏️ 오늘의 글자' : '📖 오늘의 포인트'}</div>
-      ${cards}
-      ${s.cards && s.cards[0].s ? '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">빨간 선이 지금 긋는 획, 빨간 점이 시작하는 곳이에요.</div>' : ''}
-      ${s.tip ? `<div class="tip">${s.tip}</div>` : ''}
-      ${rules}
-      ${s.chart ? `<div class="k-head">오십음도를 소리 내어 한 번 읽고 시작하세요.</div>${kanaChart(s.chart)}` : ''}
-    </div>
-    <div class="sec-head" style="margin-top:10px"><span class="sec-no">✎</span>따라 쓰고 문제를 풀어 보세요. <span style="font-weight:400;color:var(--text-muted);font-size:11px;margin-left:auto">✍️ = 손글씨 패드</span></div>
-    ${items.replace('<!--SEC2-->', '')}
-    <div id="done-area"></div>`;
-  s.items.forEach((it, i) => { if (it.pad && [...it.jp].length <= 2) togglePad(i); });   // 글자 따라쓰기는 손글씨 패드를 바로 펼쳐 둠
-  renderBottom();
-  if (r && draft.__graded) grade(true);
+    <div class="g-tiles">${G.tiles.map((t, i) => `<button class="g-tile jp-k" ${t.used ? 'disabled' : ''} onclick="kanaTile(${i})">${t.c}</button>`).join('')}</div>`);
+}
+function kanaTile(i) {
+  if (G.lock || G.tiles[i].used) return;
+  const k = G.slots.findIndex((s) => !s.c); if (k < 0) return;
+  G.slots[k] = { c: G.tiles[i].c, t: i }; G.tiles[i].used = true;
+  if (G.slots.some((s) => !s.c)) return kanaBuildDraw();
+  const w = cur.words[G.wi]; G.lock = true;
+  if (G.slots.map((s) => s.c).join('') === w.jp) { kanaBuildDraw('ok'); speak(w.jp); gLater(() => { G.wi++; kanaBuildShow(); }, 1000); }
+  else { kanaBuildDraw('ng'); G.tries++; gLater(() => { G.slots.forEach((s, j) => { if (!s.given) { G.tiles[s.t].used = false; G.slots[j] = { c: null }; } }); G.lock = false; kanaBuildDraw(); }, 800); }
+}
+function kanaSlot(i) { const s = G.slots[i]; if (G.lock || s.given || !s.c) return; G.tiles[s.t].used = false; G.slots[i] = { c: null }; kanaBuildDraw(); }
+/* 4 타임어택: 지금까지 배운 글자 전부에서 나옴 (오늘 글자가 더 자주) */
+function kanaTaIntro() {
+  G.stage = 3; clearInterval(G.tick);
+  const r = state.results[cur.id] || {};
+  gShell(`<div class="grammar g-q"><div class="g-ins">마무리 타임어택</div>
+      <div class="g-prompt ko">${TA_SEC}초 동안 몇 개나 맞힐까요?</div>
+      <div class="g-sub">${cur.sc === 'k' ? '가타카나를 보고 같은 소리의 히라가나를' : '글자를 보고 소리를'} 고르세요. 지금까지 배운 글자가 모두 나와요.<br>★★ ${TA_STAR2}개 · ★★★ ${TA_STAR3}개${r.best ? ` · 내 최고 기록 ${r.best}개` : ''}</div></div>
+    <div class="g-nav"><button class="btn-sub" onclick="kanaTaEnd(true)">건너뛰기</button><button class="btn-main" onclick="kanaTaStart()">시작 ▶</button></div>`);
+  window.scrollTo({ top: 0 });
+}
+function kanaTaStart() {
+  const all = WS_KANA_POOL[cur.sc].slice(0, cur.pool);
+  const own = all.filter(([c]) => cur.own.includes(c));
+  G.ta = { n: 0, miss: 0, end: Date.now() + TA_SEC * 1000, bag: all.concat(own, own), all, last: null };
+  gShell(`<div class="g-top"><div class="bar"><i id="g-time" style="width:100%"></i></div><span id="g-left">${TA_SEC}초</span><span class="g-combo" id="g-score">0개</span></div>
+    <div class="grammar g-q"><div class="g-prompt kana jp-k" id="g-ta-p"></div></div><div class="g-opts" id="g-ta-o"></div>`);
+  G.tick = setInterval(() => {
+    const left = G.ta.end - Date.now();
+    if (left <= 0) return kanaTaEnd();
+    document.getElementById('g-time').style.width = (left / (TA_SEC * 10)) + '%';
+    document.getElementById('g-left').textContent = Math.ceil(left / 1000) + '초';
+  }, 100);
+  kanaTaNext();
+}
+function kanaTaNext() {
+  const t = G.ta; let it; do { it = t.bag[Math.floor(Math.random() * t.bag.length)]; } while (it[0] === t.last && t.all.length > 1);
+  t.last = it[0]; t.cur = it; G.lock = false;
+  const wrong = shuffle([...new Set(t.all.map((x) => x[1]).filter((x) => x !== it[1]))]).slice(0, 3);
+  t.opts = shuffle([it[1], ...wrong]);
+  document.getElementById('g-ta-p').textContent = it[0];
+  const o = document.getElementById('g-ta-o'); o.className = 'g-opts' + (cur.sc === 'h' ? ' read' : '');
+  o.innerHTML = t.opts.map((x, i) => `<button class="g-opt ${cur.sc === 'k' ? 'jp-k' : ''}" id="g-opt-${i}" onclick="kanaTaPick(${i})">${esc(x)}</button>`).join('');
+}
+function kanaTaPick(i) {
+  if (G.lock || !G.ta) return; const t = G.ta;
+  if (t.opts[i] === t.cur[1]) { t.n++; document.getElementById('g-score').textContent = t.n + '개'; return kanaTaNext(); }
+  G.lock = true; t.miss++;
+  document.getElementById('g-opt-' + i).classList.add('ng'); document.getElementById('g-opt-' + t.opts.indexOf(t.cur[1])).classList.add('ok');
+  gLater(kanaTaNext, 600);
+}
+function kanaTaEnd(skipped) {
+  clearInterval(G.tick); G.timers.forEach(clearTimeout);
+  const n = skipped ? 0 : G.ta.n; const stars = n >= TA_STAR3 ? 3 : n >= TA_STAR2 ? 2 : 1;
+  saveKana(stars, n);
+  const r = state.results[cur.id]; const next = KANA[KANA.indexOf(cur) + 1];
+  const msg = skipped ? '세 단계를 끝냈어요. 타임어택은 언제든 다시 할 수 있어요.' : stars === 3 ? '완벽해요! 눈이 글자를 바로 알아봐요.' : stars === 2 ? `잘했어요! ${TA_STAR3}개를 넘기면 별 세 개예요.` : `좋아요. ${TA_STAR2}개를 넘기면 별 두 개예요. 한 번 더 해 볼까요?`;
+  gShell(`<div class="done-card"><div class="g-stars">${starStr(stars)}</div>${skipped ? '' : `<div class="score">${n}개</div>`}
+      <div class="msg">${skipped ? '' : `최고 기록 ${r.best}개 · 내 별 ${starStr(r.score)}<br>`}${msg}</div></div>
+    <div class="g-nav"><button class="btn-sub" onclick="kanaTaIntro()">↻ 타임어택</button><button class="btn-sub" onclick="renderKana()">처음부터</button>
+      <button class="btn-main" onclick="${next ? `openStep(${next.id})` : 'goBack()'}">${next ? `다음 ${next.no} →` : '홈으로'}</button></div>`);
+  window.scrollTo({ top: 0 });
 }
 
 /* ───────────── 채점 ───────────── */
@@ -747,8 +899,7 @@ function grade(silent) {
   const selfOk = (state.drafts[s.id] && state.drafts[s.id].__self) || {};
   s.items.forEach((it, i) => {
     const mine = getVal(i);
-    const ok = isRight(it, mine) || !!selfOk[i];
-    const scriptMiss = !ok && it.strict && mine && answersOf(it).includes(norm(mine));
+    const ok = answersOf(it).includes(norm(mine)) || !!selfOk[i];
     if (ok) score++;
     const el = document.getElementById(`item-${i}`);
     el.classList.remove('ok', 'ng'); el.classList.add(ok ? 'ok' : 'ng');
@@ -757,7 +908,7 @@ function grade(silent) {
     const res = document.getElementById(`res-${i}`);
     res.innerHTML = ok
       ? `<div class="r-lab">정답 ○</div><div class="r-ans jp">${ruby(model)}${it.type === 'trace' ? '' : ' <button class="spk" onclick="speak(' + qa(model) + ')">🔊</button>'}</div>${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}`
-      : `<div class="r-lab">정답은 이렇게</div>${mine ? `<div class="r-mine">${esc(mine)}</div>` : ''}${scriptMiss ? '<div class="r-note">💡 소리는 맞아요. 글자 종류(히라가나·가타카나)를 확인하세요.</div>' : ''}<div class="r-ans jp">${ruby(model)} <button class="spk" onclick="speak(${qa(model)})">🔊</button></div>
+      : `<div class="r-lab">정답은 이렇게</div>${mine ? `<div class="r-mine">${esc(mine)}</div>` : ''}<div class="r-ans jp">${ruby(model)} <button class="spk" onclick="speak(${qa(model)})">🔊</button></div>
          ${Array.isArray(it.a) && it.a.length > 1 ? `<div style="font-size:12px;color:var(--text-muted)">다른 표현: ${it.a.slice(1).map((x) => plainKanji(x)).join(' / ')}</div>` : ''}
          ${it.note ? `<div class="r-note">💡 ${esc(it.note)}</div>` : ''}
          ${it.type === 'compose' && mine ? `<button class="self-ok" onclick="selfMark(${i})">뜻이 같게 썼어요 → ○ 로 바꾸기</button>` : ''}`;
@@ -833,10 +984,9 @@ function drawGuide(i) {
   ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
   ctx.setLineDash([]);
   if (it.type === 'trace') {
-    const txt = plainKanji(it.jp); let fs = it.pad ? 96 : 44;
-    const face = it.pad ? '"Klee One", "Noto Sans JP", sans-serif' : '"Noto Sans JP", sans-serif';
-    ctx.font = `${fs}px ${face}`;
-    while (ctx.measureText(txt).width > w - 24 && fs > 16) { fs -= 2; ctx.font = `${fs}px ${face}`; }
+    const txt = plainKanji(it.jp); let fs = 44;
+    ctx.font = `${fs}px "Noto Sans JP", sans-serif`;
+    while (ctx.measureText(txt).width > w - 24 && fs > 16) { fs -= 2; ctx.font = `${fs}px "Noto Sans JP", sans-serif`; }
     ctx.fillStyle = 'rgba(60,60,90,0.18)'; ctx.textBaseline = 'middle';
     ctx.fillText(txt, 12, h / 2);
   }
