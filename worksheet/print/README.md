@@ -9,8 +9,8 @@
 cd worksheet/print/fonts
 curl -sSo NotoSansJP-400.ttf "https://fonts.gstatic.com/s/notosansjp/v57/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75s.ttf"
 curl -sSo NotoSansJP-700.ttf "https://fonts.gstatic.com/s/notosansjp/v57/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFPYk75s.ttf"
-curl -sSo NotoSansKR-400.ttf "https://fonts.gstatic.com/s/notosanskr/v40/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzg01eLQ.ttf"
-curl -sSo NotoSansKR-700.ttf "https://fonts.gstatic.com/s/notosanskr/v40/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLQ.ttf"
+curl -sSo NotoSansKR-400.ttf "https://fonts.gstatic.com/s/notosanskr/v40/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzuoyeLQ.ttf"
+curl -sSo NotoSansKR-700.ttf "https://fonts.gstatic.com/s/notosanskr/v40/PbyxFmXiEBPT4ITbgNA5Cgms3VYcOA-vvnIzzg01eLQ.ttf"
 curl -sSo KleeOne-400.ttf "https://fonts.gstatic.com/s/kleeone/v14/LDIxapCLNRc6A8oT4q4A.ttf"
 curl -sSo KleeOne-600.ttf "https://fonts.gstatic.com/s/kleeone/v14/LDI2apCLNRc6A8oT4pbYF8Os.ttf"
 
@@ -19,6 +19,18 @@ node worksheet/print/build.js 1 && cp worksheet/print/out/일본어학습지_초
 node worksheet/print/build.js 2 && cp worksheet/print/out/일본어학습지_초급2.pdf worksheet/print/worksheet2.pdf
 node worksheet/print/build.js 3 && cp worksheet/print/out/일본어학습지_초급3.pdf worksheet/print/worksheet3.pdf
 ```
+
+## 0권 (문자편 · 히라가나 + 가타카나)
+
+```bash
+node worksheet/print/kana/build.js screen   && cp worksheet/print/out/일본어학습지_0권.pdf worksheet/print/worksheet0.pdf
+node worksheet/print/kana/build.js wireless # 인쇄소용 내지 188×263mm (재단 여백 3mm, 제본 쪽 여백 홀짝 교대)
+```
+
+- 히라가나 H01~H16, 가타카나 K01~K18. 단원마다 2쪽(왼쪽 익히기 / 오른쪽 문제), 내지 74쪽.
+- 단원 내용은 `kana/data.js`, 레이아웃은 `kana/build.js`. 그림 자리는 아직 빈 상자(IMAGE)이고 표지도 자리만 잡아 둠.
+- 획순 그림은 `kana/strokes.json`(KanjiVG, © Ulrich Apel, CC BY-SA 3.0)에서 그림. 책 마지막 쪽에 출처 표기가 들어감.
+- 글꼴은 임시 HTML 파일을 열어서 싣는다. `setContent`(about:blank)에서는 `file://` 글꼴이 막혀 시스템 글꼴로 대체되기 때문. 1~3권 `build.js`는 아직 `setContent` 방식이라 Klee·Noto 대신 시스템 대체 글꼴로 나온다.
 
 ## 삽화
 
