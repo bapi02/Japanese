@@ -29,7 +29,7 @@ node worksheet/print/kana/build.js wireless # 인쇄소용 내지 188×263mm (�
 
 - 히라가나 H01~H16, 가타카나 K01~K18. 단원마다 2쪽(왼쪽 익히기 / 오른쪽 문제), 내지 74쪽.
 - 단원 내용은 `kana/data.js`, 단원 구성은 `kana/units.js`, 인쇄 레이아웃은 `kana/build.js`.
-- 웹 학습지용 데이터는 `node worksheet/print/kana/gen-web.js` 로 `worksheet/data0.js` 를 다시 만든다 (같은 단원 정의를 문제 형식으로 변환). 그림 자리는 아직 빈 상자(IMAGE)이고 표지도 자리만 잡아 둠.
+- 웹 학습지용 데이터는 `node worksheet/print/kana/gen-web.js` 로 `worksheet/data0.js` 를 다시 만든다. 웹 0권은 종이와 공부법이 달라서, 같은 단원 정의에서 글자·낱말·비교 쌍만 뽑아 탭으로 푸는 4단계(배우기 → 고르기 → 낱말 조립 → 타임어택)로 바꾼다. 그림 자리는 아직 빈 상자(IMAGE)이고 표지도 자리만 잡아 둠.
 - 획순 그림은 `kana/strokes.json`(KanjiVG, © Ulrich Apel, CC BY-SA 3.0)에서 그림. 책 마지막 쪽에 출처 표기가 들어감.
 - 글꼴은 임시 HTML 파일을 열어서 싣는다. `setContent`(about:blank)에서는 `file://` 글꼴이 막혀 시스템 글꼴로 대체되기 때문. 1~3권 `build.js`는 아직 `setContent` 방식이라 Klee·Noto 대신 시스템 대체 글꼴로 나온다.
 
