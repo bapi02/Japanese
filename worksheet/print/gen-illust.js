@@ -1,0 +1,87 @@
+// 각 학습지 본문 삽화 생성 (OpenAI gpt-image-1.5, 수채 파스텔 스타일)
+// 사용법: NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt node gen-illust.js [stepId ...]
+const fs = require('fs');
+const path = require('path');
+const STYLE = "Soft gentle watercolor illustration for a children's language workbook: muted pastel colors, light hand-drawn pencil outlines, airy, warm, simple shapes, plain white background, no text, no letters, no signs with writing.";
+const SCENES = {
+  1: 'Two people meeting for the first time and bowing politely to each other at the entrance of a Japanese school, both smiling.',
+  2: 'A friendly Japanese teacher standing by a small blackboard and a student holding a textbook, a company worker with a briefcase nearby.',
+  3: 'A classroom scene: a student with a Korean flag pin on their bag chatting with a teacher, a doctor\'s white coat hanging on a hook in the corner.',
+  4: 'A school desk with a book on it, a school bag on a chair, and a school building seen through the window.',
+  5: 'A wooden desk with a book that has a small name tag, a folded umbrella leaning on the desk, and a Japanese textbook on a shelf.',
+  6: 'A round wall clock showing eight o\'clock, with a small school building and a small bank building below it.',
+  7: 'Tokyo cityscape on a clear sunny day: Tokyo Tower, many small buildings, a busy crossing with lots of people.',
+  8: 'A quiet Kyoto street with a wooden temple gate, a small pagoda, blooming flowers, and a kind shopkeeper waving.',
+  9: 'A quiet student room: a simple wooden desk with one book and a small laptop on it, a cat sitting on the floor beside the desk.',
+  10: 'A morning breakfast table with a cup of coffee and an open Japanese textbook, a small television in the background turned off.',
+  11: 'A morning routine: an alarm clock showing seven, a commuter train, and two friends studying together at a library table.',
+  12: 'Two friends leaving a movie theater holding tickets, with grey rainy clouds in the sky above.',
+  13: 'A person daydreaming with a thought bubble showing Tokyo Tower and a plate of sushi, a suitcase beside them.',
+  14: 'Two coworkers happily eating bowls of ramen together at a small restaurant table at lunchtime.',
+  15: 'A morning sequence in one scene: a sun rising over a house, a person washing their face at a sink, a breakfast tray, and a small school on a path.',
+  16: 'A reception desk with a form and a pen, a receptionist waiting kindly, and in the background a man talking on the telephone.',
+  17: 'A museum garden with a camera held up by a visitor, and simple pictogram signs: a crossed-out camera and a crossed-out cigarette, no words.',
+  18: 'A night study desk with a lamp and textbooks, a bed with a pillow, a television switched off and a game controller put away in a box.',
+  19: 'A person wearing headphones listening to music with eyes closed, a karaoke microphone on the table, a Japanese textbook open.',
+  20: 'A comparison scene: Tokyo skyline on the left, Osaka castle on the right, a Kyoto temple with red autumn leaves in the middle, and a shiny red apple in front.',
+  // ── 2권 ──
+  21: 'A small shop counter: a shopkeeper handing over a tote bag, two folded handkerchiefs on the counter, a price tag with no digits.',
+  22: 'A wall calendar with one day circled, a small birthday cake with candles, two friends chatting at a table.',
+  23: 'A cold winter day: two friends in coats holding warm coffee cups outside a cozy cafe near a train station, breath visible in the air.',
+  24: 'Early morning: two people jogging on a riverside path, a swimming pool in the background, sunrise sky.',
+  25: 'Travel memories: Mount Fuji in the distance, a cup of green matcha tea on a tray, a temple in Kyoto, a small suitcase with stickers (no text).',
+  26: 'A relaxing weekend collage: a person reading on a sofa, a movie screen, a cafe table with two cups, a kitchen with pots.',
+  27: 'A tired student with a headache at a desk, a friend offering a glass of water and medicine, a blanket on a bed nearby.',
+  28: 'Two friends at the beach with a beach umbrella and towels, a small weather icon of a sun over the sea, an alarm clock showing eight.',
+  29: 'Two friends walking out of a cinema at night talking happily, a tall movie poster with no text behind them.',
+  30: 'A youth soccer team huddled together on a field, a coach with a whistle, a scoreboard with no numbers.',
+  31: 'A picnic basket and blanket under a tree, half the sky sunny and half cloudy with light rain, a folded umbrella.',
+  32: 'A peaceful evening walk in a park, a person strolling under trees, a warm bath tub with steam in a small inset corner.',
+  33: 'Mountain hiking trail on a sunny day on one side, a cinema seat with popcorn on the other, a train station platform with a phone.',
+  34: 'A street map view: a straight road leading to a big intersection, a post office building with a red mailbox, a person asking directions.',
+  35: 'A person slumped at a table with a mug, a television glowing in a dim living room, a clock showing late night.',
+  36: 'Gift giving: a wrapped present with a ribbon, a cute tote bag, a wristwatch in a box, a handwritten letter envelope with no text.',
+  37: 'Moving day: friends carrying cardboard boxes into a small apartment, a car with its trunk open full of boxes, a home-cooked meal on a table.',
+  38: 'A karaoke room with a microphone and colorful lights, a person playing an acoustic guitar, a songbook with no text.',
+  39: 'A tired office worker leaving work early with a bag, a window showing evening light, a calm weekend scene with a hammock in the corner.',
+  40: 'Graduation day: a student in a cap and gown holding a diploma, an airplane in the sky, a small office building, a suitcase.',
+  // ── 3권 ──
+  41: 'A cozy Japanese house interior seen from the entrance: a hallway with several doors, a family of five smiling in the living room, a little girl waving.',
+  42: 'An office: a young woman at her desk looking pale with a hand on her forehead, a concerned colleague beside her, a thermometer and a cup of tea.',
+  43: 'Camping preparation: a tent half set up in a backyard with one bent pole, a bag of groceries, a worried person holding the pole.',
+  44: 'An empty classroom in the evening: ceiling light on, a window open with curtains moving, a notebook left on a desk.',
+  45: 'Two friends looking at a printed photo together; inside the photo, a boy in a cap and his friend stand in front of a Kyoto temple.',
+  46: 'A dark cloudy sky over a street, two friends with a folded umbrella looking at a new bakery window full of fresh bread.',
+  47: 'A small old bookstore at a station front with a closing-sale look, an elderly shopkeeper looking tired, two passersby whispering.',
+  48: 'A bright new apartment room with big windows, a train station visible nearby, rain outside, a person happily unpacking.',
+  49: 'A comic strip of an unlucky day: a foot stepped on in a crowded train, rain pouring at a station exit, a little brother eating pudding.',
+  50: 'A meeting room: a young woman raising her hand to present, a kind manager nodding, a coworker preparing documents.',
+  51: 'A cafe entrance: a polite waiter bowing to two customers, a menu held open, cups of coffee on a tray.',
+  52: 'A company reception desk: a receptionist with a gentle smile, a visitor in a suit holding documents, a waiting sofa.',
+  53: 'Morning jogging on a park path, and a desk at night with vocabulary flashcards and a lamp, side by side.',
+  54: 'A young man holding a moving box and a Tokyo map, a friend waving goodbye, a cooking pot with steam in a thought bubble.',
+  55: 'A person running toward a cinema with a phone to their ear, a clock above the entrance, a friend waiting with two tickets.',
+  56: 'Kyoto in autumn: a temple gate with bright red maple leaves, crowds of visitors, early morning soft light.',
+  57: 'A new cafe with a sunflower painted on its sign (no letters), two friends chatting outside, a slice of cake on a table.',
+  58: 'An apartment window left open with rain blowing in, a wet floor, a person rushing out the door with keys.',
+  59: 'A person waiting at the door looking at an empty mailbox, a delivery truck far down the street, a package in a thought bubble.',
+  60: 'Morning in a Japanese home: a father knocking on a bedroom door, a boy still in bed, a soccer uniform and ball ready by the door.',
+  61: 'A self-introduction scene: a young woman standing in front of a small group, a Korean flag pin on her bag, a cooking pot and a JLPT-style test paper (blank) on a board.',
+};
+async function gen(id) {
+  const out = path.join('img', `step_${String(id).padStart(2, '0')}.png`);
+  if (fs.existsSync(out)) { console.log(id, 'exists'); return; }
+  const body = { model: 'gpt-image-1.5', prompt: `${STYLE} Scene: ${SCENES[id]} Centered composition with generous white margins around the scene.`, size: '1024x1024', quality: 'medium', n: 1 };
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const r = await fetch('https://api.openai.com/v1/images/generations', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer proxy-injected' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok) { fs.writeFileSync(out, Buffer.from(j.data[0].b64_json, 'base64')); console.log(id, 'ok'); return; }
+    console.error(id, 'attempt', attempt, r.status, JSON.stringify(j).slice(0, 200));
+    await new Promise((res) => setTimeout(res, 3000 * attempt));
+  }
+}
+(async () => {
+  const ids = process.argv.slice(2).length ? process.argv.slice(2).map(Number) : Object.keys(SCENES).map(Number);
+  const queue = [...ids]; const workers = Array.from({ length: 4 }, async () => { while (queue.length) await gen(queue.shift()); });
+  await Promise.all(workers);
+})();
