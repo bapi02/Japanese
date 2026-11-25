@@ -1733,8 +1733,19 @@ function ftAddFeedback(feedback, correction) {
   d.scrollIntoView({ behavior: 'smooth', block: 'end' });
 }
 
+let ftFinalizeFn = null;
 function toggleFreeTalkRecording() {
-  if (ftRecording) { if (ftRec) { try { ftRec.stop(); } catch (e) {} } return; }
+  if (ftRecording) {
+    if (ftRec) { try { ftRec.stop(); } catch (e) {} }
+    // onend가 안 오면(일부 모바일 브라우저) 1.5초 후 강제로 마무리해 먹통 방지
+    setTimeout(() => {
+      if (ftRecording) {
+        if (ftRec) { try { ftRec.abort(); } catch (e) {} }
+        if (ftFinalizeFn) ftFinalizeFn();
+      }
+    }, 1500);
+    return;
+  }
   startFtRecording();
 }
 
@@ -1752,7 +1763,30 @@ function startFtRecording() {
   hint.className = 'record-hint active';
   hint.textContent = '🔴 녹음 중 — 다 말한 뒤 버튼을 다시 누르세요';
 
+  // 이전 인식 세션이 남아 있으면 즉시 해제 (두 번째 녹음이 안 되는 주원인)
+  if (ftRec) { try { ftRec.abort(); } catch (e) {} ftRec = null; }
   let finalText = '';
+  const finalize = () => {
+    if (!ftRecording) return;
+    ftRecording = false;
+    ftFinalizeFn = null;
+    btn.className = 'record-btn';
+    btn.textContent = '🎤';
+    hint.className = 'record-hint';
+    const text = (finalText || el.textContent || '').trim();
+    if (text && !['듣는 중...', '...'].includes(text)) {
+      ftPendingText = text;
+      el.textContent = text;
+      el.className = 'transcript-box has-text';
+      document.getElementById('ft-actions').style.display = 'flex';
+      hint.textContent = '📨 보내기 또는 🎤 다시 녹음을 선택하세요';
+    } else {
+      el.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
+      el.className = 'transcript-box';
+      hint.textContent = '버튼을 누르고 일본어로 대답해보세요';
+    }
+  };
+  ftFinalizeFn = finalize;
   ftRec = startSpeech('ja-JP',
     (e) => {
       finalText = '';
@@ -1764,32 +1798,28 @@ function startFtRecording() {
       el.textContent = finalText || interim || '...';
       el.className = 'transcript-box has-text';
     },
-    () => {
-      ftRecording = false;
-      btn.className = 'record-btn';
-      btn.textContent = '🎤';
-      hint.className = 'record-hint';
-      const text = (finalText || el.textContent || '').trim();
-      if (text && !['듣는 중...', '...'].includes(text)) {
-        ftPendingText = text;
-        el.textContent = text;
-        el.className = 'transcript-box has-text';
-        document.getElementById('ft-actions').style.display = 'flex';
-        hint.textContent = '📨 보내기 또는 🎤 다시 녹음을 선택하세요';
-      } else {
-        el.textContent = '잘 들리지 않았어요. 다시 눌러보세요.';
-        el.className = 'transcript-box';
-        hint.textContent = '버튼을 누르고 일본어로 대답해보세요';
-      }
-    },
+    finalize,
     (e) => {
+      const err = (e && e.error) || 'unknown';
       ftRecording = false;
+      ftFinalizeFn = null;
       btn.className = 'record-btn';
       btn.textContent = '🎤';
       hint.className = 'record-hint';
       hint.textContent = '버튼을 누르고 일본어로 대답해보세요';
+      if (err === 'aborted') return;
+      el.className = 'transcript-box';
+      if (err === 'no-speech') el.textContent = '소리가 감지되지 않았어요. 다시 눌러보세요.';
+      else if (err === 'not-allowed' || err === 'audio-capture' || err === 'service-not-allowed') el.textContent = '마이크를 쓸 수 없어요 (' + err + '). 마이크 권한을 확인하고 페이지를 새로고침해주세요.';
+      else if (err === 'unsupported') el.textContent = '이 브라우저는 음성인식을 지원하지 않아요. Chrome/Safari로 열어주세요.';
+      else el.textContent = '오류: ' + err + ' — 다시 눌러보세요.';
     }
   );
+  if (!ftRec && ftRecording) {
+    ftRecording = false;
+    ftFinalizeFn = null;
+    resetBtn('ft-record-btn', 'ft-record-hint', '버튼을 누르고 일본어로 대답해보세요');
+  }
 }
 
 function ftReRecord() {
@@ -1934,7 +1964,9 @@ function resetBtn(btnId, hintId, hintText) {
 
 function startSpeech(lang, onResult, onEnd, onError) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) return null;
+  if (!SR) { onError && onError({ error: 'unsupported' }); return null; }
+  // 음성 읽기(TTS)가 오디오를 잡고 있으면 마이크 인식이 시작되지 않으므로 먼저 정지
+  if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
   const rec = new SR();
   rec.lang = lang;
   rec.interimResults = true;
@@ -1942,7 +1974,13 @@ function startSpeech(lang, onResult, onEnd, onError) {
   rec.onresult = onResult;
   rec.onend = onEnd;
   rec.onerror = onError;
-  rec.start();
+  try {
+    rec.start();
+  } catch (e) {
+    // 시작 실패를 조용히 삼키면 '녹음 중' 상태로 굳어버리므로 반드시 오류로 알림
+    onError && onError({ error: 'start-failed: ' + (e && e.message ? e.message : e) });
+    return null;
+  }
   return rec;
 }
 
